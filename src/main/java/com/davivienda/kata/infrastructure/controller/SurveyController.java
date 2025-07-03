@@ -125,7 +125,6 @@ public class SurveyController {
     )
     @PostMapping("/answer")
     public ResponseEntity<DefaultResponseDto<?>> answer(@RequestBody CreateSurveyDto survey, Authentication authentication){
-        Long userId = (Long) authentication.getDetails();
         return ResponseEntity.ok(
                 DefaultResponseDto.builder()
                         .message("Surveys")

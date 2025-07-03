@@ -73,13 +73,13 @@ public class SurveyUseCase {
     }
 
     public ResponseEntity<DefaultResponseDto<?>> saveAnswer(CreateSurveyDto survey) {
-        AnswerEntity answerEntity = AnswerEntity.builder().id(survey.getId()).data(survey.getSurvey()).build();
+        AnswerEntity answerEntity = AnswerEntity.builder().surveyId(survey.getId()).data(survey.getSurvey()).build();
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(DefaultResponseDto.builder()
-                        .message("Encuesta creada correctamente")
+                        .message("Respuesta creada correctamente")
                         .status(HttpStatus.CREATED)
-                        .details("Encuesta creada correctamente")
+                        .details("Respuesta creada correctamente")
                         .data(surveyGateway.saveAnswer(answerEntity))
                         .build());
     }
