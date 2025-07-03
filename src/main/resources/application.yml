@@ -1,0 +1,73 @@
+server:
+  servlet:
+    context-path: /api
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/surveys?currentSchema=public
+    username: postgres
+    password: 1234
+    schema: public
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      enabled: 'true'
+      max-request-size: 15MB
+      file-size-threshold: 2KB
+  jpa:
+    show-sql: 'true'
+    open-in-view: false
+    hibernate:
+      dialect: org.hibernate.dialect.PostgreSQLDialect
+    properties:
+      hibernate:
+        default_schema: public
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  mvc:
+    pathmatch:
+      matching-strategy: ant-path-matcher
+
+#t0ll-p4y-js0n-w3b-70k3n-s3cr37-k3y
+app:
+  jwt-secret: dDBsbC1wNHktanMwbi13M2ItNzBrM24tczNjcjM3LWszeQ==
+  jwt-expiration-milliseconds: 60000
+  jwt-token-type: Bearer
+#  security:
+#    user:
+#      name: ikarlox
+#      password: 123
+
+logging:
+  level:
+    org:
+      springframework:
+        cache: DEBUG
+        interceptor: DEBUG
+    hibernate:
+      SQL: debug
+      type:
+        descriptor:
+          sql: trace
+
+message:
+  exception:
+    general: Ha ocurrido un error
+    internal-server-error: Estamos presentamos problemas, intente de nuevo mas tarde
+    method-not-allow: Método de petición no permitido
+    not-found: Información no encontrada
+    bad-request: Petición no valida
+    constraint-violation: Se ha infringido una integridad de datos
+    username-not-found: No se ha encontrado el usuario
+    bad-credentials: Credenciales incorrectos
+    unauthorized: Acceso denegado
+    forbidden: Acceso restringido
+    media-type-no-supported: Media type unsopported
+    expired-code: Código de verificación expirado
+
+authorization-request:
+    headers:
+      application-id-internal: kata-02
+      application-id-external: kata-01
+    credentials:
+      api-key-internal: 1234
+      api-key-external: 1234
