@@ -17,11 +17,12 @@ public class JwtUtil {
     private final SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     private final JwtParser parser = Jwts.parser().verifyWith(key).build();
 
-   public String generateToken(UserEntity user) {
+   public String generateToken(UserEntity user, String role) {
         return Jwts.builder()
                 .subject(user.getUsername())
                 .claim("userId", user.getId())
                 .claim("personId", user.getPersonId())
+                .claim("role", role)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + 86400000)) // 1 día TODO media hora
                 .signWith(key, Jwts.SIG.HS256)

@@ -11,9 +11,7 @@ import java.util.List;
 @AllArgsConstructor
 public class RegisterPersonUseCase {
 
-
     private PersonGateway personGateway;
-
 
     public PersonRegisterDto register(PersonRegisterDto data) {
         return personGateway.save(data);

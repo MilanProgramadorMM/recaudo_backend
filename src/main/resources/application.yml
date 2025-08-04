@@ -5,9 +5,9 @@ server:
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5433/recaudo?currentSchema=public
+    url: jdbc:postgresql://localhost:5432/recaudo?currentSchema=public
     username: postgres
-    password: Ingprocess1
+    password: 1234
     schema: public
   servlet:
     multipart:

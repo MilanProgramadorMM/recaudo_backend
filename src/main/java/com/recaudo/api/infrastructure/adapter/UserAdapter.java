@@ -61,7 +61,7 @@ public class UserAdapter implements UserGateway {
         UserDto dto = new UserDto();
 
         dto.setId(user.getId());
-        dto.setUsername(Long.valueOf(user.getUsername()));
+        dto.setUsername(user.getUsername());
         dto.setUserCreate(user.getUserCreate());
         dto.setCreatedAt(user.getCreatedAt().toString());
 
@@ -95,16 +95,19 @@ public class UserAdapter implements UserGateway {
         return entities.stream().map(user -> {
             UserDto dto = new UserDto();
             dto.setId(user.getId());
-            dto.setUsername(Long.valueOf(user.getUsername()));
+            dto.setUsername(user.getUsername());
             dto.setUserCreate(user.getUserCreate());
             dto.setCreatedAt(user.getCreatedAt().toString());
 
             // OBTENEMOS EL NOMBRE COMPLETO DE LA PERSONA
-            dto.setPersonFullName(
-                    personRepository.findById(user.getPersonId())
-                            .map(PersonEntity::getFullName)
-                            .orElse(null)
-            );
+            if (user.getPersonId() != null)
+                dto.setPersonFullName(
+                        personRepository.findById(user.getPersonId())
+                                .map(PersonEntity::getFullName)
+                                .orElse(null)
+                );
+            else
+                dto.setPersonFullName("Usuario sin persona asociada");
 
             // OBTENEMOS EL ROL Y ID ASOCIADO A LA PERSONA
             UserRoleEntity userRole = userRoleRepository.findByUserId(user.getId());

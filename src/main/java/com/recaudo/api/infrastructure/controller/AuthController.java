@@ -79,7 +79,7 @@ public class AuthController {
                     .orElse("Rol no encontrado");
         }
 
-        String token = jwtService.generateToken(userEntity);
+        String token = jwtService.generateToken(userEntity, roleName);
 
         return ResponseEntity.ok(
                 DefaultResponseDto.builder()
