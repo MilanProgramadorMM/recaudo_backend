@@ -100,14 +100,15 @@ public class UserAdapter implements UserGateway {
             dto.setCreatedAt(user.getCreatedAt().toString());
 
             // OBTENEMOS EL NOMBRE COMPLETO DE LA PERSONA
-            if (user.getPersonId() != null)
+            if (user.getPersonId() != null) {
                 dto.setPersonFullName(
                         personRepository.findById(user.getPersonId())
                                 .map(PersonEntity::getFullName)
                                 .orElse(null)
                 );
-            else
+            } else {
                 dto.setPersonFullName("Usuario sin persona asociada");
+            }
 
             // OBTENEMOS EL ROL Y ID ASOCIADO A LA PERSONA
             UserRoleEntity userRole = userRoleRepository.findByUserId(user.getId());
