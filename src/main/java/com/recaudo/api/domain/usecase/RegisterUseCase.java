@@ -2,7 +2,10 @@ package com.recaudo.api.domain.usecase;
 
 import com.recaudo.api.config.UseCase;
 import com.recaudo.api.domain.gateway.UserGateway;
-import com.recaudo.api.domain.model.dto.rest_api.UserDto;
+import com.recaudo.api.domain.model.dto.response.UserDto;
+import com.recaudo.api.domain.model.dto.rest_api.UpdateUserDto;
+import com.recaudo.api.domain.model.dto.rest_api.UpdateUserPasswordDto;
+import com.recaudo.api.domain.model.dto.rest_api.UserCreateDto;
 import com.recaudo.api.domain.model.entity.UserEntity;
 import lombok.AllArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,9 +21,8 @@ public class RegisterUseCase {
     private UserGateway userGateway;
     private PasswordEncoder passwordEncoder;
 
-    public UserEntity register(UserEntity data) {
-        //return userGateway.save(data);
-        return null;
+    public UserDto register(UserCreateDto data) {
+        return userGateway.saveUser(data);
     }
 
     public UserDto getById(Long id)  {
@@ -30,4 +32,13 @@ public class RegisterUseCase {
     public List<UserDto> getAll() {
         return userGateway.getAll();
     }
+
+    public void updateUsername(UpdateUserDto userDto) {
+        userGateway.updateUsername(userDto);
+    }
+
+    public void updatePassword(UpdateUserPasswordDto userDto) {
+        userGateway.updatePassword(userDto);
+    }
+
 }

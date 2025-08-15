@@ -15,18 +15,18 @@ import java.time.LocalDateTime;
 public class UserPermissionEntity implements Serializable {
 
     @Id
-    @SequenceGenerator(name = "user_permission_seq", sequenceName = "user_permission_seq", allocationSize = 1)
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_permission_seq")
+    @SequenceGenerator(name = "user_permission_id_seq", sequenceName = "user_permission_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_permission_id_seq")
     private Long id;
 
     @Column(name = "user_id")
-    private Long userId;
+    private Integer userId;
 
     @Column(name = "action_id")
-    private Long actionId;
+    private Integer actionId;
 
     @Column(name = "module_id")
-    private Long moduleId;
+    private Integer moduleId;
 
     @Column(name = "allow")
     private Boolean allow;

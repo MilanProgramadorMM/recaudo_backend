@@ -1,17 +1,27 @@
 package com.recaudo.api.infrastructure.controller;
 
 import com.recaudo.api.domain.model.dto.response.DefaultResponseDto;
-import com.recaudo.api.domain.model.dto.rest_api.PersonRegisterDto;
-import com.recaudo.api.domain.model.dto.rest_api.UserDto;
+import com.recaudo.api.domain.model.dto.response.UserDto;
+import com.recaudo.api.domain.model.dto.rest_api.UpdateUserDto;
+import com.recaudo.api.domain.model.dto.rest_api.UpdateUserPasswordDto;
+import com.recaudo.api.domain.model.dto.rest_api.UserCreateDto;
 import com.recaudo.api.domain.usecase.RegisterUseCase;
+import com.recaudo.api.exception.BadRequestException;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import org.apache.catalina.User;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/user")
@@ -27,17 +37,17 @@ public class UserController {
         UserDto data = userUseCase.getById(id);
 
         return ResponseEntity.ok(
-                DefaultResponseDto.<UserDto>builder()
-                        .message("Información encontrada")
-                        .status(HttpStatus.OK)
-                        .details("Información encontrada")
-                        .data(data)
-                        .build()
+            DefaultResponseDto.<UserDto>builder()
+                .message("Información encontrada")
+                .status(HttpStatus.OK)
+                .details("Información encontrada")
+                .data(data)
+                .build()
         );
     }
 
     @GetMapping("/get-all")
-    public ResponseEntity<DefaultResponseDto<List<UserDto>>> getAllPersons() {
+    public ResponseEntity<DefaultResponseDto<List<UserDto>>> getAllUsers() {
         List<UserDto> users = userUseCase.getAll();
 
         return ResponseEntity.ok(
@@ -49,6 +59,54 @@ public class UserController {
                         .build()
         );
     }
+
+    @PostMapping("/register")
+    public ResponseEntity<DefaultResponseDto<UserDto>> registerUser(
+            @RequestBody @Valid UserCreateDto data,
+            BindingResult bindingResult) throws Exception {
+
+        if (bindingResult.hasErrors())
+            throw new BadRequestException(bindingResult.getAllErrors().get(0).getDefaultMessage());
+
+        return ResponseEntity.ok(
+            DefaultResponseDto.<UserDto>builder()
+                .message("Usuario creado correctamente")
+                .status(HttpStatus.OK)
+                .details("Los datos fueron creados")
+                .data(userUseCase.register(data))
+                .build());
+    }
+
+    @PostMapping("/update-username")
+    public ResponseEntity<DefaultResponseDto<UserDto>> updateUsername(
+            @Valid @RequestBody UpdateUserDto userDto) {
+
+        userUseCase.updateUsername(userDto);
+
+        return ResponseEntity.ok(
+                DefaultResponseDto.<UserDto>builder()
+                        .message("Username actualizado correctamente")
+                        .status(HttpStatus.OK)
+                        .details("Username cambiado a: " + userDto.getValue())
+                        .build()
+        );
+    }
+
+    @PostMapping("/update-password")
+    public ResponseEntity<DefaultResponseDto<UserDto>> updatePassword(
+            @Valid @RequestBody UpdateUserPasswordDto userDto) {
+
+        userUseCase.updatePassword(userDto);
+
+        return ResponseEntity.ok(
+                DefaultResponseDto.<UserDto>builder()
+                        .message("Contraseña actualizada correctamente")
+                        .status(HttpStatus.OK)
+                        .details("Contraseña actualizada")
+                        .build()
+        );
+    }
+
 
 
 

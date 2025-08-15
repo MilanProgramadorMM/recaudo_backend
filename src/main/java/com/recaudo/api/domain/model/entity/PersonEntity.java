@@ -18,8 +18,8 @@ import java.time.LocalDateTime;
 public class PersonEntity implements Serializable {
 
     @Id
-    @SequenceGenerator(name = "person_sequence", sequenceName = "person_sequence", allocationSize = 1)
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "person_sequence")
+    @SequenceGenerator(name = "person_id_seq", sequenceName = "person_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "person_id_seq")
     private Long id;
 
     @Column(name = "document_type")

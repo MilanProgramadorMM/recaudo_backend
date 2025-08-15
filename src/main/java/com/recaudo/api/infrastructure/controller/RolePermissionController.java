@@ -2,6 +2,7 @@ package com.recaudo.api.infrastructure.controller;
 
 import com.recaudo.api.domain.model.dto.response.DefaultResponseDto;
 import com.recaudo.api.domain.model.dto.response.RolePermissionDto;
+import com.recaudo.api.domain.model.dto.rest_api.UpdateRolePermissionDto;
 import com.recaudo.api.infrastructure.adapter.RolePermissionAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,7 +21,7 @@ public class RolePermissionController {
 
     @GetMapping("/role/{roleId}")
     public ResponseEntity<DefaultResponseDto<List<RolePermissionDto>>> getPermissionsByRole(@PathVariable Long roleId) {
-        List<RolePermissionDto> permissions = getPermissionsByRoleId.getPermissionsByRole(roleId);
+        List<RolePermissionDto> permissions = getPermissionsByRoleId.getPermissionsByRoleAct(roleId);
 
         return ResponseEntity.ok(
                 DefaultResponseDto.<List<RolePermissionDto>>builder()
@@ -32,7 +33,7 @@ public class RolePermissionController {
         );
     }
 
-    @PutMapping("/update/{rolePermissionId}")
+    /*@PutMapping("/update/{rolePermissionId}")
     public ResponseEntity<DefaultResponseDto<String>> updateRolePermission(
             @PathVariable Long rolePermissionId,
             @RequestBody Boolean allow) {
@@ -56,6 +57,32 @@ public class RolePermissionController {
                             .build());
         }
     }
+
+
+     */
+    @PutMapping("/update")
+    public ResponseEntity<DefaultResponseDto<String>> updateRolePermission(
+            @RequestBody UpdateRolePermissionDto dto) {
+        try {
+            getPermissionsByRoleId.updateOrCreatePermission(dto);
+            return ResponseEntity.ok(
+                    DefaultResponseDto.<String>builder()
+                            .message("Permiso actualizado o creado correctamente")
+                            .status(HttpStatus.OK)
+                            .details("La operación fue exitosa")
+                            .data("OK")
+                            .build()
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(DefaultResponseDto.<String>builder()
+                            .message("Error al actualizar o crear permiso")
+                            .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                            .details(e.getMessage())
+                            .build());
+        }
+    }
+
 
 
 }

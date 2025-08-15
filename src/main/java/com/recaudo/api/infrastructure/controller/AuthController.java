@@ -71,10 +71,10 @@ public class AuthController {
         UserEntity userEntity = userDetails.getUserEntity();
 
         // Obtener el rol desde el repositorio
-        UserRoleEntity userRole = userRoleRepository.findByUserId(userEntity.getId());
+        List<UserRoleEntity> userRole = userRoleRepository.findByUserId(userEntity.getId());
         String roleName = "Sin rol";
         if (userRole != null) {
-            roleName = roleRepository.findById(userRole.getRoleId())
+            roleName = roleRepository.findById(userRole.get(0).getRoleId())
                     .map(RoleEntity::getName)
                     .orElse("Rol no encontrado");
         }
@@ -89,7 +89,7 @@ public class AuthController {
                         .data(LoginResponseDto.builder()
                                 .user(userData.getUsername())
                                 .token(token)
-                                .role(roleName) // Se incluye el rol aquí
+                                .role(roleName)
                                 .build())
                         .build()
         );
@@ -169,10 +169,9 @@ public class AuthController {
 
     @PutMapping("/delete/{id}")
     public ResponseEntity<DefaultResponseDto<String>> deletePerson(
-            @PathVariable Long id,
-            @RequestParam String userDelete) {
+            @PathVariable Long id) {
 
-        personUseCase.delete(id, userDelete);
+        personUseCase.delete(id);
 
         return ResponseEntity.ok(
                 DefaultResponseDto.<String>builder()

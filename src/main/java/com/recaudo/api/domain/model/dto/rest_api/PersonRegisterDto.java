@@ -55,13 +55,8 @@ public class PersonRegisterDto {
     @JsonProperty("description")
     private String description;
 
-    @JsonProperty("user_create")
-    private String userCreate;
-
     @Builder.Default
     @JsonProperty("created_at")
     private String createdAt = LocalDateTime.now().toString();
 
-    @JsonProperty("user_edit")
-    private String userEdit;
 }

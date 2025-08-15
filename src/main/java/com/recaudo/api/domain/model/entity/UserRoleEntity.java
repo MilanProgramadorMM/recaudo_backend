@@ -1,5 +1,6 @@
 package com.recaudo.api.domain.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -15,8 +16,8 @@ import java.time.LocalDateTime;
 public class UserRoleEntity implements Serializable {
 
     @Id
-    @SequenceGenerator(name = "user_role_sequence", sequenceName = "user_role_sequence", allocationSize = 1)
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_role_sequence")
+    @SequenceGenerator(name = "user_role_id_seq", sequenceName = "user_role_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_role_id_seq")
     private Long id;
 
     @Column(name = "user_id", nullable = false)
@@ -25,6 +26,7 @@ public class UserRoleEntity implements Serializable {
     @Column(name = "role_id", nullable = false)
     private Long roleId;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    @Builder.Default
+    @JsonProperty("created_at")
+    private LocalDateTime createdAt = LocalDateTime.now();
 }

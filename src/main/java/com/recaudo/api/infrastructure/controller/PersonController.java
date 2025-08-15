@@ -97,10 +97,9 @@ public class PersonController {
 
     @PutMapping("/delete/{id}")
     public ResponseEntity<DefaultResponseDto<String>> deletePerson(
-            @PathVariable Long id,
-            @RequestParam String userDelete) {
+            @PathVariable Long id) {
 
-        personUseCase.delete(id, userDelete);
+        personUseCase.delete(id);
 
         return ResponseEntity.ok(
                 DefaultResponseDto.<String>builder()

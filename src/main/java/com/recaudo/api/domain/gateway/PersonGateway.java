@@ -12,7 +12,7 @@ public interface PersonGateway {
     List<PersonRegisterDto> getAll();
     public PersonRegisterDto save(PersonRegisterDto person);
     public PersonRegisterDto edit(PersonRegisterDto person);
-    public void delete(Long id, String userDelete);
+    public void delete(Long id);
 
 
 }
