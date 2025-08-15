@@ -17,6 +17,7 @@ import com.recaudo.api.infrastructure.repository.UserRoleRepository;
 import lombok.AllArgsConstructor;
 import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -76,6 +77,10 @@ public class PersonRegisterAdapter implements PersonGateway {
             throw new BadRequestException("Ya existe este documento de Identificacion");
 
         PersonEntity personEntity = personMapper.dtoToEntity(person);
+
+        // Asignamos al usuario que crea el registro
+        personEntity.setUserCreate(getUsernameToken());
+
         personEntity = personRepository.save(personEntity);
         userGateway.saveUserToPerson(personEntity);
         return personMapper.entityToDto(personEntity);
@@ -86,13 +91,13 @@ public class PersonRegisterAdapter implements PersonGateway {
         PersonEntity entity = personMapper.dtoToEntity(dto);
         if (entity.getId() != null && personRepository.existsById(entity.getId())) {
             entity.setEditedAt(LocalDateTime.now());
-            entity.setUserEdit(dto.getUserEdit());
+            entity.setUserEdit(getUsernameToken()); // Obtener usuario del token
         }
         return personMapper.entityToDto(personRepository.save(entity));
     }
 
     @Override
-    public void delete(Long id, String userDelete) {
+    public void delete(Long id) {
 
         //CONSULTAMOS SI EXISTE LA PERSONA Y EL USUARIO DE ESA PERSONA
         Optional<PersonEntity> optionalPerson = personRepository.findById(id);
@@ -103,17 +108,27 @@ public class PersonRegisterAdapter implements PersonGateway {
             PersonEntity person = optionalPerson.get();
             person.setStatus(false);
             person.setDeletedAt(LocalDateTime.now());
-            person.setUserDelete(userDelete);
+            person.setUserDelete(getUsernameToken());
             personRepository.save(person);
 
                 UserEntity user = optionalUser.get();
                 user.setStatus(false);
                 user.setDeletedAt(LocalDateTime.now());
-                user.setUserDelete(userDelete);
+                user.setUserDelete(getUsernameToken());
                 userRepository.save(user);
             }else {
             throw new BadRequestException("No se pudo eliminar a esta persona");
         }
-        }
+    }
+
+    private String getUsernameToken() {
+        return ((UserDetailsImpl) SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal())
+                .getUsername();
+    }
+
+
 
 }

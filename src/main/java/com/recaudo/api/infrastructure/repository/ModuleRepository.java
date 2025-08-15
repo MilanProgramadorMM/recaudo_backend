@@ -11,4 +11,5 @@ public interface ModuleRepository extends JpaRepository<ModuleEntity, Integer> {
     List<ModuleEntity> findByType(Integer type); // 1 = TITLE, 2 = MODULE, 3 = SUB MODULE
     List<ModuleEntity> findByStatus(String status);
     List<ModuleEntity> findByStatusAndType(String status, Integer type);
+
 }

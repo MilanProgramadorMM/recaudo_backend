@@ -29,8 +29,8 @@ public class RegisterPersonUseCase {
         return personGateway.getAll();
     }
 
-    public void delete(Long id, String userDelete){
-        personGateway.delete(id,userDelete);
+    public void delete(Long id){
+        personGateway.delete(id);
     }
 
 }

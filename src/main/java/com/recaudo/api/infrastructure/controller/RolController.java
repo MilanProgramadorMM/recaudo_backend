@@ -2,9 +2,7 @@ package com.recaudo.api.infrastructure.controller;
 
 import com.recaudo.api.domain.model.dto.response.DefaultResponseDto;
 import com.recaudo.api.domain.model.dto.response.RoleDto;
-import com.recaudo.api.domain.model.dto.rest_api.UserDto;
 import com.recaudo.api.domain.model.dto.rest_api.UserRoleUpdateDto;
-import com.recaudo.api.domain.usecase.RegisterUseCase;
 import com.recaudo.api.domain.usecase.RolUseCase;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
@@ -51,8 +49,10 @@ public class RolController {
         );
     }
 
-    @PutMapping("/assign-role")
-    public ResponseEntity<DefaultResponseDto<String>> assignRole(@RequestBody UserRoleUpdateDto dto) {
+    @PutMapping("/{userId}/assign-role")
+    public ResponseEntity<DefaultResponseDto<String>> assignRole(@PathVariable Long userId,
+                                                                 @RequestBody UserRoleUpdateDto dto) {
+        dto.setUserId(userId);
         rolUseCase.assignRole(dto);
 
         return ResponseEntity.ok(

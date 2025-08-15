@@ -1,25 +1,29 @@
 package com.recaudo.api.infrastructure.adapter;
 
 import com.recaudo.api.domain.gateway.UserGateway;
-import com.recaudo.api.domain.mapper.PersonMapper;
 import com.recaudo.api.domain.mapper.UserMapper;
 import com.recaudo.api.domain.model.dto.response.RoleDto;
-import com.recaudo.api.domain.model.dto.response.RolePermissionDto;
-import com.recaudo.api.domain.model.dto.response.UserPermissionDto;
-import com.recaudo.api.domain.model.dto.rest_api.PersonRegisterDto;
-import com.recaudo.api.domain.model.dto.rest_api.UserDto;
+import com.recaudo.api.domain.model.dto.response.UserDto;
+import com.recaudo.api.domain.model.dto.rest_api.UpdateUserDto;
+import com.recaudo.api.domain.model.dto.rest_api.UpdateUserPasswordDto;
+import com.recaudo.api.domain.model.dto.rest_api.UserCreateDto;
 import com.recaudo.api.domain.model.entity.*;
 import com.recaudo.api.exception.BadRequestException;
 import com.recaudo.api.infrastructure.repository.*;
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -49,7 +53,6 @@ public class UserAdapter implements UserGateway {
     private PasswordEncoder passwordEncoder;
 
 
-
     @Override
     public UserDto getById(Long id) {
         Optional<UserEntity> optional = userRepository.findById(id);
@@ -77,17 +80,26 @@ public class UserAdapter implements UserGateway {
         }
 
         // Obtener rol asociado al usuario
-        UserRoleEntity userRole = userRoleRepository.findByUserId(user.getId());
-        if (userRole != null) {
-            roleRepository.findById(userRole.getRoleId()).ifPresent(role -> {
-                RoleDto roleDto = RoleDto.builder()
-                        .id(role.getId())
-                        .name(role.getName())
-                        .build();
-                dto.setRol(roleDto);
-            });
-        }
+        List<UserRoleEntity> userRole = userRoleRepository.findByUserId(user.getId());
+        // OBTENEMOS TODOS LOS ROLES ASOCIADOS AL USUARIO
+        List<UserRoleEntity> userRoles = userRoleRepository.findByUserId(user.getId());
+        if (userRoles != null && !userRoles.isEmpty()) {
+            List<RoleDto> roles = userRoles.stream()
+                    .map(ur -> roleRepository.findById(ur.getRoleId())
+                            .map(role -> RoleDto.builder()
+                                    .id(role.getId())
+                                    .name(role.getName())
+                                    .description(role.getDescription())
+                                    .build()
+                            ).orElse(null)
+                    )
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
 
+            dto.setRol(roles);
+        } else {
+            dto.setRol(Collections.emptyList());
+        }
         return dto;
     }
 
@@ -113,22 +125,30 @@ public class UserAdapter implements UserGateway {
             else
                 dto.setPersonFullName("Usuario sin persona asociada");
 
+            // OBTENEMOS TODOS LOS ROLES ASOCIADOS AL USUARIO
+            List<UserRoleEntity> userRoles = userRoleRepository.findByUserId(user.getId());
+            if (userRoles != null && !userRoles.isEmpty()) {
+                List<RoleDto> roles = userRoles.stream()
+                        .map(ur -> roleRepository.findById(ur.getRoleId())
+                                .map(role -> RoleDto.builder()
+                                        .id(role.getId())
+                                        .name(role.getName())
+                                        .description(role.getDescription())
+                                        .build()
+                                ).orElse(null)
+                        )
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList());
 
-            // OBTENEMOS EL ROL Y ID ASOCIADO A LA PERSONA
-            UserRoleEntity userRole = userRoleRepository.findByUserId(user.getId());
-            if (userRole != null) {
-                roleRepository.findById(userRole.getRoleId()).ifPresent(role -> {
-                    RoleDto roleDto = RoleDto.builder()
-                            .id(role.getId())
-                            .name(role.getName())
-                            .build();
-                    dto.setRol(roleDto);
-                });
+                dto.setRol(roles);
+            } else {
+                dto.setRol(Collections.emptyList());
             }
 
             return dto;
         }).toList();
     }
+
 
     @Override
     public UserEntity saveUserToPerson(PersonEntity personEntity) {
@@ -139,15 +159,15 @@ public class UserAdapter implements UserGateway {
                 .username(personEntity.getDocument())
                 .password(hashedPassword)
                 .personId(personEntity.getId())
-                .userCreate(personEntity.getUserCreate())
+                .userCreate(getUsernameToken())
                 .createdAt(LocalDateTime.now())
                 .build();
         UserEntity userCreated = userRepository.save(user);
 
         // Asignamos rol al usuario
-        RoleEntity rol = roleRepository.findByName("ASESOR");
+        RoleEntity rol = roleRepository.findByName("Asesor");
         if (rol == null)
-            throw new BadRequestException("Rol ASESOR no encontrado");
+            throw new BadRequestException("Rol asesor no encontrado");
 
         UserRoleEntity userRoleEntity = UserRoleEntity.builder()
                 .roleId(rol.getId())
@@ -156,22 +176,107 @@ public class UserAdapter implements UserGateway {
                 .build();
         userRoleRepository.saveAndFlush(userRoleEntity);
 
-        // Obtenemos los permisos del rol
-        List<RolePermissionDto> permisosRol = rolePermissionRepository.findPermissionsByRoleId(rol.getId());
-
-        // Mapeamos y guardar permisos para el usuario
-        List<UserPermissionEntity> userPermissions = permisosRol.stream()
-                .map(permiso -> UserPermissionEntity.builder()
-                        .userId(userCreated.getId())
-                        .actionId(permiso.getActionId())
-                        .moduleId(permiso.getModuleId())
-                        .allow(permiso.getPermiso())
-                        .createdAt(LocalDateTime.now())
-                        .build())
-                .toList();
-
-        userPermissionRepository.saveAllAndFlush(userPermissions);
-
         return userCreated;
     }
+
+    @Override
+    @Transactional
+    public UserDto saveUser(UserCreateDto dto) {
+
+        Optional<UserEntity> existUsername = userRepository.findByUsername(dto.getUsername());
+        if (existUsername.isPresent())
+            throw new BadRequestException("Ya existe este username");
+
+        String hashedPassword = passwordEncoder.encode(dto.getPassword());
+
+        // Guardar el usuario sin roles primero (para tener el ID)
+        UserEntity user = new UserEntity();
+        user.setUsername(dto.getUsername());
+        user.setPassword(hashedPassword);
+        user.setUserCreate(getUsernameToken());
+        user.setCreatedAt(LocalDateTime.now());
+        UserEntity savedUser = userRepository.saveAndFlush(user);
+
+        assignRolesToUser(savedUser.getId(), dto.getRoles());
+
+        return userMapper.entityToDto(savedUser);
+    }
+
+    void assignRolesToUser(Long userId, List<Long> roles) {
+        roles.forEach(rol -> {
+                if (roleRepository.existsById(rol)) {
+                    userRoleRepository.saveAndFlush(
+                        UserRoleEntity.builder()
+                            .userId(userId)
+                            .roleId(rol)
+                            .createdAt(LocalDateTime.now())
+                            .build()
+                    );
+                }
+            }
+        );
+    }
+
+    private String getUsernameToken() {
+        return ((UserDetailsImpl) SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal())
+                .getUsername();
+    }
+
+    private Long getUserIdToken() {
+        return ((UserDetailsImpl) SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getPrincipal())
+                .getId();
+    }
+
+
+    @Override
+    @Transactional
+    public void updateUsername(UpdateUserDto userDto) {
+        Optional<UserEntity> optionalUser = userRepository.findById(userDto.getUserId());
+        if (optionalUser.isEmpty())
+            throw new BadRequestException("Usuario no encontrado con ID: " + userDto.getUserId());
+
+        // Validar si el nuevo username ya existe
+        Optional<UserEntity> exist = userRepository.findByUsername(userDto.getValue());
+        if (exist.isPresent())
+            throw new BadRequestException("El username ya está en uso");
+
+        UserEntity user = optionalUser.get();
+        user.setUsername(userDto.getValue());
+        user.setEditedAt(LocalDateTime.now());
+
+        userRepository.saveAndFlush(user);
+    }
+
+    @Override
+    @Transactional
+    public void updatePassword(UpdateUserPasswordDto userDto) {
+        Optional<UserEntity> optionalUser = userRepository.findById(getUserIdToken());
+
+        if (optionalUser.isEmpty())
+            throw new BadRequestException("Usuario no encontrado con ID: " + getUserIdToken());
+
+        String password = userDto.getNewPassword();
+
+        if (password == null || !password.matches("^(?=.*[A-Za-z])(?=.*\\d).+$")) {
+            throw new BadRequestException("La contraseña debe contener letras y números");
+        }
+
+        UserEntity user = optionalUser.get();
+        String hashedPassword = passwordEncoder.encode(password);
+
+        user.setPassword(hashedPassword);
+        user.setPasswordChange(LocalDateTime.now());
+        user.setEditedAt(LocalDateTime.now());
+
+        userRepository.saveAndFlush(user);
+    }
+
+
+
 }

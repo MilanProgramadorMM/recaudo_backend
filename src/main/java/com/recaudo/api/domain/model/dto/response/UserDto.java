@@ -1,10 +1,10 @@
-package com.recaudo.api.domain.model.dto.rest_api;
+package com.recaudo.api.domain.model.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.recaudo.api.domain.model.dto.response.RoleDto;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -23,7 +23,7 @@ public class UserDto {
     private String personFullName;
 
     @JsonProperty("rol")
-    private RoleDto rol;
+    private List<RoleDto> rol;
 
     @JsonProperty("user_create")
     private String userCreate;

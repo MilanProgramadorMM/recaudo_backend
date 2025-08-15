@@ -7,10 +7,10 @@ import lombok.*;
 @Data
 @Builder
 public class UserPermissionDto {
-    private Long id;
-    private Long moduleId;
+    private Integer id;
+    private Integer moduleId;
     private String modulo;
-    private Long actionId;
+    private Integer actionId;
     private String accion;
     private Boolean permiso;
 }
