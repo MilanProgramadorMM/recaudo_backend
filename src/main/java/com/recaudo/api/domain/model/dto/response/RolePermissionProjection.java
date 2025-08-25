@@ -5,5 +5,5 @@ public interface RolePermissionProjection {
     String getModuleName();
     Long getActionId();
     String getActionName();
-    Boolean getAllow();
+    Integer  getAllow();
 }

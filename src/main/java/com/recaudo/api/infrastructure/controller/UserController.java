@@ -102,10 +102,11 @@ public class UserController {
                 DefaultResponseDto.<UserDto>builder()
                         .message("Contraseña actualizada correctamente")
                         .status(HttpStatus.OK)
-                        .details("Contraseña actualizada")
+                        .details("La contraseña fue cambiada")
                         .build()
         );
     }
+
 
 
 

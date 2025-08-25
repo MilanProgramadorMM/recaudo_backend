@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "module_action", schema = "public")
+@Table(name = "module_action")
 public class ModuleActionEntity implements Serializable {
 
     @Id

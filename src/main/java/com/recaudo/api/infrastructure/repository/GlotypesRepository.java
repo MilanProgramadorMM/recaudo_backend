@@ -11,14 +11,15 @@ import java.util.List;
 @Repository
 public interface GlotypesRepository extends JpaRepository<GlotypesEntity, Long> {
 
-    @Query(value = "SELECT type, key, name, id FROM glotypes g WHERE g.key = :key", nativeQuery = true)
+    @Query(value = "SELECT `type`, `key`, `name`, `id` FROM glotypes g WHERE g.`key` = :key", nativeQuery = true)
     List<GlotypesProjection> findByKey(String key);
 
     @Query(value = """
-        SELECT type, key, name, id
-        FROM glotypes g
-        WHERE g.type = :type
-    """, nativeQuery = true)
+    SELECT `type`, `key`, `name`, `id`
+    FROM glotypes g
+    WHERE g.`type` = :type
+""", nativeQuery = true)
     List<GlotypesProjection> findByType(Long type);
+
 
 }

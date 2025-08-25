@@ -14,12 +14,11 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "glotypes", schema = "public")
+@Table(name = "glotypes")
 public class GlotypesEntity implements Serializable {
 
     @Id
-    @SequenceGenerator(name = "glotypes_id_seq", sequenceName = "glotypes_id_seq", allocationSize = 1)
-    @GeneratedValue(strategy = GenerationType.SEQUENCE,generator = "glotypes_id_seq")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(name = "type")

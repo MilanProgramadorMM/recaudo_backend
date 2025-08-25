@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "role", schema = "public")
+@Table(name = "role")
 public class RoleEntity implements Serializable {
 
     @Id
@@ -23,6 +23,9 @@ public class RoleEntity implements Serializable {
 
     @Column(name = "description")
     private String description;
+
+    @Column(name = "hierarchy")
+    private Integer hierarchy;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

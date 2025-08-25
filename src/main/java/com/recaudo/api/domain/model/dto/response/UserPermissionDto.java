@@ -1,16 +1,21 @@
 package com.recaudo.api.domain.model.dto.response;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
 @Builder
 public class UserPermissionDto {
-    private Integer id;
-    private Integer moduleId;
+    private Long id;
+    private Long moduleId;
     private String modulo;
-    private Integer actionId;
+    private Long actionId;
     private String accion;
-    private Boolean permiso;
-}
+    private Integer permiso;
+    }
+
+

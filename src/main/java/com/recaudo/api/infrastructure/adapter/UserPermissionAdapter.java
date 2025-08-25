@@ -23,8 +23,19 @@ public class UserPermissionAdapter {
     private ModuleActionRepository moduleActionRepository;
 
     public List<UserPermissionDto> getPermissionsByUser(Long userId) {
-        return moduleActionRepository.findPermissionsByUserId(userId);
+        return moduleActionRepository.findPermissionsByUserId(userId)
+                .stream()
+                .map(p -> UserPermissionDto.builder()
+                        .id(p.getId())                // Long
+                        .moduleId(p.getModuleId())    // Long
+                        .modulo(p.getModulo())
+                        .actionId(p.getActionId())    // Long
+                        .accion(p.getAccion())
+                        .permiso(p.getPermiso())      // Boolean
+                        .build())
+                .toList();
     }
+
 
 
     public void upsertUserPermission(Integer userId, Integer moduleId, Integer actionId, Boolean allow) {

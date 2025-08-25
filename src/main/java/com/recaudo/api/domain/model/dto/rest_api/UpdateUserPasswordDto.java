@@ -10,6 +10,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UpdateUserPasswordDto {
 
+    private String currentPassword; // contraseña actual
+
     @Size(min = 8, message = "valor debe contener mas de 8 caracteres")
     private String newPassword;
 }

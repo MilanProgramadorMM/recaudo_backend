@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "municipio", schema = "public")
+@Table(name = "municipio")
 public class MunicipioEntity {
 
     @Id 

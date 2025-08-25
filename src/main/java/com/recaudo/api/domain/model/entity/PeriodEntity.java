@@ -1,10 +1,7 @@
 package com.recaudo.api.domain.model.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -14,18 +11,28 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "glotypes_description")
-public class GlotypesDescriptionEntity implements Serializable {
+@Table(name = "period")
+public class PeriodEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "code")
-    private String code;
+    @Column(name = "cod", length = 3, nullable = false, unique = true)
+    private String cod;
+
+    @Column(name = "name", nullable = false)
+    private String name;
 
     @Column(name = "description")
     private String description;
+
+    @Column(name = "conversion_factor", nullable = false)
+    private Integer factorConversion;
+
+    @Builder.Default
+    @Column(name = "status")
+    private boolean status = true;
 
     @Column(name = "user_create")
     private String userCreate;

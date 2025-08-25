@@ -2,10 +2,13 @@ package com.recaudo.api.infrastructure.adapter;
 
 import com.recaudo.api.domain.gateway.RolGateway;
 import com.recaudo.api.domain.model.dto.response.RoleDto;
+import com.recaudo.api.domain.model.dto.rest_api.RoleCreateDto;
 import com.recaudo.api.domain.model.dto.rest_api.UserRoleUpdateDto;
 import com.recaudo.api.domain.model.entity.RoleEntity;
+import com.recaudo.api.domain.model.entity.RolePermissionEntity;
 import com.recaudo.api.domain.model.entity.UserRoleEntity;
 import com.recaudo.api.exception.BadRequestException;
+import com.recaudo.api.infrastructure.repository.RolePermissionRepository;
 import com.recaudo.api.infrastructure.repository.RoleRepository;
 import com.recaudo.api.infrastructure.repository.UserRepository;
 import com.recaudo.api.infrastructure.repository.UserRoleRepository;
@@ -24,6 +27,7 @@ public class RoleAdapter implements RolGateway {
     private final RoleRepository roleRepository;
     UserRoleRepository userRoleRepository;
     UserRepository userRepository;
+    RolePermissionRepository rolePermissionRepository;
 
     @Override
     public RoleDto getById(Long id) {
@@ -42,10 +46,71 @@ public class RoleAdapter implements RolGateway {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Asigna (sincroniza) los roles del usuario con la lista recibida.
-     * Añade roles nuevos y elimina los ya existentes que no estén en roleIds.
-     */
+    @Override
+    public RoleDto create(RoleCreateDto dto) {
+        // Validar nombre único
+        if (roleRepository.findByName(dto.getName()) != null) {
+            throw new BadRequestException("Ya existe un rol con el nombre: " + dto.getName());
+        }
+
+        // Crear rol
+        RoleEntity entity = RoleEntity.builder()
+                .name(dto.getName())
+                .description(dto.getDescription())
+                .hierarchy(2)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        roleRepository.save(entity);
+
+        // Buscar rol ADMIN
+        RoleEntity adminRole = roleRepository.findByName("Administrador");
+        if (adminRole != null) {
+            // Buscar permisos de ADMIN
+            List<RolePermissionEntity> adminPermissions =
+                    rolePermissionRepository.findAll().stream()
+                            .filter(rp -> rp.getRoleId().equals(adminRole.getId()))
+                            .toList();
+
+            // Clonar los permisos con allow = false para el nuevo rol
+            List<RolePermissionEntity> newPermissions = adminPermissions.stream()
+                    .map(rp -> RolePermissionEntity.builder()
+                            .roleId(entity.getId())
+                            .moduleId(rp.getModuleId())
+                            .actionId(rp.getActionId())
+                            .allow(false)
+                            .createdAt(LocalDateTime.now())
+                            .build()
+                    ).toList();
+
+            rolePermissionRepository.saveAll(newPermissions);
+        }
+
+        return mapToDto(entity);
+    }
+
+    @Override
+    public RoleDto update(Long id, RoleCreateDto dto) {
+        // Buscar rol existente
+        RoleEntity entity = roleRepository.findById(id)
+                .orElseThrow(() -> new BadRequestException("Rol no encontrado con ID: " + id));
+
+        // Validar nombre único (excepto si es el mismo rol)
+        RoleEntity existing = roleRepository.findByName(dto.getName());
+        if (existing != null && !existing.getId().equals(id)) {
+            throw new BadRequestException("Ya existe un rol con el nombre: " + dto.getName());
+        }
+
+        // Actualizar valores
+        entity.setName(dto.getName());
+        entity.setDescription(dto.getDescription());
+
+        roleRepository.save(entity);
+
+        return mapToDto(entity);
+    }
+
+
 
     @Transactional
     @Override

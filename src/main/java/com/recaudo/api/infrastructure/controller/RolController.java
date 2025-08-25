@@ -2,6 +2,7 @@ package com.recaudo.api.infrastructure.controller;
 
 import com.recaudo.api.domain.model.dto.response.DefaultResponseDto;
 import com.recaudo.api.domain.model.dto.response.RoleDto;
+import com.recaudo.api.domain.model.dto.rest_api.RoleCreateDto;
 import com.recaudo.api.domain.model.dto.rest_api.UserRoleUpdateDto;
 import com.recaudo.api.domain.usecase.RolUseCase;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -48,6 +49,38 @@ public class RolController {
                         .build()
         );
     }
+
+    @PostMapping("/create")
+    public ResponseEntity<DefaultResponseDto<RoleDto>> create(@RequestBody RoleCreateDto dto) {
+        RoleDto role = rolUseCase.create(dto);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+                DefaultResponseDto.<RoleDto>builder()
+                        .message("Rol creado exitosamente")
+                        .status(HttpStatus.CREATED)
+                        .details("El rol fue creado correctamente")
+                        .data(role)
+                        .build()
+        );
+    }
+
+    @PutMapping("/update/{id}")
+    public ResponseEntity<DefaultResponseDto<RoleDto>> update(
+            @PathVariable Long id,
+            @RequestBody RoleCreateDto dto) {
+
+        RoleDto role = rolUseCase.update(id, dto);
+
+        return ResponseEntity.ok(
+                DefaultResponseDto.<RoleDto>builder()
+                        .message("Rol actualizado exitosamente")
+                        .status(HttpStatus.OK)
+                        .details("El rol fue actualizado correctamente")
+                        .data(role)
+                        .build()
+        );
+    }
+
 
     @PutMapping("/{userId}/assign-role")
     public ResponseEntity<DefaultResponseDto<String>> assignRole(@PathVariable Long userId,
