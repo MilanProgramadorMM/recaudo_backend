@@ -39,7 +39,7 @@ public interface RolePermissionRepository extends JpaRepository<RolePermissionEn
             m.name         AS module_name,
             a.id           AS action_id,
             a.name         AS action_name,
-            COALESCE(rp.allow, FALSE) AS allow
+            COALESCE(rp.allow, 0) AS allow
         FROM module m
         INNER JOIN module_action ma ON m.id = ma.module_id
         JOIN action a ON a.id = ma.action_id

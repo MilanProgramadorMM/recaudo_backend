@@ -2,28 +2,27 @@ server:
   port: 8081
   servlet:
     context-path: /api
+
 spring:
   datasource:
-    driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/recaudo?currentSchema=public
-    username: postgres
-    password: 1234
-    schema: public
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/recaudo?serverTimezone=UTC
+    #para docker
+    # url: jdbc:postgresql://host.docker.internal:3306/recaudo?serverTimezone=UTC
+    username: root
+    password:
   servlet:
     multipart:
       max-file-size: 10MB
-      enabled: 'true'
+      enabled: true
       max-request-size: 15MB
       file-size-threshold: 2KB
   jpa:
-    show-sql: 'true'
+    show-sql: true
     open-in-view: false
+    database-platform: org.hibernate.dialect.MySQL8Dialect
     hibernate:
-      dialect: org.hibernate.dialect.PostgreSQLDialect
-    properties:
-      hibernate:
-        default_schema: public
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+      ddl-auto: none
   mvc:
     pathmatch:
       matching-strategy: ant-path-matcher
@@ -53,7 +52,7 @@ logging:
 message:
   exception:
     general: Ha ocurrido un error
-    internal-server-error: Estamos presentamos problemas, intente de nuevo mas tarde
+    internal-server-error: Estamos presentando problemas, intente de nuevo mas tarde
     method-not-allow: Método de petición no permitido
     not-found: Información no encontrada
     bad-request: Petición no valida
@@ -66,9 +65,9 @@ message:
     expired-code: Código de verificación expirado
 
 authorization-request:
-    headers:
-      application-id-internal: kata-02
-      application-id-external: kata-01
-    credentials:
-      api-key-internal: 1234
-      api-key-external: 1234
+  headers:
+    application-id-internal: kata-02
+    application-id-external: kata-01
+  credentials:
+    api-key-internal: 1234
+    api-key-external: 1234

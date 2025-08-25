@@ -11,12 +11,11 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "user_permission", schema = "public")
+@Table(name = "user_permission")
 public class UserPermissionEntity implements Serializable {
 
     @Id
-    @SequenceGenerator(name = "user_permission_id_seq", sequenceName = "user_permission_id_seq", allocationSize = 1)
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_permission_id_seq")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(name = "user_id")

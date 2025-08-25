@@ -42,8 +42,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     private static final String TXT_REASON = " REASON: ";
     private static final String TXT_DETAILS = ". More info: ";
 
-    private ResponseEntity<ResponseDto<ErrorInfo>> response(ErrorInfo error, HttpStatus httpStatus) {
-        return new ResponseEntity<>(ResponseDto.create(error), httpStatus);
+    private ResponseEntity<ErrorInfo> response(ErrorInfo error, HttpStatus httpStatus) {
+        return new ResponseEntity<>(error, httpStatus);
     }
 
     private Map<String, String> getDataFromException(Exception exception) {
@@ -83,7 +83,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ResponseDto<ErrorInfo>> handleResourceNotFoundException(ResourceNotFoundException e,
+    public ResponseEntity<ErrorInfo> handleResourceNotFoundException(ResourceNotFoundException e,
                                                                                   HttpServletRequest request) {
         String messageException = e.getMessage();
         log.warn(TXT_ERROR.concat(request.getMethod()).concat(" } ").concat(request.getRequestURI()).concat(TXT_REASON)
@@ -94,7 +94,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(UsernameNotFoundException.class)
-    public ResponseEntity<ResponseDto<ErrorInfo>> handlerUsernameNotFounExeption(
+    public ResponseEntity<ErrorInfo> handlerUsernameNotFounExeption(
             UsernameNotFoundException e,HttpServletRequest request) {
         String messageException = e.getMessage();
         log.warn(TXT_ERROR.concat(request.getMethod()).concat(" } ").concat(request.getRequestURI()).concat(TXT_REASON)
@@ -105,7 +105,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<ResponseDto<ErrorInfo>> handleForbiddenException(ForbiddenException e,
+    public ResponseEntity<ErrorInfo> handleForbiddenException(ForbiddenException e,
                                                                            HttpServletRequest request) {
         String messageException = e.getMessage();
         log.warn(TXT_ERROR.concat(request.getMethod()).concat(" } ").concat(request.getRequestURI()).concat(TXT_REASON)
@@ -115,7 +115,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<ResponseDto<ErrorInfo>> handleBadRequestException(BadRequestException e,
+    public ResponseEntity<ErrorInfo> handleBadRequestException(BadRequestException e,
                                                                             HttpServletRequest request) {
         String messageException = e.getMessage();
         log.warn(TXT_ERROR.concat(request.getMethod()).concat(" } ").concat(request.getRequestURI()).concat(TXT_REASON)
@@ -126,7 +126,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(InternalServerErrorException.class)
-    public ResponseEntity<ResponseDto<ErrorInfo>> handleInternalServerErrorException(InternalServerErrorException e,
+    public ResponseEntity<ErrorInfo> handleInternalServerErrorException(InternalServerErrorException e,
                                                                             HttpServletRequest request) {
         String messageException = e.getMessage();
         log.warn(TXT_ERROR.concat(request.getMethod()).concat(" } ").concat(request.getRequestURI()).concat(TXT_REASON)
@@ -137,7 +137,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(InconsistencyException.class)
-    public ResponseEntity<ResponseDto<ErrorInfo>> handleInconsistencyException(InconsistencyException e,
+    public ResponseEntity<ErrorInfo> handleInconsistencyException(InconsistencyException e,
                                                                                HttpServletRequest request) {
         String messageException = e.getMessage();
         log.warn(TXT_ERROR.concat(request.getMethod()).concat(" } ").concat(request.getRequestURI()).concat(TXT_REASON)
@@ -147,7 +147,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler({ ConstraintViolationException.class })
-    public ResponseEntity<ResponseDto<ErrorInfo>> handleConstraintViolation(ConstraintViolationException e,
+    public ResponseEntity<ErrorInfo> handleConstraintViolation(ConstraintViolationException e,
                                                                             WebRequest request) {
         String messageException = processException(e);
         StringBuilder errors = new StringBuilder();
@@ -164,7 +164,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler({ DataIntegrityViolationException.class })
-    public ResponseEntity<ResponseDto<ErrorInfo>> handleDataIntegrityViolationException(
+    public ResponseEntity<ErrorInfo> handleDataIntegrityViolationException(
             DataIntegrityViolationException e, WebRequest request) {
         String messageException = processException(e);
         log.warn(TXT_ERROR.concat(request.getDescription(true)).concat(" } ").concat(TXT_REASON)
@@ -175,7 +175,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler({ MethodArgumentTypeMismatchException.class })
-    public ResponseEntity<ResponseDto<ErrorInfo>> handleMethodArgumentTypeMismatchException(
+    public ResponseEntity<ErrorInfo> handleMethodArgumentTypeMismatchException(
             MethodArgumentTypeMismatchException e, HttpServletRequest request) {
         String error = "El parámetro ".concat(e.getName()).concat(" debe ser de tipo ")
                 .concat((e.getRequiredType() != null ? e.getRequiredType().getName() : ""));
@@ -187,7 +187,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public final ResponseEntity<ResponseDto<ErrorInfo>> handleAllBadCredentialsException(Exception e, HttpServletRequest request) {
+    public final ResponseEntity<ErrorInfo> handleAllBadCredentialsException(Exception e, HttpServletRequest request) {
         String messageException = processException(e);
         log.error(TXT_ERROR.concat(request.getMethod()).concat(" } ").concat(request.getRequestURI()).concat(TXT_REASON)
                 .concat(messageException));
@@ -198,7 +198,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public final ResponseEntity<ResponseDto<ErrorInfo>> handleAllExceptions(Exception e, HttpServletRequest request) {
+    public final ResponseEntity<ErrorInfo> handleAllExceptions(Exception e, HttpServletRequest request) {
         String messageException = processException(e);
         log.error(TXT_ERROR.concat(request.getMethod()).concat(" } ").concat(request.getRequestURI()).concat(TXT_REASON)
                 .concat(messageException));

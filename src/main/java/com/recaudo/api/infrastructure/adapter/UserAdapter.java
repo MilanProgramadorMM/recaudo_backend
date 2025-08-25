@@ -261,15 +261,20 @@ public class UserAdapter implements UserGateway {
         if (optionalUser.isEmpty())
             throw new BadRequestException("Usuario no encontrado con ID: " + getUserIdToken());
 
-        String password = userDto.getNewPassword();
+        UserEntity user = optionalUser.get();
 
+        if (!passwordEncoder.matches(userDto.getCurrentPassword(), user.getPassword())) {
+            throw new BadRequestException("La contraseña actual es incorrecta");
+        }
+
+        // Validar nueva contraseña
+        String password = userDto.getNewPassword();
         if (password == null || !password.matches("^(?=.*[A-Za-z])(?=.*\\d).+$")) {
             throw new BadRequestException("La contraseña debe contener letras y números");
         }
 
-        UserEntity user = optionalUser.get();
+        // Guardar nueva contraseña
         String hashedPassword = passwordEncoder.encode(password);
-
         user.setPassword(hashedPassword);
         user.setPasswordChange(LocalDateTime.now());
         user.setEditedAt(LocalDateTime.now());

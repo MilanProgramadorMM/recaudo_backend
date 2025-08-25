@@ -32,7 +32,7 @@ public class RolePermissionAdapter {
                         p.getModuleName(),
                         p.getActionId(),
                         p.getActionName(),
-                        p.getAllow()
+                        p.getAllow() != null && p.getAllow() == 1
                 )).toList();
     }
 

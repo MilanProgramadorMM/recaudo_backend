@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "role_permission", schema = "public")
+@Table(name = "role_permission")
 public class RolePermissionEntity implements Serializable {
 
     @Id

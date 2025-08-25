@@ -11,7 +11,6 @@ import lombok.NoArgsConstructor;
 @Builder
 public class RolePermissionDto{
     private Long id;
-
     private Long moduleId;
     private String modulo;
     private Long actionId;

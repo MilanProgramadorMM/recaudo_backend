@@ -14,18 +14,24 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "glotypes_description")
-public class GlotypesDescriptionEntity implements Serializable {
+@Table(name = "amortization")
+public class AmortizationdEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "code")
-    private String code;
+    @Column(name = "cod", length = 3, nullable = false, unique = true)
+    private String cod;
 
-    @Column(name = "description")
-    private String description;
+    @Column(name = "name", nullable = false)
+    private String name;
+
+    @Column(name = "proce_almac_relacionado")
+    private String proceAlmacRelacionado;
+
+    @Column(name = "status")
+    private boolean status = true;
 
     @Column(name = "user_create")
     private String userCreate;
