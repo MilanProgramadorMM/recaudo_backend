@@ -4,6 +4,7 @@ import com.recaudo.api.domain.gateway.PeriodGateway;
 import com.recaudo.api.domain.model.dto.response.PeriodResponseDto;
 import com.recaudo.api.infrastructure.repository.PeriodRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,8 +17,7 @@ public class PeriodAdapter implements PeriodGateway {
 
      @Override
      public List<PeriodResponseDto> getAll() {
-        return periodRepository.findAll()
-                .stream()
+        return periodRepository.findAllByStatusTrue(Sort.by(Sort.Direction.DESC, "id"))                .stream()
                 .map(period -> PeriodResponseDto.builder()
                         .cod(period.getCod())
                         .name(period.getName())

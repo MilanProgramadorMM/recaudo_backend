@@ -7,4 +7,7 @@ import java.util.List;
 
 public interface MunicipioRepository extends JpaRepository<MunicipioEntity, Long> {
     List<MunicipioEntity> findByIdDepartamentoAndStatusTrueOrderByValueAsc(Long idDepartamento);
+    boolean existsByValueIgnoreCaseAndIdDepartamento(String value, Long idDepartamento);
+    boolean existsByValueIgnoreCaseAndIdDepartamentoAndIdNot(String value, Long idDepartamento, Long id);
+
 }

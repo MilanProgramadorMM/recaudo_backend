@@ -59,4 +59,7 @@ public class PersonRegisterDto {
     @JsonProperty("created_at")
     private String createdAt = LocalDateTime.now().toString();
 
+    @JsonProperty("type_person")
+    private String typePerson;
+
 }

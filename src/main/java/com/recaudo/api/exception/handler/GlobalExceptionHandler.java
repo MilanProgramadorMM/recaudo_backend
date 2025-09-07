@@ -3,11 +3,7 @@ package com.recaudo.api.exception.handler;
 import com.recaudo.api.domain.model.dto.ResponseDto;
 import com.recaudo.api.domain.model.dto.exception.ErrorInfo;
 import com.recaudo.api.domain.model.dto.exception.Message;
-import com.recaudo.api.exception.BadRequestException;
-import com.recaudo.api.exception.ForbiddenException;
-import com.recaudo.api.exception.InconsistencyException;
-import com.recaudo.api.exception.InternalServerErrorException;
-import com.recaudo.api.exception.ResourceNotFoundException;
+import com.recaudo.api.exception.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolation;
@@ -81,6 +77,18 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         }
         return messageException;
     }
+
+    @ExceptionHandler(InactivePersonException.class)
+    public ResponseEntity<?> handleInactivePerson(InactivePersonException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                Map.of(
+                        "message", ex.getMessage(),
+                        "personId", ex.getPersonId(),
+                        "status", "INACTIVE"
+                )
+        );
+    }
+
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorInfo> handleResourceNotFoundException(ResourceNotFoundException e,

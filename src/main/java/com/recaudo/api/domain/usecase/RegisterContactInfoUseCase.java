@@ -27,6 +27,10 @@ public class RegisterContactInfoUseCase {
     public ContactInfoRegisterDto update(Long id,ContactInfoRegisterDto data) {
         return contactInfoGateway.update(id,data);
     }
+
+    public void delete(Long id) {
+        contactInfoGateway.delete(id);
+    }
     public List<ContactInfoListDto> getContactInfoByPerson(Long personId) {
         return contactInfoGateway.getByPerson(personId);
     }

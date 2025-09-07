@@ -14,6 +14,7 @@ import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -106,7 +107,7 @@ public class UserAdapter implements UserGateway {
 
     @Override
     public List<UserDto> getAll() {
-        List<UserEntity> entities = userRepository.findByStatusTrue();
+        List<UserEntity> entities = userRepository.findByStatusTrue(Sort.by(Sort.Direction.DESC, "id"));
 
         return entities.stream().map(user -> {
             UserDto dto = new UserDto();
@@ -155,8 +156,10 @@ public class UserAdapter implements UserGateway {
 
         //CREAMOS EL USUARIO ASOCIADO A LA NUEVA PERSONA
         String hashedPassword = passwordEncoder.encode(personEntity.getDocument());
+        String username = asignUsername(personEntity.getFirstName(), personEntity.getLastName());
+
         UserEntity user = UserEntity.builder()
-                .username(personEntity.getDocument())
+                .username(username)
                 .password(hashedPassword)
                 .personId(personEntity.getId())
                 .userCreate(getUsernameToken())
@@ -191,7 +194,7 @@ public class UserAdapter implements UserGateway {
 
         // Guardar el usuario sin roles primero (para tener el ID)
         UserEntity user = new UserEntity();
-        user.setUsername(dto.getUsername());
+        user.setUsername(dto.getUsername().toUpperCase());
         user.setPassword(hashedPassword);
         user.setUserCreate(getUsernameToken());
         user.setCreatedAt(LocalDateTime.now());
@@ -200,6 +203,38 @@ public class UserAdapter implements UserGateway {
         assignRolesToUser(savedUser.getId(), dto.getRoles());
 
         return userMapper.entityToDto(savedUser);
+    }
+
+    public String asignUsername(String primerNombre, String primerApellido) {
+        primerNombre = primerNombre.trim().toUpperCase();
+        primerApellido = primerApellido.trim().toUpperCase();
+
+        int letras = 1;
+        String username;
+
+        do {
+            // Tomar las primeras 'letras' del nombre + apellido
+            String prefijo = primerNombre.substring(0, Math.min(letras, primerNombre.length()));
+            username = prefijo + primerApellido;
+
+            // Si no existe en la base de datos, lo retornamos
+            if (!userRepository.findByUsername(username).isPresent()) {
+                return username;
+            }
+
+            letras++;
+        } while (letras <= primerNombre.length());
+
+        // En caso extremo, añadir un sufijo numérico
+        int contador = 1;
+        String base = primerNombre + primerApellido;
+        username = base;
+        while (userRepository.findByUsername(username).isPresent()) {
+            username = base + contador;
+            contador++;
+        }
+
+        return username;
     }
 
     void assignRolesToUser(Long userId, List<Long> roles) {
@@ -282,6 +317,54 @@ public class UserAdapter implements UserGateway {
         userRepository.saveAndFlush(user);
     }
 
+    @Transactional
+    @Override
+    public void deleteUser(Long userId) {
+        Optional<UserEntity> optionalUser = userRepository.findById(userId);
+        if (optionalUser.isEmpty())
+            throw new BadRequestException("Usuario no encontrado con ID: " + userId);
+
+        // Validar si el usuario a eliminar tiene una persona asociada
+        if(optionalUser.get().getPersonId() != null)
+            throw new BadRequestException("El usuario tiene una persona asociada, elimine primero a la persona");
+
+
+        UserEntity user = optionalUser.get();
+        user.setUserDelete(getUsernameToken());
+        user.setDeletedAt(LocalDateTime.now());
+        user.setStatus(false);
+        userRepository.saveAndFlush(user);
+    }
+
+    @Override
+    @Transactional
+    public void reactivateUserFromPerson(PersonEntity personEntity) {
+        Optional<UserEntity> optionalUser = userRepository.findByPersonId(personEntity.getId());
+
+        if (optionalUser.isEmpty()) {
+            throw new BadRequestException("No se encontró un usuario asociado a esta persona");
+        }
+
+        UserEntity user = optionalUser.get();
+
+        // Reactivar usuario
+        user.setStatus(true);
+        user.setDeletedAt(null);
+        user.setEditedAt(LocalDateTime.now());
+
+        userRepository.saveAndFlush(user);
+    }
+
+    @Override
+    public void inactivateUserByPersonId(Long personId) {
+        UserEntity user = userRepository.findByPersonId(personId).orElse(null);
+        if (user != null) {
+            user.setStatus(false);
+            user.setDeletedAt(LocalDateTime.now());
+            user.setUserDelete(getUsernameToken());
+            userRepository.save(user);
+        }
+    }
 
 
 }

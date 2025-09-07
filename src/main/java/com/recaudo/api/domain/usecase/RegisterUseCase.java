@@ -41,4 +41,8 @@ public class RegisterUseCase {
         userGateway.updatePassword(userDto);
     }
 
+    public void deleteUser(Long userId) {
+        userGateway.deleteUser(userId);
+    }
+
 }

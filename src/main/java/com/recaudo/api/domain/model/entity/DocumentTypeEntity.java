@@ -14,24 +14,18 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "amortization")
-public class AmortizationdEntity implements Serializable {
+@Table(name = "documentation_type")
+public class DocumentTypeEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "cod", length = 3, nullable = false, unique = true)
-    private String cod;
-
-    @Column(name = "name", nullable = false)
+    @Column(name = "name")
     private String name;
 
-    @Column(name = "proce_almac_relacionado")
-    private String proceAlmacRelacionado;
-
-    @Column(name = "status")
-    private boolean status = true;
+    @Column(name = "description")
+    private String description;
 
     @Column(name = "user_create")
     private String userCreate;
@@ -50,4 +44,8 @@ public class AmortizationdEntity implements Serializable {
 
     @Column(name = "edited_at")
     private LocalDateTime editedAt;
+
+    @Builder.Default
+    @Column(name = "status")
+    private boolean status = true;
 }
