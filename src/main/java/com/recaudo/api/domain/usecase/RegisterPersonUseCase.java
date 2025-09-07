@@ -28,9 +28,17 @@ public class RegisterPersonUseCase {
     public List<PersonRegisterDto> getAll() {
         return personGateway.getAll();
     }
+    public List<PersonRegisterDto> getByType(String type) {
+        return personGateway.getByType(type);
+    }
 
     public void delete(Long id){
         personGateway.delete(id);
     }
+
+    public PersonRegisterDto reactivate(Long id) {
+        return personGateway.reactivate(id);
+    }
+
 
 }

@@ -4,22 +4,20 @@ import com.recaudo.api.domain.gateway.PersonGateway;
 import com.recaudo.api.domain.gateway.UserGateway;
 import com.recaudo.api.domain.mapper.PersonMapper;
 import com.recaudo.api.domain.model.dto.rest_api.PersonRegisterDto;
-import com.recaudo.api.domain.model.entity.PersonEntity;
-import com.recaudo.api.domain.model.entity.RoleEntity;
-import com.recaudo.api.domain.model.entity.UserEntity;
-import com.recaudo.api.domain.model.entity.UserRoleEntity;
+import com.recaudo.api.domain.model.entity.*;
 import com.recaudo.api.domain.usecase.RegisterUseCase;
 import com.recaudo.api.exception.BadRequestException;
-import com.recaudo.api.infrastructure.repository.PersonRepository;
-import com.recaudo.api.infrastructure.repository.RoleRepository;
-import com.recaudo.api.infrastructure.repository.UserRepository;
-import com.recaudo.api.infrastructure.repository.UserRoleRepository;
+import com.recaudo.api.exception.InactivePersonException;
+import com.recaudo.api.infrastructure.repository.*;
+import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.webjars.NotFoundException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,6 +34,8 @@ public class PersonRegisterAdapter implements PersonGateway {
 
     UserRoleRepository userRoleRepository;
     UserGateway userGateway;
+
+    TypePersonRepository typePersonRepository;
 
 
     @Autowired(required = false)
@@ -61,63 +61,112 @@ public class PersonRegisterAdapter implements PersonGateway {
 
     @Override
     public List<PersonRegisterDto> getAll() {
-        List<PersonEntity> entities = personRepository.findByStatusTrue();
+        List<PersonEntity> entities = personRepository.findByStatusTrue(Sort.by(Sort.Direction.DESC, "id"));
         return entities.stream()
                 .map(personMapper::entityToDto)
                 .toList();
     }
 
+    @Override
+    public List<PersonRegisterDto> getByType(String type) {
+        TypePersonEntity typePerson = typePersonRepository.findByValue(type)
+                .orElseThrow(() -> new RuntimeException("Tipo de persona no encontrado: " + type));
+        Long typePersonId = typePerson.getId();
+
+        List<PersonEntity> entities = personRepository.findByTypePersonIdAndStatusTrue(typePersonId);
+
+        return entities.stream()
+                .map(personMapper::entityToDto)
+                .toList();
+    }
 
     @Override
     public PersonRegisterDto save(PersonRegisterDto person) {
+        Optional<PersonEntity> documentOpt = personRepository.findByDocument(person.getDocument());
 
-        //VALIDAMOS EXISTENCIA DE NUMERO DE DOCUMENTO EN LA BD
-        Optional<PersonEntity> document = personRepository.findByDocument(person.getDocument());
-        if(document.isPresent())
-            throw new BadRequestException("Ya existe este documento de Identificacion");
+        if (documentOpt.isPresent()) {
+            PersonEntity existing = documentOpt.get();
+
+            if (existing.isStatus()) {
+                // Ya existe y está activa
+                throw new BadRequestException("Ya existe este documento de Identificación");
+            } else {
+                // Existe pero está inactiva
+                throw new InactivePersonException(
+                        "La persona con este documento está inactiva",
+                        existing.getId()
+                );
+            }
+        }
+
 
         PersonEntity personEntity = personMapper.dtoToEntity(person);
-
-        // Asignamos al usuario que crea el registro
         personEntity.setUserCreate(getUsernameToken());
+        TypePersonEntity typeEntity = typePersonRepository.findByValue(person.getTypePerson())
+                .orElseThrow(() -> new RuntimeException("Tipo de persona no encontrado"));
+        personEntity.setTypePersonId(typeEntity.getId());
 
         personEntity = personRepository.save(personEntity);
-        userGateway.saveUserToPerson(personEntity);
+
+        // Solo si es ASESOR se crea usuario
+        if ("ASESOR".equalsIgnoreCase(person.getTypePerson())) {
+            userGateway.saveUserToPerson(personEntity);
+        }
+
         return personMapper.entityToDto(personEntity);
     }
 
     @Override
+    @Transactional
+    public PersonRegisterDto reactivate(Long id) {
+        PersonEntity person = personRepository.findById(id)
+                .orElseThrow(() -> new BadRequestException("Persona no encontrada"));
+
+        person.setStatus(true);
+        person.setDeletedAt(null);
+        person.setEditedAt(LocalDateTime.now());
+        person.setUserEdit(getUsernameToken());
+
+        // Reactivar usuario asociado
+        userGateway.reactivateUserFromPerson(person);
+
+        PersonEntity updated = personRepository.saveAndFlush(person);
+        return personMapper.entityToDto(updated);
+    }
+
+
+    @Override
     public PersonRegisterDto edit(PersonRegisterDto dto) {
         PersonEntity entity = personMapper.dtoToEntity(dto);
+
         if (entity.getId() != null && personRepository.existsById(entity.getId())) {
+            TypePersonEntity typeEntity = typePersonRepository.findByValue(dto.getTypePerson())
+                    .orElseThrow(() -> new BadRequestException("Tipo de persona no encontrado"));
             entity.setEditedAt(LocalDateTime.now());
-            entity.setUserEdit(getUsernameToken()); // Obtener usuario del token
+            entity.setUserEdit(getUsernameToken());
+            entity.setTypePersonId(typeEntity.getId());
+
         }
         return personMapper.entityToDto(personRepository.save(entity));
     }
 
     @Override
     public void delete(Long id) {
+        PersonEntity person = personRepository.findById(id)
+                .orElseThrow(() -> new BadRequestException("Persona no encontrada con id " + id));
 
-        //CONSULTAMOS SI EXISTE LA PERSONA Y EL USUARIO DE ESA PERSONA
-        Optional<PersonEntity> optionalPerson = personRepository.findById(id);
-        Optional<UserEntity> optionalUser = userRepository.findByPersonId(id);
+        TypePersonEntity typeEntity = typePersonRepository.findById(person.getTypePersonId())
+                .orElseThrow(() -> new BadRequestException("Tipo de persona no encontrado"));
 
-        //VALIDAMOS QUE EXISTAN AMBOS REGISTROS
-        if (optionalPerson.isPresent() && optionalUser.isPresent()) {
-            PersonEntity person = optionalPerson.get();
-            person.setStatus(false);
-            person.setDeletedAt(LocalDateTime.now());
-            person.setUserDelete(getUsernameToken());
-            personRepository.save(person);
+        person.setStatus(false);
+        person.setDeletedAt(LocalDateTime.now());
+        person.setUserDelete(getUsernameToken());
+        personRepository.save(person);
 
-                UserEntity user = optionalUser.get();
-                user.setStatus(false);
-                user.setDeletedAt(LocalDateTime.now());
-                user.setUserDelete(getUsernameToken());
-                userRepository.save(user);
-            }else {
-            throw new BadRequestException("No se pudo eliminar a esta persona");
+        // 4. Si es ASESOR, también inactivar usuario
+        if ("ASESOR".equalsIgnoreCase(typeEntity.getValue())) {
+            userGateway.inactivateUserByPersonId(id);
+
         }
     }
 
@@ -128,7 +177,5 @@ public class PersonRegisterAdapter implements PersonGateway {
                 .getPrincipal())
                 .getUsername();
     }
-
-
 
 }

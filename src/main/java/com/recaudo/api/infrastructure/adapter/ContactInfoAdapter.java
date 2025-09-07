@@ -47,7 +47,7 @@ public class ContactInfoAdapter implements ContactInfoGateway {
 
     @Override
     public List<ContactInfoListDto> getByPerson(Long personId) {
-        List<ContactInfoEntity> entities = contactInfoRepository.findByPerson(personId);
+        List<ContactInfoEntity> entities = contactInfoRepository.findByPersonOrderByIdDesc(personId);
 
         return entities.stream().map(e -> {
             GlotypesEntity tipo = glotypesRepository.findById(e.getType())
@@ -108,6 +108,11 @@ public class ContactInfoAdapter implements ContactInfoGateway {
     }
 
     @Override
+    public void delete(Long id) {
+        contactInfoRepository.deleteById(id);
+    }
+
+    @Override
     public ContactInfoRegisterDto save(ContactInfoRegisterDto dto) {
         ContactInfoEntity entityToSave = buildAndValidateContactInfo(dto, null);
         entityToSave.setCreatedAt(LocalDateTime.now());
@@ -125,6 +130,8 @@ public class ContactInfoAdapter implements ContactInfoGateway {
                 .orElseThrow(() -> new RuntimeException("El tipo de información no existe"));
 
         String code = tipoHijo.getCode().toUpperCase();
+        String description = tipoHijo.getName().toUpperCase();
+
 
         //PARA EXCLUIR O EVADIR CUANDO SE VAYA A EDITAR
         Long excludeId = (existing != null) ? existing.getId() : -1L;
@@ -136,7 +143,7 @@ public class ContactInfoAdapter implements ContactInfoGateway {
                 excludeId
         );
         if (existsSameType) {
-            throw new BadRequestException("Esta persona ya tiene un contacto de tipo " + code);
+            throw new BadRequestException("Esta persona ya tiene un contacto de tipo " + description);
         }
 
         // DUPLICADO DE NÚMERO CEL (excluyendo el actual en caso de update)

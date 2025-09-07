@@ -83,6 +83,19 @@ public class ContactInfoController {
         );
     }
 
+    @DeleteMapping("/info/{contactInfoId}")
+    public ResponseEntity<DefaultResponseDto<ContactInfoRegisterDto>> deleteContactInfo(
+            @PathVariable Long contactInfoId) throws Exception {
 
 
+        registerContactInfoUseCase.delete(contactInfoId);
+
+        return ResponseEntity.ok(
+                DefaultResponseDto.<ContactInfoRegisterDto>builder()
+                        .message("Información de contacto eliminada correctamente")
+                        .status(HttpStatus.OK)
+                        .details("Los datos fueron eliminados")
+                        .build()
+        );
+    }
 }

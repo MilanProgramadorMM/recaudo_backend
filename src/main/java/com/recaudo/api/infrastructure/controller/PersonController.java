@@ -4,6 +4,7 @@ import com.recaudo.api.domain.model.dto.response.DefaultResponseDto;
 import com.recaudo.api.domain.model.dto.response.LoginResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.LoginDto;
 import com.recaudo.api.domain.model.dto.rest_api.PersonRegisterDto;
+import com.recaudo.api.domain.model.entity.PersonEntity;
 import com.recaudo.api.domain.usecase.RegisterPersonUseCase;
 import com.recaudo.api.domain.usecase.RegisterUseCase;
 import com.recaudo.api.exception.BadRequestException;
@@ -95,6 +96,23 @@ public class PersonController {
         );
     }
 
+    @GetMapping("/get-by-type/{type}")
+    public ResponseEntity<DefaultResponseDto<List<PersonRegisterDto>>> getPersonsByType(
+            @PathVariable("type") String type) {
+
+        List<PersonRegisterDto> persons = personUseCase.getByType(type);
+
+        return ResponseEntity.ok(
+                DefaultResponseDto.<List<PersonRegisterDto>>builder()
+                        .message("Personas encontradas por tipo")
+                        .status(HttpStatus.OK)
+                        .details("Listado filtrado por tipo: " + type)
+                        .data(persons)
+                        .build()
+        );
+    }
+
+
     @PutMapping("/delete/{id}")
     public ResponseEntity<DefaultResponseDto<String>> deletePerson(
             @PathVariable Long id) {
@@ -110,6 +128,22 @@ public class PersonController {
                         .build()
         );
     }
+
+    @PutMapping("/person/reactivate/{id}")
+    public ResponseEntity<DefaultResponseDto<PersonRegisterDto>> reactivatePerson(@PathVariable Long id) {
+        PersonRegisterDto dto = personUseCase.reactivate(id);
+
+        return ResponseEntity.ok(
+                DefaultResponseDto.<PersonRegisterDto>builder()
+                        .message("Persona reactivada correctamente")
+                        .status(HttpStatus.OK)
+                        .details("Se reactivó la persona y su usuario asociado")
+                        .data(dto)
+                        .build()
+        );
+    }
+
+
 
 
 }

@@ -10,9 +10,12 @@ public interface PersonGateway {
     public PersonEntity getByUserName(String username);
     public PersonRegisterDto getById(Long id);
     List<PersonRegisterDto> getAll();
+    List<PersonRegisterDto> getByType(String type);
     public PersonRegisterDto save(PersonRegisterDto person);
     public PersonRegisterDto edit(PersonRegisterDto person);
     public void delete(Long id);
+    PersonRegisterDto reactivate(Long id);
+
 
 
 }

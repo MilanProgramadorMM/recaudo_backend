@@ -7,9 +7,11 @@ import lombok.Data;
 @Data
 @Builder
 @AllArgsConstructor
-public class AmortizationResponseDto {
-    private String cod;
+public class AmortizationTypeResponseDto {
+    private Long id;
+    private String code;
     private String name;
+    private String description;
     private String procedure;
     private String status;
 }

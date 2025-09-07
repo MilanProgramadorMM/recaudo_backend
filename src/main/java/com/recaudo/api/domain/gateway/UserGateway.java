@@ -17,5 +17,12 @@ public interface UserGateway {
     public UserDto saveUser(UserCreateDto dto);
     void updateUsername(UpdateUserDto userDto);
     void updatePassword(UpdateUserPasswordDto userDto);
+    void deleteUser(Long id);
+    void reactivateUserFromPerson(PersonEntity personEntity);
+    void inactivateUserByPersonId(Long personId);
+
+
+
+
 
 }

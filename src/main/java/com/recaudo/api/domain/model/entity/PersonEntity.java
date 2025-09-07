@@ -72,4 +72,8 @@ public class PersonEntity implements Serializable {
     @Builder.Default
     @Column(name = "status")
     private boolean status = true;
+
+    @Column(name = "type_person_id")
+    private Long typePersonId;
+
 }

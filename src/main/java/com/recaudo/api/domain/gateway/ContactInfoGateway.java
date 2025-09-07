@@ -12,6 +12,7 @@ public interface ContactInfoGateway {
     public ContactInfoRegisterDto save(ContactInfoRegisterDto person);
     List<ContactInfoListDto> getByPerson(Long personId);
     ContactInfoRegisterDto update(Long id, ContactInfoRegisterDto dto);
+    void delete(Long id);
 
 
 }

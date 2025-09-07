@@ -14,6 +14,7 @@ import com.recaudo.api.infrastructure.repository.UserRepository;
 import com.recaudo.api.infrastructure.repository.UserRoleRepository;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -39,8 +40,7 @@ public class RoleAdapter implements RolGateway {
 
     @Override
     public List<RoleDto> getAll() {
-        List<RoleEntity> entities = roleRepository.findAll();
-
+        List<RoleEntity> entities = roleRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
         return entities.stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
@@ -55,8 +55,8 @@ public class RoleAdapter implements RolGateway {
 
         // Crear rol
         RoleEntity entity = RoleEntity.builder()
-                .name(dto.getName())
-                .description(dto.getDescription())
+                .name(dto.getName().toUpperCase())
+                .description(dto.getDescription().toUpperCase())
                 .hierarchy(2)
                 .createdAt(LocalDateTime.now())
                 .build();
