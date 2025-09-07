@@ -6,11 +6,14 @@ server:
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    #url: jdbc:mysql://localhost:3306/recaudo?serverTimezone=UTC
+    #Local
+    url: jdbc:mysql://localhost:3306/recaudo?serverTimezone=UTC
+    username: root
+    password:
     #para docker
-    url: jdbc:mysql://host.docker.internal:3306/recaudo?serverTimezone=America/Bogota
-    username: recaudoapp
-    password: R3c4uD0-DB
+    # url: jdbc:postgresql://host.docker.internal:3306/recaudo?serverTimezone=UTC
+    #username: recaudoapp
+    #password: R3c4uD0-DB
   servlet:
     multipart:
       max-file-size: 10MB
