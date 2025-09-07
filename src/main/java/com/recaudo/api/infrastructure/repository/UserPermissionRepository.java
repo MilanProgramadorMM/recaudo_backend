@@ -85,7 +85,7 @@ public interface UserPermissionRepository extends JpaRepository<UserPermissionEn
                   up.allow,
                   1 AS priority
               FROM user_permission up
-              WHERE up.user_id = 1
+              WHERE up.user_id = :userId
           
               UNION ALL
           
@@ -96,7 +96,7 @@ public interface UserPermissionRepository extends JpaRepository<UserPermissionEn
                   2 AS priority
               FROM user_role ur
               JOIN role_permission rp ON rp.role_id = ur.role_id
-              WHERE ur.user_id = 1
+              WHERE ur.user_id = :userId
           ),
           ranked_permissions AS (
               SELECT
