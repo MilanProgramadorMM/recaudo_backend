@@ -12,8 +12,12 @@ public class BarrioResponseDto {
     Long id;
     String nombre;
     String description;
-    String nombreMunicipio;
-    Long idMunicipio;
-    String nombreDepartamento;
-    String nombrePais;
+    private Long idMunicipio;
+    private String nombreMunicipio;
+
+    private Long idDepartamento;
+    private String nombreDepartamento;
+
+    private Long idPais;
+    private String nombrePais;
 }

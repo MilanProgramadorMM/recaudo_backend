@@ -32,4 +32,8 @@ public class UserDto {
     @JsonProperty("created_at")
     private String createdAt = LocalDateTime.now().toString();
 
+    @JsonProperty("status")
+    private boolean status;
+
+
 }

@@ -1,7 +1,6 @@
 package com.recaudo.api.domain.model.dto.rest_api;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -26,12 +25,10 @@ public class CreditLineCreateDto {
     private String description;
 
     @NotNull(message = "El valor mínimo de cuota es obligatorio")
-    //@DecimalMin(value = "0.01", message = "El valor mínimo de cuota debe ser mayor a 0")
     @JsonProperty("min_quota")
     private BigDecimal minQuota;
 
     @NotNull(message = "El valor máximo de cuota es obligatorio")
-    //@DecimalMin(value = "0.01", message = "El valor máximo de cuota debe ser mayor a 0")
     @JsonProperty("max_quota")
     private BigDecimal maxQuota;
 
@@ -64,4 +61,8 @@ public class CreditLineCreateDto {
 
     @JsonProperty("require_documentation")
     private boolean requireDocumentation;
+
+    //@JsonProperty("documentation_type_ids")
+    //private List<Long> documentationTypeIds;
+
 }

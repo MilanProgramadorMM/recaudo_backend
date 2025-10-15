@@ -45,4 +45,9 @@ public class RegisterUseCase {
         userGateway.deleteUser(userId);
     }
 
+    public UserDto updateUserStatus(Long userId, boolean status) {
+        return userGateway.updateStatus(userId, status);
+    }
+
+
 }

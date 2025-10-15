@@ -5,6 +5,7 @@ import com.recaudo.api.domain.model.dto.response.BarrioResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.BarrioCreateDto;
 import com.recaudo.api.domain.model.entity.BarrioEntity;
 import com.recaudo.api.domain.model.entity.DepartamentoEntity;
+import com.recaudo.api.domain.model.entity.MunicipioEntity;
 import com.recaudo.api.domain.model.entity.PaisEntity;
 import com.recaudo.api.exception.BadRequestException;
 import com.recaudo.api.infrastructure.repository.BarrioRepository;
@@ -16,7 +17,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class BarrioAdapter implements BarrioGateway {
@@ -38,18 +38,22 @@ public class BarrioAdapter implements BarrioGateway {
                 .stream()
                 .filter(BarrioEntity::getStatus)
                 .map(b -> {
+                    // Buscar municipio
                     var municipioOpt = municipioRepository.findById(b.getIdMunicipio());
-                    String nombreMunicipio = municipioOpt.map(m -> m.getValue()).orElse(null);
-                    Long idMunicipio = municipioOpt.map(m -> m.getId()).orElse(null);
+                    String nombreMunicipio = municipioOpt.map(MunicipioEntity::getValue).orElse(null);
+                    Long idMunicipio = municipioOpt.map(MunicipioEntity::getId).orElse(null);
 
+                    // Buscar departamento a partir del municipio
                     var departamentoOpt = municipioOpt
                             .flatMap(m -> departamentoRepository.findById(m.getIdDepartamento()));
-                    String nombreDepartamento = departamentoOpt.map(d -> d.getValue()).orElse(null);
+                    String nombreDepartamento = departamentoOpt.map(DepartamentoEntity::getValue).orElse(null);
+                    Long idDepartamento = departamentoOpt.map(DepartamentoEntity::getId).orElse(null);
 
-                    String nombrePais = departamentoOpt
-                            .flatMap(d -> paisRepository.findById(d.getIdPais()))
-                            .map(p -> p.getValue())
-                            .orElse(null);
+                    // Buscar país a partir del departamento
+                    var paisOpt = departamentoOpt
+                            .flatMap(d -> paisRepository.findById(d.getIdPais()));
+                    String nombrePais = paisOpt.map(PaisEntity::getValue).orElse(null);
+                    Long idPais = paisOpt.map(PaisEntity::getId).orElse(null);
 
                     return BarrioResponseDto.builder()
                             .id(b.getId())
@@ -58,7 +62,9 @@ public class BarrioAdapter implements BarrioGateway {
                             .nombreMunicipio(nombreMunicipio)
                             .idMunicipio(idMunicipio)
                             .nombreDepartamento(nombreDepartamento)
+                            .idDepartamento(idDepartamento)
                             .nombrePais(nombrePais)
+                            .idPais(idPais)
                             .build();
                 })
                 .toList();
@@ -103,7 +109,6 @@ public class BarrioAdapter implements BarrioGateway {
 
     @Override
     public BarrioResponseDto update(Long id, BarrioCreateDto barrioCreateDto) {
-        // Buscar el barrio
         BarrioEntity barrio = barrioRepository.findById(id)
                 .orElseThrow(() -> new BadRequestException("El barrio no existe"));
 
@@ -122,11 +127,14 @@ public class BarrioAdapter implements BarrioGateway {
 
         barrioRepository.save(barrio);
 
-        // Obtener datos de ubicación
-        var muniOpt = municipioRepository.findById(barrio.getIdMunicipio());
-        String nombreMunicipio = muniOpt.map(m -> m.getValue()).orElse(null);
-        var departamentoOpt = muniOpt.flatMap(m -> departamentoRepository.findById(m.getIdDepartamento()));
+        var municipioOpt = municipioRepository.findById(barrio.getIdMunicipio());
+        String nombreMunicipio = municipioOpt.map(MunicipioEntity::getValue).orElse(null);
+        Long idDepartamento = municipioOpt.map(MunicipioEntity::getIdDepartamento).orElse(null);
+
+        var departamentoOpt = municipioOpt.flatMap(m -> departamentoRepository.findById(m.getIdDepartamento()));
         String nombreDepartamento = departamentoOpt.map(DepartamentoEntity::getValue).orElse(null);
+        Long idPais = departamentoOpt.map(DepartamentoEntity::getIdPais).orElse(null);
+
         String nombrePais = departamentoOpt
                 .flatMap(d -> paisRepository.findById(d.getIdPais()))
                 .map(PaisEntity::getValue)
@@ -135,8 +143,12 @@ public class BarrioAdapter implements BarrioGateway {
         return BarrioResponseDto.builder()
                 .id(barrio.getId())
                 .nombre(barrio.getValue())
+                .description(barrio.getDescription())
+                .idMunicipio(barrio.getIdMunicipio())
                 .nombreMunicipio(nombreMunicipio)
+                .idDepartamento(idDepartamento)
                 .nombreDepartamento(nombreDepartamento)
+                .idPais(idPais)
                 .nombrePais(nombrePais)
                 .build();
     }

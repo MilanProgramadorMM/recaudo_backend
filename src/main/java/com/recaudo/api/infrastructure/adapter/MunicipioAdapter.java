@@ -7,6 +7,7 @@ import com.recaudo.api.domain.model.dto.response.MunicipioResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.MunicipioCreateDto;
 import com.recaudo.api.domain.model.entity.DepartamentoEntity;
 import com.recaudo.api.domain.model.entity.MunicipioEntity;
+import com.recaudo.api.domain.model.entity.PaisEntity;
 import com.recaudo.api.exception.BadRequestException;
 import com.recaudo.api.infrastructure.repository.DepartamentoRepository;
 import com.recaudo.api.infrastructure.repository.MunicipioRepository;
@@ -37,25 +38,28 @@ public class MunicipioAdapter implements MunicipioGateway {
                 .map(m -> {
                     var departamentoOpt = departamentoRepository.findById(m.getIdDepartamento());
 
-                    String nombreDepartamento = departamentoOpt.map(d -> d.getValue()).orElse(null);
-                    Long idDepartamento = departamentoOpt.map(d -> d.getId()).orElse(null);
+                    String nombreDepartamento = departamentoOpt.map(DepartamentoEntity::getValue).orElse(null);
+                    Long idDepartamento = departamentoOpt.map(DepartamentoEntity::getId).orElse(null);
 
-                    String nombrePais = departamentoOpt
-                            .flatMap(d -> paisRepository.findById(d.getIdPais()))
-                            .map(p -> p.getValue())
-                            .orElse(null);
+                    // Obtener país desde el departamento
+                    var paisOpt = departamentoOpt.flatMap(d -> paisRepository.findById(d.getIdPais()));
+
+                    String nombrePais = paisOpt.map(PaisEntity::getValue).orElse(null);
+                    Long idPais = paisOpt.map(PaisEntity::getId).orElse(null);
 
                     return MunicipioResponseDto.builder()
                             .id(m.getId())
                             .nombre(m.getValue().toUpperCase())
-                            .description(m.getDescription().toUpperCase())
+                            .description(m.getDescription())
                             .nombreDepartamento(nombreDepartamento)
                             .idDepartamento(idDepartamento)
                             .nombrePais(nombrePais)
+                            .idPais(idPais)
                             .build();
                 })
                 .toList();
     }
+
 
     @Override
     public MunicipioResponseDto create(MunicipioCreateDto municipioCreateDto) {
@@ -111,15 +115,19 @@ public class MunicipioAdapter implements MunicipioGateway {
         municipioRepository.save(municipio);
 
         var dptoOpt = departamentoRepository.findById(municipio.getIdDepartamento());
-        String nombreDepartamento = dptoOpt.map(d -> d.getValue()).orElse(null);
+        String nombreDepartamento = dptoOpt.map(DepartamentoEntity::getValue).orElse(null);
+        Long idPais = dptoOpt.map(DepartamentoEntity::getIdPais).orElse(null);
         String nombrePais = dptoOpt.flatMap(d -> paisRepository.findById(d.getIdPais()))
-                .map(p -> p.getValue())
+                .map(PaisEntity::getValue)
                 .orElse(null);
 
         return MunicipioResponseDto.builder()
                 .id(municipio.getId())
                 .nombre(municipio.getValue())
+                .description(municipio.getDescription())
+                .idDepartamento(municipio.getIdDepartamento())
                 .nombreDepartamento(nombreDepartamento)
+                .idPais(idPais)
                 .nombrePais(nombrePais)
                 .build();
     }

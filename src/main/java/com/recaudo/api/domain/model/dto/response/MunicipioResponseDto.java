@@ -12,7 +12,9 @@ public class MunicipioResponseDto {
     Long id;
     String nombre;
     String description;
-    String nombreDepartamento;
-    Long idDepartamento;
-    String nombrePais;
+    private Long idDepartamento;
+    private String nombreDepartamento;
+
+    private Long idPais;
+    private String nombrePais;
 }

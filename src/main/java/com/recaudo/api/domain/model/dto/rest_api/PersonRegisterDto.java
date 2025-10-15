@@ -62,4 +62,17 @@ public class PersonRegisterDto {
     @JsonProperty("type_person")
     private String typePerson;
 
+    //private Long orden;
+    private Long zona;
+    private Long countryId;
+    private Long cityId;
+    private Long departentId;
+    private Long neighborhoodId;
+    private String adress;
+    private String details;
+    private String correo;
+    private String celular;
+    private String telefono;
+
+    private String user_create;
 }

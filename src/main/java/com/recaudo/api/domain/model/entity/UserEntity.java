@@ -48,7 +48,7 @@ public class UserEntity implements Serializable {
     @Column(name = "edited_at")
     private LocalDateTime editedAt;
 
-    @Builder.Default
+    //@Builder.Default
     @Column(name = "status")
     private boolean status = true;
 }

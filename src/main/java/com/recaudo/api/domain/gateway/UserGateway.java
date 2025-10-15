@@ -20,6 +20,7 @@ public interface UserGateway {
     void deleteUser(Long id);
     void reactivateUserFromPerson(PersonEntity personEntity);
     void inactivateUserByPersonId(Long personId);
+    UserDto updateStatus(Long userId, boolean status);
 
 
 
