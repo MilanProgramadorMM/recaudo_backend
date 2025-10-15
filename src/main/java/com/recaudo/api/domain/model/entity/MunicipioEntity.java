@@ -29,4 +29,7 @@ public class MunicipioEntity {
 
     @Column(name = "status")
     private Boolean status = true;
+
+    @Column(name = "code")
+    private Long code;
 }

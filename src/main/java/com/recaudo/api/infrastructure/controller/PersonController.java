@@ -2,6 +2,8 @@ package com.recaudo.api.infrastructure.controller;
 
 import com.recaudo.api.domain.model.dto.response.DefaultResponseDto;
 import com.recaudo.api.domain.model.dto.response.LoginResponseDto;
+import com.recaudo.api.domain.model.dto.response.PersonInterfaceResponseDto;
+import com.recaudo.api.domain.model.dto.response.PersonResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.LoginDto;
 import com.recaudo.api.domain.model.dto.rest_api.PersonRegisterDto;
 import com.recaudo.api.domain.model.entity.PersonEntity;
@@ -34,14 +36,14 @@ public class PersonController {
     private final RegisterPersonUseCase personUseCase;
 
     @PostMapping("/register")
-    public ResponseEntity<DefaultResponseDto<PersonRegisterDto>> register(
+    public ResponseEntity<DefaultResponseDto<PersonResponseDto>> register(
             @RequestBody @Valid PersonRegisterDto data, BindingResult
                     bindingResult) throws Exception {
         if (bindingResult.hasErrors())
             throw new BadRequestException(bindingResult.getAllErrors().get(0).getDefaultMessage());
 
         return ResponseEntity.ok(
-                DefaultResponseDto.<PersonRegisterDto>builder()
+                DefaultResponseDto.<PersonResponseDto>builder()
                         .message("Registro completado")
                         .status(HttpStatus.OK)
                         .details("Registro completado exitosamente")
@@ -51,7 +53,7 @@ public class PersonController {
     }
 
     @PutMapping("/update")
-    public ResponseEntity<DefaultResponseDto<PersonRegisterDto>> updatePerson(
+    public ResponseEntity<DefaultResponseDto<PersonResponseDto>> updatePerson(
             @RequestBody @Valid PersonRegisterDto data,
             BindingResult bindingResult) throws Exception {
 
@@ -59,7 +61,7 @@ public class PersonController {
             throw new BadRequestException(bindingResult.getAllErrors().get(0).getDefaultMessage());
 
         return ResponseEntity.ok(
-                DefaultResponseDto.<PersonRegisterDto>builder()
+                DefaultResponseDto.<PersonResponseDto>builder()
                         .message("Persona actualizada correctamente")
                         .status(HttpStatus.OK)
                         .details("Los datos fueron modificados")
@@ -68,12 +70,12 @@ public class PersonController {
     }
 
     @GetMapping("/get/{id}")
-    public ResponseEntity<DefaultResponseDto<PersonRegisterDto>> getByUserId(@PathVariable("id") Long id) throws org.apache.coyote.BadRequestException {
+    public ResponseEntity<DefaultResponseDto<PersonResponseDto>> getByUserId(@PathVariable("id") Long id) throws org.apache.coyote.BadRequestException {
 
-        PersonRegisterDto dto = personUseCase.getById(id);
+        PersonResponseDto dto = personUseCase.getById(id);
 
         return ResponseEntity.ok(
-                DefaultResponseDto.<PersonRegisterDto>builder()
+                DefaultResponseDto.<PersonResponseDto>builder()
                         .message("Información encontrada")
                         .status(HttpStatus.OK)
                         .details("Información encontrada")
@@ -83,11 +85,11 @@ public class PersonController {
     }
 
     @GetMapping("/get-all")
-    public ResponseEntity<DefaultResponseDto<List<PersonRegisterDto>>> getAllPersons() {
-        List<PersonRegisterDto> persons = personUseCase.getAll();
+    public ResponseEntity<DefaultResponseDto<List<PersonResponseDto>>> getAllPersons() {
+        List<PersonResponseDto> persons = personUseCase.getAll();
 
         return ResponseEntity.ok(
-                DefaultResponseDto.<List<PersonRegisterDto>>builder()
+                DefaultResponseDto.<List<PersonResponseDto>>builder()
                         .message("Personas encontradas")
                         .status(HttpStatus.OK)
                         .details("Listado completo")
@@ -97,16 +99,32 @@ public class PersonController {
     }
 
     @GetMapping("/get-by-type/{type}")
-    public ResponseEntity<DefaultResponseDto<List<PersonRegisterDto>>> getPersonsByType(
+    public ResponseEntity<DefaultResponseDto<List<PersonInterfaceResponseDto>>> getPersonsByType(
             @PathVariable("type") String type) {
 
-        List<PersonRegisterDto> persons = personUseCase.getByType(type);
+        List<PersonInterfaceResponseDto> persons = personUseCase.getByType(type);
 
         return ResponseEntity.ok(
-                DefaultResponseDto.<List<PersonRegisterDto>>builder()
+                DefaultResponseDto.<List<PersonInterfaceResponseDto>>builder()
                         .message("Personas encontradas por tipo")
                         .status(HttpStatus.OK)
                         .details("Listado filtrado por tipo: " + type)
+                        .data(persons)
+                        .build()
+        );
+    }
+
+    @GetMapping("/get-by-zona/{type}/{zona}")
+    public ResponseEntity<DefaultResponseDto<List<PersonInterfaceResponseDto>>> getPersonsByZona(
+            @PathVariable("type") String type, @PathVariable("zona") String zona) {
+
+        List<PersonInterfaceResponseDto> persons = personUseCase.getByZona(type,zona);
+
+        return ResponseEntity.ok(
+                DefaultResponseDto.<List<PersonInterfaceResponseDto>>builder()
+                        .message("Personas encontradas por zona")
+                        .status(HttpStatus.OK)
+                        .details("Listado filtrado por zona: " + zona)
                         .data(persons)
                         .build()
         );
@@ -130,11 +148,11 @@ public class PersonController {
     }
 
     @PutMapping("/person/reactivate/{id}")
-    public ResponseEntity<DefaultResponseDto<PersonRegisterDto>> reactivatePerson(@PathVariable Long id) {
-        PersonRegisterDto dto = personUseCase.reactivate(id);
+    public ResponseEntity<DefaultResponseDto<PersonResponseDto>> reactivatePerson(@PathVariable Long id) {
+        PersonResponseDto dto = personUseCase.reactivate(id);
 
         return ResponseEntity.ok(
-                DefaultResponseDto.<PersonRegisterDto>builder()
+                DefaultResponseDto.<PersonResponseDto>builder()
                         .message("Persona reactivada correctamente")
                         .status(HttpStatus.OK)
                         .details("Se reactivó la persona y su usuario asociado")
@@ -142,8 +160,22 @@ public class PersonController {
                         .build()
         );
     }
+    @PutMapping("/status/{id}")
+    public ResponseEntity<DefaultResponseDto<PersonResponseDto>> toggleStatus(
+            @PathVariable Long id,
+            @RequestParam boolean status) {
 
+        PersonResponseDto dto = personUseCase.toggleStatus(id, status);
 
+        return ResponseEntity.ok(
+                DefaultResponseDto.<PersonResponseDto>builder()
+                        .message("Estado actualizado correctamente")
+                        .status(HttpStatus.OK)
+                        .details("El estado de la persona fue actualizado a " + (status ? "Activo" : "Inactivo"))
+                        .data(dto)
+                        .build()
+        );
+    }
 
 
 }

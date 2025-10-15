@@ -2,6 +2,7 @@ package com.recaudo.api.infrastructure.controller;
 
 import com.recaudo.api.domain.model.dto.response.DefaultResponseDto;
 import com.recaudo.api.domain.model.dto.response.LoginResponseDto;
+import com.recaudo.api.domain.model.dto.response.PersonResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.LoginDto;
 import com.recaudo.api.domain.model.dto.rest_api.PersonRegisterDto;
 import com.recaudo.api.domain.model.entity.RoleEntity;
@@ -29,6 +30,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
 
 @RestController
 @RequestMapping("/auth")
@@ -69,6 +71,9 @@ public class AuthController {
 
         UserDetailsImpl userDetails = (UserDetailsImpl) auth.getPrincipal();
         UserEntity userEntity = userDetails.getUserEntity();
+        if (!userEntity.isStatus()) {
+            throw new BadRequestException("El usuario está inactivo. No puede iniciar sesión.");
+        }
 
         // Obtener el rol desde el repositorio
         List<UserRoleEntity> userRole = userRoleRepository.findByUserId(userEntity.getId());
@@ -105,14 +110,14 @@ public class AuthController {
             }
     )
     @PostMapping("/register")
-    public ResponseEntity<DefaultResponseDto<PersonRegisterDto>> register(
+    public ResponseEntity<DefaultResponseDto<PersonResponseDto>> register(
             @RequestBody @Valid PersonRegisterDto data, BindingResult
                     bindingResult) throws Exception {
         if (bindingResult.hasErrors())
             throw new BadRequestException(bindingResult.getAllErrors().get(0).getDefaultMessage());
 
         return ResponseEntity.ok(
-                DefaultResponseDto.<PersonRegisterDto>builder()
+                DefaultResponseDto.<PersonResponseDto>builder()
                         .message("Registro completado")
                         .status(HttpStatus.OK)
                         .details("Registro completado exitosamente")
@@ -122,7 +127,7 @@ public class AuthController {
     }
 
     @PutMapping("/update")
-    public ResponseEntity<DefaultResponseDto<PersonRegisterDto>> updatePerson(
+    public ResponseEntity<DefaultResponseDto<PersonResponseDto>> updatePerson(
             @RequestBody @Valid PersonRegisterDto data,
             BindingResult bindingResult) throws Exception {
 
@@ -130,7 +135,7 @@ public class AuthController {
             throw new BadRequestException(bindingResult.getAllErrors().get(0).getDefaultMessage());
 
         return ResponseEntity.ok(
-                DefaultResponseDto.<PersonRegisterDto>builder()
+                DefaultResponseDto.<PersonResponseDto>builder()
                         .message("Persona actualizada correctamente")
                         .status(HttpStatus.OK)
                         .details("Los datos fueron modificados")
@@ -139,12 +144,12 @@ public class AuthController {
     }
 
     @GetMapping("/get/{id}")
-    public ResponseEntity<DefaultResponseDto<PersonRegisterDto>> getByUserId(@PathVariable("id") Long id) throws org.apache.coyote.BadRequestException {
+    public ResponseEntity<DefaultResponseDto<PersonResponseDto>> getByUserId(@PathVariable("id") Long id) throws org.apache.coyote.BadRequestException {
 
-        PersonRegisterDto dto = personUseCase.getById(id);
+        PersonResponseDto dto = personUseCase.getById(id);
 
         return ResponseEntity.ok(
-                DefaultResponseDto.<PersonRegisterDto>builder()
+                DefaultResponseDto.<PersonResponseDto>builder()
                         .message("Información encontrada")
                         .status(HttpStatus.OK)
                         .details("Información encontrada")
@@ -154,11 +159,11 @@ public class AuthController {
     }
 
     @GetMapping("/get-all")
-    public ResponseEntity<DefaultResponseDto<List<PersonRegisterDto>>> getAllPersons() {
-        List<PersonRegisterDto> persons = personUseCase.getAll();
+    public ResponseEntity<DefaultResponseDto<List<PersonResponseDto>>> getAllPersons() {
+        List<PersonResponseDto> persons = personUseCase.getAll();
 
         return ResponseEntity.ok(
-                DefaultResponseDto.<List<PersonRegisterDto>>builder()
+                DefaultResponseDto.<List<PersonResponseDto>>builder()
                         .message("Personas encontradas")
                         .status(HttpStatus.OK)
                         .details("Listado completo")

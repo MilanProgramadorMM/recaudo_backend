@@ -1,6 +1,7 @@
 package com.recaudo.api.infrastructure.controller;
 
 import com.recaudo.api.domain.model.dto.response.DefaultResponseDto;
+import com.recaudo.api.domain.model.dto.response.PersonResponseDto;
 import com.recaudo.api.domain.model.dto.response.UserDto;
 import com.recaudo.api.domain.model.dto.rest_api.UpdateUserDto;
 import com.recaudo.api.domain.model.dto.rest_api.UpdateUserPasswordDto;
@@ -115,5 +116,20 @@ public class UserController {
                         .build()
         );
     }
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<DefaultResponseDto<UserDto>> updateUserStatus(
+            @PathVariable Long id,
+            @RequestParam boolean status) {
+        UserDto dto = userUseCase.updateUserStatus(id, status);
+        return ResponseEntity.ok(
+                DefaultResponseDto.<UserDto>builder()
+                        .message("Estado actualizado correctamente")
+                        .status(HttpStatus.OK)
+                        .details("El estado de la persona fue actualizado a " + (status ? "Activo" : "Inactivo"))
+                        .data(dto)
+                        .build()
+        );    }
+
 
 }

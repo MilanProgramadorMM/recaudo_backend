@@ -1,9 +1,7 @@
 package com.recaudo.api.infrastructure.controller;
 
-import com.recaudo.api.domain.model.dto.response.BarrioResponseDto;
 import com.recaudo.api.domain.model.dto.response.DefaultResponseDto;
 import com.recaudo.api.domain.model.dto.response.DepartamentoResponseDto;
-import com.recaudo.api.domain.model.dto.rest_api.BarrioCreateDto;
 import com.recaudo.api.domain.model.dto.rest_api.DepartamentoCreateDto;
 import com.recaudo.api.infrastructure.adapter.DepartamentoAdapter;
 import lombok.AllArgsConstructor;

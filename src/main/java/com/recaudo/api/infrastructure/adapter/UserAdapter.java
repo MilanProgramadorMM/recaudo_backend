@@ -72,11 +72,11 @@ public class UserAdapter implements UserGateway {
         // Obtener nombre completo de la persona
         if (user.getPersonId() != null) {
             dto.setPersonFullName(
-                personRepository.findById(user.getPersonId())
-                    .map(PersonEntity::getFullName)
-                    .orElse(null)
+                    personRepository.findById(user.getPersonId())
+                            .map(PersonEntity::getFullName)
+                            .orElse(null)
             );
-        } else {            
+        } else {
             dto.setPersonFullName("Usuario sin persona asociada");
         }
 
@@ -107,13 +107,14 @@ public class UserAdapter implements UserGateway {
 
     @Override
     public List<UserDto> getAll() {
-        List<UserEntity> entities = userRepository.findByStatusTrue(Sort.by(Sort.Direction.DESC, "id"));
+        List<UserEntity> entities = userRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
 
         return entities.stream().map(user -> {
             UserDto dto = new UserDto();
             dto.setId(user.getId());
             dto.setUsername(user.getUsername());
             dto.setUserCreate(user.getUserCreate());
+            dto.setStatus(user.isStatus());
             dto.setCreatedAt(user.getCreatedAt().toString());
 
             // OBTENEMOS EL NOMBRE COMPLETO DE LA PERSONA
@@ -163,6 +164,7 @@ public class UserAdapter implements UserGateway {
                 .password(hashedPassword)
                 .personId(personEntity.getId())
                 .userCreate(getUsernameToken())
+                .status(true)
                 .createdAt(LocalDateTime.now())
                 .build();
         UserEntity userCreated = userRepository.save(user);
@@ -239,16 +241,16 @@ public class UserAdapter implements UserGateway {
 
     void assignRolesToUser(Long userId, List<Long> roles) {
         roles.forEach(rol -> {
-                if (roleRepository.existsById(rol)) {
-                    userRoleRepository.saveAndFlush(
-                        UserRoleEntity.builder()
-                            .userId(userId)
-                            .roleId(rol)
-                            .createdAt(LocalDateTime.now())
-                            .build()
-                    );
+                    if (roleRepository.existsById(rol)) {
+                        userRoleRepository.saveAndFlush(
+                                UserRoleEntity.builder()
+                                        .userId(userId)
+                                        .roleId(rol)
+                                        .createdAt(LocalDateTime.now())
+                                        .build()
+                        );
+                    }
                 }
-            }
         );
     }
 
@@ -325,7 +327,7 @@ public class UserAdapter implements UserGateway {
             throw new BadRequestException("Usuario no encontrado con ID: " + userId);
 
         // Validar si el usuario a eliminar tiene una persona asociada
-        if(optionalUser.get().getPersonId() != null)
+        if (optionalUser.get().getPersonId() != null)
             throw new BadRequestException("El usuario tiene una persona asociada, elimine primero a la persona");
 
 
@@ -366,5 +368,45 @@ public class UserAdapter implements UserGateway {
         }
     }
 
+    @Override
+    @Transactional
+    public UserDto updateStatus(Long userId, boolean status) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new BadRequestException("Usuario no encontrado"));
 
+        user.setStatus(status);
+        if (!status) {
+            user.setDeletedAt(LocalDateTime.now());
+            user.setUserDelete(getUsernameToken());
+
+            // Si el usuario tiene persona asociada, inactivar persona también
+            if (user.getPersonId() != null) {
+                PersonEntity person = personRepository.findById(user.getPersonId()).orElse(null);
+                if (person != null) {
+                    person.setStatus(false);
+                    person.setDeletedAt(LocalDateTime.now());
+                    person.setUserDelete(getUsernameToken());
+                    personRepository.save(person);
+                }
+            }
+
+        } else {
+            user.setDeletedAt(null);
+
+            // Si tiene persona asociada, reactivar persona también
+            if (user.getPersonId() != null) {
+                PersonEntity person = personRepository.findById(user.getPersonId()).orElse(null);
+                if (person != null) {
+                    person.setStatus(true);
+                    person.setDeletedAt(null);
+                    person.setEditedAt(LocalDateTime.now());
+                    person.setUserEdit(getUsernameToken());
+                    personRepository.save(person);
+                }
+            }
+        }
+
+        UserEntity saved = userRepository.saveAndFlush(user);
+        return userMapper.entityToDto(saved);
+    }
 }

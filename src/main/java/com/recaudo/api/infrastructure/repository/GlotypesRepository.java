@@ -13,6 +13,8 @@ public interface GlotypesRepository extends JpaRepository<GlotypesEntity, Long> 
 
     @Query(value = "SELECT `type`, `key`, `name`, `id` FROM glotypes g WHERE g.`key` = :key", nativeQuery = true)
     List<GlotypesProjection> findByKey(String key);
+    GlotypesEntity findByCode(String key);
+
 
     @Query(value = """
     SELECT `type`, `key`, `name`, `id`

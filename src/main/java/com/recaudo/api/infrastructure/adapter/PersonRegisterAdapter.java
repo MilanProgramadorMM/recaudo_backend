@@ -1,8 +1,12 @@
 package com.recaudo.api.infrastructure.adapter;
 
+import com.recaudo.api.domain.gateway.ContactInfoGateway;
 import com.recaudo.api.domain.gateway.PersonGateway;
 import com.recaudo.api.domain.gateway.UserGateway;
 import com.recaudo.api.domain.mapper.PersonMapper;
+import com.recaudo.api.domain.model.dto.response.ContactInfoListDto;
+import com.recaudo.api.domain.model.dto.response.PersonInterfaceResponseDto;
+import com.recaudo.api.domain.model.dto.response.PersonResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.PersonRegisterDto;
 import com.recaudo.api.domain.model.entity.*;
 import com.recaudo.api.domain.usecase.RegisterUseCase;
@@ -37,6 +41,17 @@ public class PersonRegisterAdapter implements PersonGateway {
 
     TypePersonRepository typePersonRepository;
 
+    PersonZonaRepository personZonaRepository;
+
+    ZonaRepository zonaRepository;
+
+    ContactInfoGateway contactInfoGateway;
+
+    PaisRepository paisRepository;
+    MunicipioRepository municipioRepository;
+    BarrioRepository barrioRepository;
+    DepartamentoRepository departamentoRepository;
+
 
     @Autowired(required = false)
     PersonMapper personMapper = Mappers.getMapper(PersonMapper.class);
@@ -50,7 +65,7 @@ public class PersonRegisterAdapter implements PersonGateway {
     }
 
     @Override
-    public PersonRegisterDto getById(Long id){
+    public PersonResponseDto getById(Long id){
         Optional<PersonEntity> optional = personRepository.findById(id);
         if (optional.isEmpty()) {
             throw new BadRequestException("No existe registro asociado al id " + id);
@@ -60,28 +75,22 @@ public class PersonRegisterAdapter implements PersonGateway {
     }
 
     @Override
-    public List<PersonRegisterDto> getAll() {
-        List<PersonEntity> entities = personRepository.findByStatusTrue(Sort.by(Sort.Direction.DESC, "id"));
-        return entities.stream()
-                .map(personMapper::entityToDto)
-                .toList();
+    public List<PersonResponseDto> getAll() {
+        return personRepository.getAllPerson();
     }
 
     @Override
-    public List<PersonRegisterDto> getByType(String type) {
-        TypePersonEntity typePerson = typePersonRepository.findByValue(type)
-                .orElseThrow(() -> new RuntimeException("Tipo de persona no encontrado: " + type));
-        Long typePersonId = typePerson.getId();
-
-        List<PersonEntity> entities = personRepository.findByTypePersonIdAndStatusTrue(typePersonId);
-
-        return entities.stream()
-                .map(personMapper::entityToDto)
-                .toList();
+    public List<PersonInterfaceResponseDto> getByType(String type) {
+        return personRepository.getByTypePerson(type);
     }
 
     @Override
-    public PersonRegisterDto save(PersonRegisterDto person) {
+    public List<PersonInterfaceResponseDto> getByZona(String type, String zona) {
+        return personRepository.getByZona(type, zona);
+    }
+
+    @Override
+    public PersonResponseDto save(PersonRegisterDto person) {
         Optional<PersonEntity> documentOpt = personRepository.findByDocument(person.getDocument());
 
         if (documentOpt.isPresent()) {
@@ -99,6 +108,7 @@ public class PersonRegisterAdapter implements PersonGateway {
             }
         }
 
+        normalizePersonDto(person);
 
         PersonEntity personEntity = personMapper.dtoToEntity(person);
         personEntity.setUserCreate(getUsernameToken());
@@ -113,12 +123,44 @@ public class PersonRegisterAdapter implements PersonGateway {
             userGateway.saveUserToPerson(personEntity);
         }
 
+        if ("CLIENTE".equalsIgnoreCase(person.getTypePerson())) {
+
+            Long zonaId = person.getZona();
+            //Long nuevoOrden = person.getOrden();
+
+            /* Obtenemos los clientes existentes en la zona ordenados por orden
+            List<PersonZonaEntity> clientesAfectados = personZonaRepository
+                    .findAllByZonaIdAndOrdenGreaterThanEqualOrderByOrdenAsc(zonaId, nuevoOrden);
+
+            // Incrementamos el orden de los que son >= nuevoOrden
+            for (PersonZonaEntity pz : clientesAfectados) {
+                pz.setOrden(pz.getOrden() + 1);
+            }
+
+            // se guardan los cambios de los clientes existentes
+            personZonaRepository.saveAll(clientesAfectados);*/
+
+            // nuevo cliente
+            PersonZonaEntity personZona = PersonZonaEntity.builder()
+                    .personId(personEntity.getId())
+                    .zonaId(zonaId)
+                    .orden(0L)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            personZonaRepository.save(personZona);
+        }
+
+
+        contactInfoGateway.saveContactInfoClient(person, personEntity.getId());
+
+
         return personMapper.entityToDto(personEntity);
     }
 
     @Override
     @Transactional
-    public PersonRegisterDto reactivate(Long id) {
+    public PersonResponseDto reactivate(Long id) {
         PersonEntity person = personRepository.findById(id)
                 .orElseThrow(() -> new BadRequestException("Persona no encontrada"));
 
@@ -136,7 +178,7 @@ public class PersonRegisterAdapter implements PersonGateway {
 
 
     @Override
-    public PersonRegisterDto edit(PersonRegisterDto dto) {
+    public PersonResponseDto edit(PersonRegisterDto dto) {
         PersonEntity entity = personMapper.dtoToEntity(dto);
 
         if (entity.getId() != null && personRepository.existsById(entity.getId())) {
@@ -170,6 +212,46 @@ public class PersonRegisterAdapter implements PersonGateway {
         }
     }
 
+    @Override
+    @Transactional
+    public PersonResponseDto toggleStatus(Long id, boolean status) {
+        PersonEntity person = personRepository.findById(id)
+                .orElseThrow(() -> new BadRequestException("Persona no encontrada"));
+
+
+
+        person.setStatus(status);
+        person.setEditedAt(LocalDateTime.now());
+        person.setUserEdit(getUsernameToken());
+
+        // Obtener tipo de persona
+        TypePersonEntity typeEntity = typePersonRepository.findById(person.getTypePersonId())
+                .orElseThrow(() -> new BadRequestException("Tipo de persona no encontrado"));
+
+        if ("ASESOR".equalsIgnoreCase(typeEntity.getValue())) {
+            if (!status) {
+                // Inactivar asesor y su usuario
+                person.setDeletedAt(LocalDateTime.now());
+                userGateway.inactivateUserByPersonId(id);
+            } else {
+                // Reactivar asesor y usuario
+                person.setDeletedAt(null);
+                userGateway.reactivateUserFromPerson(person);
+            }
+        } else if ("CLIENTE".equalsIgnoreCase(typeEntity.getValue())) {
+            // Para cliente solo se actualiza el estado y las fechas
+            if (!status) {
+                person.setDeletedAt(LocalDateTime.now());
+            } else {
+                person.setDeletedAt(null);
+            }
+        }
+
+        PersonEntity updated = personRepository.saveAndFlush(person);
+        return personMapper.entityToDto(updated);
+    }
+
+
     private String getUsernameToken() {
         return ((UserDetailsImpl) SecurityContextHolder
                 .getContext()
@@ -177,5 +259,24 @@ public class PersonRegisterAdapter implements PersonGateway {
                 .getPrincipal())
                 .getUsername();
     }
+
+    private void normalizePersonDto(PersonRegisterDto dto) {
+        if (dto.getDocument() != null) dto.setDocument(dto.getDocument().trim().toUpperCase());
+        if (dto.getFirstName() != null) dto.setFirstName(dto.getFirstName().trim().toUpperCase());
+        if (dto.getMiddleName() != null) dto.setMiddleName(dto.getMiddleName().trim().toUpperCase());
+        if (dto.getLastName() != null) dto.setLastName(dto.getLastName().trim().toUpperCase());
+        if (dto.getMaternalLastname() != null) dto.setMaternalLastname(dto.getMaternalLastname().trim().toUpperCase());
+        if (dto.getFullName() != null) dto.setFullName(dto.getFullName().trim().toUpperCase());
+        if (dto.getOccupation() != null) dto.setOccupation(dto.getOccupation().trim().toUpperCase());
+        if (dto.getDescription() != null) dto.setDescription(dto.getDescription().trim().toUpperCase());
+        if (dto.getTypePerson() != null) dto.setTypePerson(dto.getTypePerson().trim().toUpperCase());
+        if (dto.getAdress() != null) dto.setAdress(dto.getAdress().trim().toUpperCase());
+        if (dto.getDetails() != null) dto.setDetails(dto.getDetails().trim().toUpperCase());
+
+        if (dto.getCorreo() != null) dto.setCorreo(dto.getCorreo().trim().toLowerCase());
+        if (dto.getCelular() != null) dto.setCelular(dto.getCelular().trim());
+        if (dto.getTelefono() != null) dto.setTelefono(dto.getTelefono().trim());
+    }
+
 
 }
