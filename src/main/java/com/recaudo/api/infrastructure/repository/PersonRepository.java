@@ -56,7 +56,7 @@ public interface PersonRepository extends JpaRepository<PersonEntity, Long> {
         INNER JOIN type_person tp 
             ON p.type_person_id = tp.id AND tp.value = :type
         LEFT JOIN person_zona pz 
-            ON p.id = pz.person_id
+            ON p.id = pz.person_id AND pz.status = true
         LEFT JOIN zona z 
             ON pz.zona_id = z.id
         LEFT JOIN contact_info ci_cel 

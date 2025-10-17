@@ -37,4 +37,12 @@ public class PersonZonaEntity implements Serializable {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    @Column(name = "status")
+    private boolean status = true;
+
+    @Column(name = "edited_at")
+    private LocalDateTime editedAt;
+
+
 }

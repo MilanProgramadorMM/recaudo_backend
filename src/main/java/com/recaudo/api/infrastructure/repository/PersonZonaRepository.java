@@ -11,6 +11,7 @@ import java.util.Optional;
 @Repository
 public interface PersonZonaRepository extends JpaRepository<PersonZonaEntity, Long> {
     Optional<PersonZonaEntity> findByPersonId(Long personId);
+    Optional<PersonZonaEntity> findByPersonIdAndStatusTrue(Long personId);
 
     List<PersonZonaEntity> findAllByZonaIdOrderByOrdenAsc(Long zonaId);
 

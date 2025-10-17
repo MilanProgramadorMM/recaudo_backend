@@ -5,4 +5,5 @@ import com.recaudo.api.domain.model.dto.rest_api.UpdateOrdenList;
 public interface PersonZonaGateway {
 
     void updateOrdenClientes(UpdateOrdenList list);
+    void updateClientToZone(Long personId, Long zoneId);
 }

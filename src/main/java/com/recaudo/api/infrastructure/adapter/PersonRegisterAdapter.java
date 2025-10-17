@@ -2,6 +2,7 @@ package com.recaudo.api.infrastructure.adapter;
 
 import com.recaudo.api.domain.gateway.ContactInfoGateway;
 import com.recaudo.api.domain.gateway.PersonGateway;
+import com.recaudo.api.domain.gateway.PersonZonaGateway;
 import com.recaudo.api.domain.gateway.UserGateway;
 import com.recaudo.api.domain.mapper.PersonMapper;
 import com.recaudo.api.domain.model.dto.response.ContactInfoListDto;
@@ -46,11 +47,15 @@ public class PersonRegisterAdapter implements PersonGateway {
     ZonaRepository zonaRepository;
 
     ContactInfoGateway contactInfoGateway;
+    PersonZonaGateway personZonaGateway;
 
     PaisRepository paisRepository;
     MunicipioRepository municipioRepository;
     BarrioRepository barrioRepository;
     DepartamentoRepository departamentoRepository;
+
+
+
 
 
     @Autowired(required = false)
@@ -187,6 +192,8 @@ public class PersonRegisterAdapter implements PersonGateway {
             entity.setEditedAt(LocalDateTime.now());
             entity.setUserEdit(getUsernameToken());
             entity.setTypePersonId(typeEntity.getId());
+
+            personZonaGateway.updateClientToZone(dto.getId(), dto.getZona());
 
         }
         return personMapper.entityToDto(personRepository.save(entity));

@@ -7,4 +7,5 @@ public class UpdateOrdenPerson {
     private Long personId;
     private Long zonaId;
     private Long orden;
+    private boolean status;
 }
