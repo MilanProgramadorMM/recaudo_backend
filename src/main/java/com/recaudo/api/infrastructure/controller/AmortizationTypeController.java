@@ -1,7 +1,9 @@
 package com.recaudo.api.infrastructure.controller;
 
+import com.recaudo.api.domain.model.dto.response.AmortizationResponseDto;
 import com.recaudo.api.domain.model.dto.response.AmortizationTypeResponseDto;
 import com.recaudo.api.domain.model.dto.response.DefaultResponseDto;
+import com.recaudo.api.domain.model.dto.rest_api.AmortizationRequestDto;
 import com.recaudo.api.domain.model.dto.rest_api.AmortizationTypeCreateDto;
 import com.recaudo.api.domain.usecase.AmortizationTypeUseCase;
 import com.recaudo.api.exception.BadRequestException;
@@ -102,4 +104,21 @@ public class AmortizationTypeController {
                         .build()
         );
     }
+
+    @GetMapping("/calculate/{code}")
+    public ResponseEntity<DefaultResponseDto<AmortizationResponseDto>> calcular(
+            @Valid @RequestBody AmortizationRequestDto amortizationRequestDto) {
+
+        AmortizationResponseDto data = amortizationUseCase.calculate(amortizationRequestDto);
+
+        return ResponseEntity.ok(
+                DefaultResponseDto.<AmortizationResponseDto>builder()
+                        .message("Cálculo de amortización realizado correctamente")
+                        .status(HttpStatus.OK)
+                        .details("Sistema de amortización: " + amortizationRequestDto.getCode().toUpperCase())
+                        .data(data)
+                        .build()
+        );
+    }
+
 }

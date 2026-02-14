@@ -14,8 +14,9 @@ public interface PersonInterfaceResponseDto {
     String getOccupation();
     String getDescription();
     Boolean getStatus();
+    String getUsername();
     Long getOrden();
-    Long getZonaId();
+    String getZid();
     String getZona();
     Long getCountryId();
     String getCountry();
@@ -30,5 +31,4 @@ public interface PersonInterfaceResponseDto {
     String getCelular();
     String getTelefono();
     String getDescriptionD();
-
 }

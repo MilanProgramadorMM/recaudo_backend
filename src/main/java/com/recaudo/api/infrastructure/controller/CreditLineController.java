@@ -23,14 +23,28 @@ public class CreditLineController {
 
     @GetMapping("/get-all")
     public ResponseEntity<DefaultResponseDto<List<CreditLineResponseDto>>> getAllCreditLine() {
-        List<CreditLineResponseDto> persons = creditLineUseCase.getAll();
+        List<CreditLineResponseDto> lines = creditLineUseCase.getAll();
 
         return ResponseEntity.ok(
                 DefaultResponseDto.<List<CreditLineResponseDto>>builder()
                         .message("Lineas de credito encontradas")
                         .status(HttpStatus.OK)
                         .details("Listado completo")
-                        .data(persons)
+                        .data(lines)
+                        .build()
+        );
+    }
+
+    @GetMapping("/get/{id}")
+    public ResponseEntity<DefaultResponseDto<CreditLineResponseDto>> getByIdCreditLine(@PathVariable Long id) {
+        CreditLineResponseDto line = creditLineUseCase.getById(id);
+
+        return ResponseEntity.ok(
+                DefaultResponseDto.<CreditLineResponseDto>builder()
+                        .message("Linea de credito encontradas")
+                        .status(HttpStatus.OK)
+                        .details("Linea completo")
+                        .data(line)
                         .build()
         );
     }

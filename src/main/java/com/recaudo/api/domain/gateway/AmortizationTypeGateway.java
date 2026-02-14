@@ -1,6 +1,8 @@
 package com.recaudo.api.domain.gateway;
 
+import com.recaudo.api.domain.model.dto.response.AmortizationResponseDto;
 import com.recaudo.api.domain.model.dto.response.AmortizationTypeResponseDto;
+import com.recaudo.api.domain.model.dto.rest_api.AmortizationRequestDto;
 import com.recaudo.api.domain.model.dto.rest_api.AmortizationTypeCreateDto;
 
 import java.util.List;
@@ -12,4 +14,5 @@ public interface AmortizationTypeGateway {
     AmortizationTypeResponseDto create(AmortizationTypeCreateDto data);
     AmortizationTypeResponseDto edit(Long id, AmortizationTypeCreateDto data);
     AmortizationTypeResponseDto delete(Long id);
+    AmortizationResponseDto calculate(AmortizationRequestDto amortizationRequestDto);
 }

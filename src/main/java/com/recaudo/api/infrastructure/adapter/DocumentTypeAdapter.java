@@ -46,6 +46,7 @@ public class DocumentTypeAdapter implements DocumentTypeGateway {
                 .orElseThrow(() -> new BadRequestException("Tipo de documento con id " + id + " no encontrado"));
     }
 
+
     @Override
     public DocumentTypeResponseDto create(DocumentTypeCreateDto data) {
         if (documentTypeRepository.existsByName(data.getName()))

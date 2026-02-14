@@ -22,6 +22,9 @@ public class UserDto {
     @JsonProperty("person_fullname")
     private String personFullName;
 
+    @JsonProperty("person_id")
+    private Long personId;
+
     @JsonProperty("rol")
     private List<RoleDto> rol;
 

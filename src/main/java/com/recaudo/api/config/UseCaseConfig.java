@@ -27,6 +27,4 @@ public class UseCaseConfig {
         return new ObjectMapper();
     }
 
-
-
 }

@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -14,26 +15,49 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 public class PersonResponseDto {
-
     private Long id;
-    private Long documentType;
+    private Integer documentType;
     private String document;
     private String firstName;
     private String middleName;
     private String lastName;
     private String maternalLastname;
     private String fullName;
-    private Long gender;
+    private Integer gender;
     private String occupation;
     private String description;
-    private Long orden;
+    private String createdAt;
+    private String typePerson;
+    private Boolean status;
+    private String uniqueCode;
+
+    // Para CLIENTE (una sola zona con orden)
+    private Integer orden;
+    private Long zonaId;
     private String zona;
-    private String countryId;
-    private String cityId;
-    private String departentId;
-    private String neighborhoodId;
+
+    // Para ASESOR (múltiples zonas sin orden)
+    private List<AsesorZonaDto> zonas;
+
+    // Campos de ubicación
+    private Long countryId;
+    private Long departentId;
+    private Long cityId;
+    private Long neighborhoodId;
+    private String descriptionD;
     private String adress;
+    private String details;
     private String correo;
     private String celular;
     private String telefono;
+
+    // Información de crédito
+    private Long creditId;
+    private Double creditAmount;
+    private Double creditBalance;
+    private String creditStatus;
+
+    // Información de cierre del día
+    private Boolean hasClosingToday;
+    private String closingStatus;
 }

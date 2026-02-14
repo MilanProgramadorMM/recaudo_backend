@@ -2,6 +2,7 @@ package com.recaudo.api.domain.usecase;
 
 import com.recaudo.api.config.UseCase;
 import com.recaudo.api.domain.gateway.PersonGateway;
+import com.recaudo.api.domain.model.dto.response.PersonInterfaceForRecaudoResponseDto;
 import com.recaudo.api.domain.model.dto.response.PersonInterfaceResponseDto;
 import com.recaudo.api.domain.model.dto.response.PersonResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.PersonRegisterDto;
@@ -27,15 +28,28 @@ public class RegisterPersonUseCase {
         return personGateway.getById(id);
     }
 
-    public List<PersonResponseDto> getAll() {
+    public List<PersonInterfaceResponseDto> getAll() {
         return personGateway.getAll();
     }
     public List<PersonInterfaceResponseDto> getByType(String type) {
         return personGateway.getByType(type);
     }
 
+    public PersonInterfaceResponseDto getByDocument(String document) {
+        return personGateway.getByDocument(document);
+    }
+
+
+    public List<PersonInterfaceForRecaudoResponseDto> getByZonaforRecaudo(String type, String zona) {
+        return personGateway.getByZonaforRecaudo(type,zona);
+    }
+
     public List<PersonInterfaceResponseDto> getByZona(String type, String zona) {
         return personGateway.getByZona(type,zona);
+    }
+
+    public List<String> getZonaByAsesor(Long asesorId) {
+        return personGateway.getZonaByAsesor(asesorId);
     }
 
     public void delete(Long id){

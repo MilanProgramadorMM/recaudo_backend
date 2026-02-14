@@ -14,6 +14,12 @@ public class CorsConfig {
 
             @Override
             public void addCorsMappings(CorsRegistry registry) {
+
+                registry.addMapping("/api/public/credit-approval/**")
+                        .allowedOrigins("*")  // Para cualquier frontend (WhatsApp link, Angular, Android, etc.)
+                        .allowedMethods("GET", "POST")
+                        .allowedHeaders("*");
+
                 registry.addMapping("/**")
                         .allowedOrigins(
                                 "*"   ) // dispositivo físico Android

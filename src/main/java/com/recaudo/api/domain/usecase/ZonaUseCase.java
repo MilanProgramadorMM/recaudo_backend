@@ -2,11 +2,15 @@ package com.recaudo.api.domain.usecase;
 
 import com.recaudo.api.config.UseCase;
 import com.recaudo.api.domain.gateway.ZonaGateway;
+import com.recaudo.api.domain.model.dto.response.DailyReportDetailDto;
+import com.recaudo.api.domain.model.dto.response.DailyReportSummaryDto;
 import com.recaudo.api.domain.model.dto.response.ZonaResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.ZonaCreateDto;
 import lombok.AllArgsConstructor;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @UseCase
 @AllArgsConstructor
@@ -34,4 +38,14 @@ public class ZonaUseCase {
     public void delete(Long id) {
         gateway.delete(id);
     }
+
+    public Optional<DailyReportSummaryDto> getDailySummaryByZone(String zonaName, LocalDate fecha){
+        return gateway.getDailySummaryByZone(zonaName, fecha);
+    }
+
+    public List<DailyReportDetailDto> getDailyDetailByZone(String username, LocalDate fech){
+        return gateway.getDailyDetailByZone(username, fech);
+    }
+
+
 }

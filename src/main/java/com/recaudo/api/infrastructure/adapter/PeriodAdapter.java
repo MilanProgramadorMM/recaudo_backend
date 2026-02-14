@@ -17,8 +17,9 @@ public class PeriodAdapter implements PeriodGateway {
 
      @Override
      public List<PeriodResponseDto> getAll() {
-        return periodRepository.findAllByStatusTrue(Sort.by(Sort.Direction.DESC, "id"))                .stream()
+        return periodRepository.findAllByStatusTrue(Sort.by(Sort.Direction.ASC, "id"))                .stream()
                 .map(period -> PeriodResponseDto.builder()
+                        .id(period.getId())
                         .cod(period.getCod())
                         .name(period.getName())
                         .description(period.getDescription())

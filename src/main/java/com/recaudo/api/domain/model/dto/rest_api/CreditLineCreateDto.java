@@ -62,6 +62,9 @@ public class CreditLineCreateDto {
     @JsonProperty("require_documentation")
     private boolean requireDocumentation;
 
+    @JsonProperty("loan_disbursement")
+    private boolean loanDisbursement;
+
     //@JsonProperty("documentation_type_ids")
     //private List<Long> documentationTypeIds;
 

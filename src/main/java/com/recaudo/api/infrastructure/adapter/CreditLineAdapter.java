@@ -3,14 +3,13 @@ package com.recaudo.api.infrastructure.adapter;
 import com.recaudo.api.domain.gateway.CreditLineGateway;
 import com.recaudo.api.domain.mapper.CreditLineMapper;
 import com.recaudo.api.domain.model.dto.response.CreditLineResponseDto;
+import com.recaudo.api.domain.model.dto.response.DocumentTypeResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.CreditLineCreateDto;
 import com.recaudo.api.domain.model.entity.*;
 import com.recaudo.api.domain.model.entity.CreditLineEntity;
 import com.recaudo.api.exception.BadRequestException;
-import com.recaudo.api.infrastructure.repository.AmortizationTypeRepository;
-import com.recaudo.api.infrastructure.repository.CreditLineDocumentationTypeRepository;
-import com.recaudo.api.infrastructure.repository.CreditLineRepository;
-import com.recaudo.api.infrastructure.repository.TaxTypeRepository;
+import com.recaudo.api.exception.ResourceNotFoundException;
+import com.recaudo.api.infrastructure.repository.*;
 import jakarta.transaction.Transactional;
 import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +33,9 @@ public class CreditLineAdapter implements CreditLineGateway {
     @Autowired
     CreditLineDocumentationTypeRepository creditLineDocumentationTypeRepository;
 
+    @Autowired
+    DocumentTypeRepository documentTypeRepository;
+
     @Autowired(required = false)
     CreditLineMapper creditLineMapper = Mappers.getMapper(CreditLineMapper.class);
 
@@ -45,14 +47,74 @@ public class CreditLineAdapter implements CreditLineGateway {
                 .map(entity -> {
                     CreditLineResponseDto dto = creditLineMapper.entityToDto(entity);
 
+                    // Obtener nombre del tipo de tasa
                     taxTypeRepository.findById(entity.getTaxType())
                             .ifPresent(taxType -> dto.setTaxTypeName(taxType.getName()));
 
+                    // Obtener nombre del tipo de amortización
                     amortizationTypeRepository.findById(entity.getAmortizationType())
                             .ifPresent(amortization -> dto.setAmortizationTypeName(amortization.getName()));
 
+                    // Obtener documentos requeridos si la línea requiere documentación
+                    if (entity.isRequireDocumentation()) {
+                        List<DocumentTypeResponseDto> requiredDocs = getRequiredDocuments(entity.getId());
+                        dto.setRequiredDocuments(requiredDocs);
+                    } else {
+                        dto.setRequiredDocuments(List.of()); // Lista vacía si no requiere
+                    }
+
                     return dto;
                 })
+                .toList();
+    }
+
+    @Override
+    public CreditLineResponseDto getById(Long id) {
+        // Buscar la entidad por ID
+        CreditLineEntity entity = creditLineRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Línea de crédito no encontrada con ID: " + id));
+
+        // Mapear entidad a DTO
+        CreditLineResponseDto dto = creditLineMapper.entityToDto(entity);
+
+        // Obtener nombre del tipo de tasa
+        taxTypeRepository.findById(entity.getTaxType())
+                .ifPresent(taxType -> dto.setTaxTypeName(taxType.getName()));
+
+        // Obtener nombre del tipo de amortización
+        amortizationTypeRepository.findById(entity.getAmortizationType())
+                .ifPresent(amortization -> dto.setAmortizationTypeName(amortization.getName()));
+
+        // Obtener documentos requeridos si la línea requiere documentación
+        if (entity.isRequireDocumentation()) {
+            List<DocumentTypeResponseDto> requiredDocs = getRequiredDocuments(entity.getId());
+            dto.setRequiredDocuments(requiredDocs);
+        } else {
+            dto.setRequiredDocuments(List.of()); // Lista vacía si no requiere
+        }
+
+        return dto;
+    }
+
+    private List<DocumentTypeResponseDto> getRequiredDocuments(Long creditLineId) {
+        // Obtener las relaciones de la tabla intermedia
+        List<CreditLineDocumentationTypeEntity> relations =
+                creditLineDocumentationTypeRepository.findByCreditLineId(creditLineId);
+
+        // Obtener los IDs de los tipos de documentación
+        List<Long> documentTypeIds = relations.stream()
+                .map(CreditLineDocumentationTypeEntity::getDocumentationTypeId)
+                .toList();
+
+        // Obtener los tipos de documentación
+        return documentTypeRepository.findAllById(documentTypeIds).stream()
+                .filter(DocumentTypeEntity::isStatus)
+                .map(docType -> DocumentTypeResponseDto.builder()
+                        .id(docType.getId())
+                        .name(docType.getName())
+                        .description(docType.getDescription())
+                        .status(docType.isStatus() ? "ACTIVO" : "INACTIVO")
+                        .build())
                 .toList();
     }
 
@@ -77,6 +139,7 @@ public class CreditLineAdapter implements CreditLineGateway {
                 .maxPeriod(dto.getMaxPeriod())
                 .procedureName(dto.getProcedureName().toUpperCase())
                 .lifeInsurance(dto.isLifeInsurance())
+                .loanDisbursement(dto.isLoanDisbursement())
                 .portfolioInsurance(dto.isPortfolioInsurance())
                 .requireDocumentation(dto.isRequireDocumentation())
                 .amortizationType(amortizationType.getId())
@@ -128,6 +191,7 @@ public class CreditLineAdapter implements CreditLineGateway {
         entity.setProcedureName(dto.getProcedureName().toUpperCase());
         entity.setLifeInsurance(dto.isLifeInsurance());
         entity.setPortfolioInsurance(dto.isPortfolioInsurance());
+        entity.setLoanDisbursement(dto.isLoanDisbursement());
         entity.setRequireDocumentation(dto.isRequireDocumentation());
         entity.setAmortizationType(amortizationType.getId());
         entity.setTaxType(taxType.getId());

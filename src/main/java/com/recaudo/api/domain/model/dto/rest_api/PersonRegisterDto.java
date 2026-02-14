@@ -8,6 +8,7 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -64,6 +65,7 @@ public class PersonRegisterDto {
 
     //private Long orden;
     private Long zona;
+    private List<Long> zonas;
     private Long countryId;
     private Long cityId;
     private Long departentId;

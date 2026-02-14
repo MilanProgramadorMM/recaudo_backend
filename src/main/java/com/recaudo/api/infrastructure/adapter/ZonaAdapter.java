@@ -1,6 +1,8 @@
 package com.recaudo.api.infrastructure.adapter;
 
 import com.recaudo.api.domain.gateway.ZonaGateway;
+import com.recaudo.api.domain.model.dto.response.DailyReportDetailDto;
+import com.recaudo.api.domain.model.dto.response.DailyReportSummaryDto;
 import com.recaudo.api.domain.model.dto.response.ZonaResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.ZonaCreateDto;
 import com.recaudo.api.domain.model.entity.ZonaEntity;
@@ -11,8 +13,10 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ZonaAdapter implements ZonaGateway {
@@ -71,6 +75,11 @@ public class ZonaAdapter implements ZonaGateway {
                 .build();
     }
 
+    @Override
+    public Optional<ZonaEntity> getById(Long id) {
+        return zonaRepository.findById(id);
+    }
+
     //Todo: preguntar sobre validaciones a tener en cuenta antes de eliminar zona
     @Override
     public void delete(Long id) {
@@ -83,6 +92,16 @@ public class ZonaAdapter implements ZonaGateway {
         zona.setUserEdit(getUsernameToken());
 
         zonaRepository.save(zona);
+    }
+
+    @Override
+    public List<DailyReportDetailDto> getDailyDetailByZone(String username, LocalDate fech) {
+        return zonaRepository.getDailyDetailByZone(username, fech);
+    }
+
+    @Override
+    public Optional<DailyReportSummaryDto> getDailySummaryByZone(String zonaName, LocalDate fecha) {
+        return zonaRepository.getDailySummaryByZone(zonaName, fecha);
     }
 
     @Override

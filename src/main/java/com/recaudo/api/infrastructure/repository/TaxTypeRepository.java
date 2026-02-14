@@ -1,6 +1,5 @@
 package com.recaudo.api.infrastructure.repository;
 
-import com.recaudo.api.domain.model.entity.OtherDiscountsEntity;
 import com.recaudo.api.domain.model.entity.TaxTypeEntity;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -17,6 +17,9 @@ public class CreditLineUseCase {
     public List<CreditLineResponseDto> getAll() {
         return creditLineGateway.get();
     }
+    public CreditLineResponseDto getById(Long id) {
+        return creditLineGateway.getById(id);
+    }
 
     public CreditLineResponseDto register(CreditLineCreateDto data) {
         return creditLineGateway.create(data);
