@@ -1,9 +1,12 @@
 package com.recaudo.api.infrastructure.controller;
 
-import com.recaudo.api.domain.model.dto.response.GlotypesProjection;
+import com.recaudo.api.domain.model.entity.GlotypesEntity;
 import com.recaudo.api.infrastructure.adapter.GlotypesAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -16,8 +19,8 @@ public class GlotypesController {
 
 
     @GetMapping("/{key}")
-    public List<GlotypesProjection> getByKey(@PathVariable String key) {
-        return glotypesAdapter.getTipDoc(key);
+    public List<GlotypesEntity> getByKey(@PathVariable String key) {
+        return glotypesAdapter.getByKey(key);
     }
 
 }

@@ -1,8 +1,6 @@
 package com.recaudo.api.infrastructure.controller;
 
-import com.recaudo.api.domain.model.dto.response.DefaultResponseDto;
-import com.recaudo.api.domain.model.dto.response.LoginResponseDto;
-import com.recaudo.api.domain.model.dto.response.PersonResponseDto;
+import com.recaudo.api.domain.model.dto.response.*;
 import com.recaudo.api.domain.model.dto.rest_api.LoginDto;
 import com.recaudo.api.domain.model.dto.rest_api.PersonRegisterDto;
 import com.recaudo.api.domain.model.entity.RoleEntity;
@@ -159,11 +157,11 @@ public class AuthController {
     }
 
     @GetMapping("/get-all")
-    public ResponseEntity<DefaultResponseDto<List<PersonResponseDto>>> getAllPersons() {
-        List<PersonResponseDto> persons = personUseCase.getAll();
+    public ResponseEntity<DefaultResponseDto<List<PersonInterfaceResponseDto>>> getAllPersons() {
+        List<PersonInterfaceResponseDto> persons = personUseCase.getAll();
 
         return ResponseEntity.ok(
-                DefaultResponseDto.<List<PersonResponseDto>>builder()
+                DefaultResponseDto.<List<PersonInterfaceResponseDto>>builder()
                         .message("Personas encontradas")
                         .status(HttpStatus.OK)
                         .details("Listado completo")

@@ -5,7 +5,7 @@ import com.recaudo.api.domain.gateway.PersonGateway;
 import com.recaudo.api.domain.gateway.PersonZonaGateway;
 import com.recaudo.api.domain.gateway.UserGateway;
 import com.recaudo.api.domain.mapper.PersonMapper;
-import com.recaudo.api.domain.model.dto.response.ContactInfoListDto;
+import com.recaudo.api.domain.model.dto.response.PersonInterfaceForRecaudoResponseDto;
 import com.recaudo.api.domain.model.dto.response.PersonInterfaceResponseDto;
 import com.recaudo.api.domain.model.dto.response.PersonResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.PersonRegisterDto;
@@ -18,11 +18,8 @@ import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.webjars.NotFoundException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -55,9 +52,6 @@ public class PersonRegisterAdapter implements PersonGateway {
     DepartamentoRepository departamentoRepository;
 
 
-
-
-
     @Autowired(required = false)
     PersonMapper personMapper = Mappers.getMapper(PersonMapper.class);
 
@@ -80,7 +74,7 @@ public class PersonRegisterAdapter implements PersonGateway {
     }
 
     @Override
-    public List<PersonResponseDto> getAll() {
+    public List<PersonInterfaceResponseDto> getAll() {
         return personRepository.getAllPerson();
     }
 
@@ -90,9 +84,30 @@ public class PersonRegisterAdapter implements PersonGateway {
     }
 
     @Override
+    public PersonInterfaceResponseDto getByDocument(String document) {
+        return personRepository.getByDocument(document);
+         }
+
+    @Override
+    public List<PersonInterfaceForRecaudoResponseDto> getByZonaforRecaudo(String type, String zona) {
+        return personRepository.getByZonaforRecaudo(type, zona);
+    }
+
+    @Override
     public List<PersonInterfaceResponseDto> getByZona(String type, String zona) {
         return personRepository.getByZona(type, zona);
     }
+
+    @Override
+    public List<String> getZonaByAsesor(Long asesorId) {
+
+        return userRepository.findById(asesorId)
+                .map(user -> personRepository.getZonasByAsesor(user.getPersonId()))
+                .orElseThrow(() ->
+                        new RuntimeException("No existe un asesor con id: " + asesorId)
+                );
+    }
+
 
     @Override
     public PersonResponseDto save(PersonRegisterDto person) {
@@ -115,7 +130,10 @@ public class PersonRegisterAdapter implements PersonGateway {
 
         normalizePersonDto(person);
 
+        String uniqueCode = setUniqueCode(person);
+
         PersonEntity personEntity = personMapper.dtoToEntity(person);
+        personEntity.setUniqueCode(uniqueCode);
         personEntity.setUserCreate(getUsernameToken());
         TypePersonEntity typeEntity = typePersonRepository.findByValue(person.getTypePerson())
                 .orElseThrow(() -> new RuntimeException("Tipo de persona no encontrado"));
@@ -126,41 +144,83 @@ public class PersonRegisterAdapter implements PersonGateway {
         // Solo si es ASESOR se crea usuario
         if ("ASESOR".equalsIgnoreCase(person.getTypePerson())) {
             userGateway.saveUserToPerson(personEntity);
+
+            // Asignar múltiples zonas al asesor
+            if (person.getZonas() != null && !person.getZonas().isEmpty()) {
+                personZonaGateway.assignZonasToAsesor(personEntity.getId(), person.getZonas());
+            } else {
+                throw new BadRequestException("Debe asignar al menos una zona al asesor");
+            }
         }
 
+        // Si es CLIENTE, asignar una sola zona con orden
         if ("CLIENTE".equalsIgnoreCase(person.getTypePerson())) {
-
-            Long zonaId = person.getZona();
-            //Long nuevoOrden = person.getOrden();
-
-            /* Obtenemos los clientes existentes en la zona ordenados por orden
-            List<PersonZonaEntity> clientesAfectados = personZonaRepository
-                    .findAllByZonaIdAndOrdenGreaterThanEqualOrderByOrdenAsc(zonaId, nuevoOrden);
-
-            // Incrementamos el orden de los que son >= nuevoOrden
-            for (PersonZonaEntity pz : clientesAfectados) {
-                pz.setOrden(pz.getOrden() + 1);
+            if (person.getZona() == null) {
+                throw new BadRequestException("Debe asignar una zona al cliente");
             }
 
-            // se guardan los cambios de los clientes existentes
-            personZonaRepository.saveAll(clientesAfectados);*/
+            Long zonaId = person.getZona();
 
-            // nuevo cliente
-            PersonZonaEntity personZona = PersonZonaEntity.builder()
-                    .personId(personEntity.getId())
-                    .zonaId(zonaId)
-                    .orden(0L)
-                    .createdAt(LocalDateTime.now())
-                    .build();
+            // Obtenemos los clientes actuales de la zona
+            List<PersonZonaEntity> clientesExistentes = personZonaRepository
+                    .findAllByZonaIdOrderByOrdenAsc(zonaId);
 
-            personZonaRepository.save(personZona);
+            int nuevoOrden;
+
+            if (clientesExistentes.isEmpty()) {
+                nuevoOrden = 1; // Primer cliente en la zona
+            } else {
+                // Buscamos el último orden y sumamos 1
+                // Usamos el último elemento de la lista ya que viene ordenada por el repositorio
+                long ultimoOrden = clientesExistentes.get(clientesExistentes.size() - 1).getOrden();
+                nuevoOrden = (int) ultimoOrden + 1;
+            }
+
+            // Pasamos el nuevoOrden calculado
+            saveToPersonZona(personEntity.getId(), zonaId, nuevoOrden);
         }
 
-
+        // Guardar información de contacto
         contactInfoGateway.saveContactInfoClient(person, personEntity.getId());
 
-
         return personMapper.entityToDto(personEntity);
+    }
+
+    private String setUniqueCode(PersonRegisterDto person) {
+        //Obtener el documento
+        String document = (person.getDocument() != null) ? person.getDocument().trim() : "";
+
+        // Obtener las 2 primeras letras del primer nombre
+        String firstPart = "";
+        if (person.getFirstName() != null && person.getFirstName().length() >= 2) {
+            firstPart = person.getFirstName().substring(0, 2);
+        } else if (person.getFirstName() != null) {
+            firstPart = person.getFirstName();
+        }
+
+        // Obtener las 2 primeras letras del segundo apellido
+        String secondPart = "";
+        if (person.getLastName() != null && person.getLastName().length() >= 2) {
+            secondPart = person.getLastName().substring(0, 2);
+        } else if (person.getLastName() != null) {
+            secondPart = person.getLastName();
+        }
+
+        // Concatenar y convertir a mayúsculas
+        return (document + firstPart + secondPart).toUpperCase();
+    }
+
+
+    private void saveToPersonZona(Long id, Long zonaId, int orden){
+        PersonZonaEntity personZona = PersonZonaEntity.builder()
+                .personId(id)
+                .zonaId(zonaId)
+                .orden(orden)
+                .status(true)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        personZonaRepository.save(personZona);
     }
 
     @Override
@@ -184,20 +244,52 @@ public class PersonRegisterAdapter implements PersonGateway {
 
     @Override
     public PersonResponseDto edit(PersonRegisterDto dto) {
-        PersonEntity entity = personMapper.dtoToEntity(dto);
 
-        if (entity.getId() != null && personRepository.existsById(entity.getId())) {
-            TypePersonEntity typeEntity = typePersonRepository.findByValue(dto.getTypePerson())
-                    .orElseThrow(() -> new BadRequestException("Tipo de persona no encontrado"));
-            entity.setEditedAt(LocalDateTime.now());
-            entity.setUserEdit(getUsernameToken());
-            entity.setTypePersonId(typeEntity.getId());
+        PersonInterfaceResponseDto personByDocument =
+                personRepository.getByDocument(dto.getDocument());
 
-            personZonaGateway.updateClientToZone(dto.getId(), dto.getZona());
-
+        if (personByDocument == null) {
+            throw new BadRequestException("No existe una persona con el documento " + dto.getDocument());
         }
+
+        Long personId = personByDocument.getId();
+
+        PersonEntity entity = personRepository.findById(personId)
+                .orElseThrow(() -> new BadRequestException("La persona a actualizar no existe"));
+
+        String uniqueCode = setUniqueCode(dto);
+        entity = personMapper.dtoToEntity(dto);
+        entity.setId(personId);
+
+
+        TypePersonEntity typeEntity = typePersonRepository
+                .findByValue(dto.getTypePerson())
+                .orElseThrow(() -> new BadRequestException("Tipo de persona no encontrado"));
+        entity.setEditedAt(LocalDateTime.now());
+        entity.setUniqueCode(uniqueCode);
+        entity.setUserEdit(getUsernameToken());
+        entity.setTypePersonId(typeEntity.getId());
+
+
+        // Actualizar zonas según el tipo de persona
+        if ("ASESOR".equalsIgnoreCase(dto.getTypePerson())) {
+            // Para asesores: actualizar múltiples zonas
+            if (dto.getZonas() != null && !dto.getZonas().isEmpty()) {
+                personZonaGateway.assignZonasToAsesor(personId, dto.getZonas());
+            } else {
+                throw new BadRequestException("Debe asignar al menos una zona al asesor");
+            }
+        } else if ("CLIENTE".equalsIgnoreCase(dto.getTypePerson())) {
+            // Para clientes: actualizar una sola zona
+            if (dto.getZona() == null) {
+                throw new BadRequestException("Debe asignar una zona al cliente");
+            }
+            personZonaGateway.updateClientToZone(personId, dto.getZona());
+        }
+
         return personMapper.entityToDto(personRepository.save(entity));
     }
+
 
     @Override
     public void delete(Long id) {
@@ -266,6 +358,7 @@ public class PersonRegisterAdapter implements PersonGateway {
                 .getPrincipal())
                 .getUsername();
     }
+
 
     private void normalizePersonDto(PersonRegisterDto dto) {
         if (dto.getDocument() != null) dto.setDocument(dto.getDocument().trim().toUpperCase());

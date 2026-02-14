@@ -68,6 +68,7 @@ public class UserAdapter implements UserGateway {
         dto.setUsername(user.getUsername());
         dto.setUserCreate(user.getUserCreate());
         dto.setCreatedAt(user.getCreatedAt().toString());
+        dto.setPersonId(user.getPersonId());
 
         // Obtener nombre completo de la persona
         if (user.getPersonId() != null) {
@@ -208,36 +209,53 @@ public class UserAdapter implements UserGateway {
     }
 
     public String asignUsername(String primerNombre, String primerApellido) {
+
         primerNombre = primerNombre.trim().toUpperCase();
         primerApellido = primerApellido.trim().toUpperCase();
 
-        int letras = 1;
-        String username;
+        final int MIN_LENGTH = 9;
 
-        do {
-            // Tomar las primeras 'letras' del nombre + apellido
-            String prefijo = primerNombre.substring(0, Math.min(letras, primerNombre.length()));
-            username = prefijo + primerApellido;
+        // Base inicial
+        String base = primerNombre + primerApellido;
 
-            // Si no existe en la base de datos, lo retornamos
-            if (!userRepository.findByUsername(username).isPresent()) {
-                return username;
+        // Caso 1: el nombre completo ya cumple longitud
+        if (base.length() >= MIN_LENGTH) {
+            String username = base;
+
+            int contador = 1;
+            while (userRepository.findByUsername(username).isPresent()) {
+                username = base + contador;
+                contador++;
+            }
+            return username;
+        }
+
+        // Caso 2: construir progresivamente hasta cumplir longitud
+        for (int i = 1; i <= primerNombre.length(); i++) {
+
+            String candidate = primerNombre.substring(0, i) + primerApellido;
+
+            if (candidate.length() < MIN_LENGTH) {
+                continue;
             }
 
-            letras++;
-        } while (letras <= primerNombre.length());
+            if (!userRepository.findByUsername(candidate).isPresent()) {
+                return candidate;
+            }
+        }
 
-        // En caso extremo, añadir un sufijo numérico
+        // Caso 3 (plan Z): sí o sí con sufijo
         int contador = 1;
-        String base = primerNombre + primerApellido;
-        username = base;
-        while (userRepository.findByUsername(username).isPresent()) {
-            username = base + contador;
+        String candidate = base;
+
+        while (candidate.length() < MIN_LENGTH || userRepository.findByUsername(candidate).isPresent()) {
+            candidate = base + contador;
             contador++;
         }
 
-        return username;
+        return candidate;
     }
+
 
     void assignRolesToUser(Long userId, List<Long> roles) {
         roles.forEach(rol -> {

@@ -133,6 +133,17 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(CreditSimulationException.class)
+    public ResponseEntity<ErrorInfo> handleCreditSimulationException(CreditSimulationException e,
+                                                               HttpServletRequest request) {
+        String messageException = e.getMessage();
+        log.warn(TXT_ERROR.concat(request.getMethod()).concat(" } ").concat(request.getRequestURI()).concat(TXT_REASON)
+                .concat(messageException));
+        log.error("Extensión de la excepción: ", e);
+        return response(ErrorInfo.create(HttpServletResponse.SC_BAD_REQUEST, message.getBadRequest(), messageException),
+                HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(InternalServerErrorException.class)
     public ResponseEntity<ErrorInfo> handleInternalServerErrorException(InternalServerErrorException e,
                                                                             HttpServletRequest request) {

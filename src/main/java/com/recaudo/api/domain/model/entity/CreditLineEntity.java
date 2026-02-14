@@ -58,6 +58,9 @@ public class CreditLineEntity implements Serializable {
     @Column(name = "require_documentation")
     private boolean requireDocumentation;
 
+    @Column(name = "loan_disbursement")
+    private boolean loanDisbursement;
+
     @Column(name = "user_create")
     private String userCreate;
 

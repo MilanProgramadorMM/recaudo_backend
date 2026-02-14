@@ -8,6 +8,7 @@ import lombok.Data;
 @Builder
 @AllArgsConstructor
 public class PeriodResponseDto {
+    private Long id;
     private String cod;
     private String name;
     private String description;

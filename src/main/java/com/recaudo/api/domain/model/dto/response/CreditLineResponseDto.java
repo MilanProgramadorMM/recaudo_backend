@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @Builder
@@ -28,4 +29,8 @@ public class CreditLineResponseDto {
     private boolean lifeInsurance;
     private boolean portfolioInsurance;
     private boolean requireDocumentation;
+    private boolean loanDisbursement;
+
+    private List<DocumentTypeResponseDto> requiredDocuments;
+
 }

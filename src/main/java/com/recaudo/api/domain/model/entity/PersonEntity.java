@@ -27,6 +27,9 @@ public class PersonEntity implements Serializable {
     @Column(name = "document")
     private String document;
 
+    @Column(name = "unique_code")
+    private String uniqueCode;
+
     @Column(name = "firstname")
     private String firstName;
 

@@ -33,11 +33,12 @@ public class PersonZonaEntity implements Serializable {
     private Long zonaId;
 
     @Column(name = "orden")
-    private Long orden;
+    private int orden;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @Builder.Default
     @Column(name = "status")
     private boolean status = true;
 

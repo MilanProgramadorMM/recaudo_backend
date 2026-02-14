@@ -1,27 +1,17 @@
 package com.recaudo.api.infrastructure.controller;
 
 import com.recaudo.api.domain.model.dto.response.DefaultResponseDto;
-import com.recaudo.api.domain.model.dto.response.LoginResponseDto;
+import com.recaudo.api.domain.model.dto.response.PersonInterfaceForRecaudoResponseDto;
 import com.recaudo.api.domain.model.dto.response.PersonInterfaceResponseDto;
 import com.recaudo.api.domain.model.dto.response.PersonResponseDto;
-import com.recaudo.api.domain.model.dto.rest_api.LoginDto;
 import com.recaudo.api.domain.model.dto.rest_api.PersonRegisterDto;
-import com.recaudo.api.domain.model.entity.PersonEntity;
 import com.recaudo.api.domain.usecase.RegisterPersonUseCase;
-import com.recaudo.api.domain.usecase.RegisterUseCase;
 import com.recaudo.api.exception.BadRequestException;
-import com.recaudo.api.infrastructure.adapter.UserDetailsImpl;
-import com.recaudo.api.infrastructure.helper.security.jwt.JwtUtil;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
@@ -85,11 +75,11 @@ public class PersonController {
     }
 
     @GetMapping("/get-all")
-    public ResponseEntity<DefaultResponseDto<List<PersonResponseDto>>> getAllPersons() {
-        List<PersonResponseDto> persons = personUseCase.getAll();
+    public ResponseEntity<DefaultResponseDto<List<PersonInterfaceResponseDto>>> getAllPersons() {
+        List<PersonInterfaceResponseDto> persons = personUseCase.getAll();
 
         return ResponseEntity.ok(
-                DefaultResponseDto.<List<PersonResponseDto>>builder()
+                DefaultResponseDto.<List<PersonInterfaceResponseDto>>builder()
                         .message("Personas encontradas")
                         .status(HttpStatus.OK)
                         .details("Listado completo")
@@ -114,7 +104,39 @@ public class PersonController {
         );
     }
 
+    @GetMapping("/get-by-document/{document}")
+    public ResponseEntity<DefaultResponseDto<PersonInterfaceResponseDto>> getPersonsByDocument(
+            @PathVariable("document") String document) {
+
+        PersonInterfaceResponseDto person = personUseCase.getByDocument(document);
+
+        return ResponseEntity.ok(
+                DefaultResponseDto.<PersonInterfaceResponseDto>builder()
+                        .message("Persona encontrada")
+                        .status(HttpStatus.OK)
+                        .details("Persona encontrada correctamente")
+                        .data(person)
+                        .build()
+        );
+    }
+
     @GetMapping("/get-by-zona/{type}/{zona}")
+    public ResponseEntity<DefaultResponseDto<List<PersonInterfaceForRecaudoResponseDto>>> getPersonsByZonaForRecaudo(
+            @PathVariable("type") String type, @PathVariable("zona") String zona) {
+
+        List<PersonInterfaceForRecaudoResponseDto> persons = personUseCase.getByZonaforRecaudo(type,zona);
+
+        return ResponseEntity.ok(
+                DefaultResponseDto.<List<PersonInterfaceForRecaudoResponseDto>>builder()
+                        .message("Personas encontradas por zona")
+                        .status(HttpStatus.OK)
+                        .details("Listado filtrado por zona: " + zona)
+                        .data(persons)
+                        .build()
+        );
+    }
+
+    @GetMapping("/get-zona/{type}/{zona}")
     public ResponseEntity<DefaultResponseDto<List<PersonInterfaceResponseDto>>> getPersonsByZona(
             @PathVariable("type") String type, @PathVariable("zona") String zona) {
 
@@ -126,6 +148,20 @@ public class PersonController {
                         .status(HttpStatus.OK)
                         .details("Listado filtrado por zona: " + zona)
                         .data(persons)
+                        .build()
+        );
+    }
+
+    @GetMapping("/asesor/{asesorId}/zona")
+    public ResponseEntity<DefaultResponseDto<List<String>>> getZonaByAsesor(
+            @PathVariable("asesorId") Long asesorId) {
+        List<String> zona = personUseCase.getZonaByAsesor(asesorId);
+        return ResponseEntity.ok(
+                DefaultResponseDto.<List<String>>builder()
+                        .message("Zona del asesor encontrada")
+                        .status(HttpStatus.OK)
+                        .details("Zona asignada al asesor ID: " + asesorId)
+                        .data(zona)
                         .build()
         );
     }

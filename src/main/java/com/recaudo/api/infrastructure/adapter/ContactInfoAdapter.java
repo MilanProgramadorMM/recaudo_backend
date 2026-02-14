@@ -134,7 +134,7 @@ public class ContactInfoAdapter implements ContactInfoGateway {
     }
 
     private void saveContact(Long personId, String code, String value, PersonRegisterDto dto) {
-        GlotypesEntity tipo = glotypesRepository.findByCode(code);
+        GlotypesEntity tipo = glotypesRepository.findByKeyAndCode("TIPUBI", code).orElse(null);
         if (tipo == null) {
             throw new BadRequestException("No existe code: " + code);
         }

@@ -8,6 +8,7 @@ import java.util.List;
 public interface CreditLineGateway {
 
     List<CreditLineResponseDto> get();
+    CreditLineResponseDto getById(Long id);
     CreditLineResponseDto create(CreditLineCreateDto barrioCreateDto);
     CreditLineResponseDto update(Long id, CreditLineCreateDto barrioCreateDto);
     CreditLineResponseDto delete(Long id);

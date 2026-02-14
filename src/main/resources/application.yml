@@ -1,4 +1,5 @@
 server:
+  port: 8081
   address: 0.0.0.0
   servlet:
     context-path: /api
@@ -14,6 +15,11 @@ spring:
     # url: jdbc:postgresql://host.docker.internal:3306/recaudo?serverTimezone=UTC
     #username: recaudoapp
     #password: R3c4uD0-DB
+    #prod
+    url: jdbc:mysql://159.203.163.185:3306/recaudo?serverTimezone=UTC
+    username: recaudoapp
+    password: R3c4uD0-DB
+
   servlet:
     multipart:
       max-file-size: 10MB
@@ -35,6 +41,20 @@ app:
   jwt-secret: dDBsbC1wNHktanMwbi13M2ItNzBrM24tczNjcjM3LWszeQ==
   jwt-expiration-milliseconds: 60000
   jwt-token-type: Bearer
+
+  frontend:
+    url: http://localhost:4200
+
+    whatsapp:
+      enabled: false  # false = modo simulado para desarrollo
+      account-sid: DUMMY_SID
+      auth-token: DUMMY_TOKEN
+      from-number: whatsapp:+1234567890
+      # Producción (comentar en desarrollo)
+      # enabled: true
+      # account-sid: ${WHATSAPP_ACCOUNT_SID}
+      # auth-token: ${WHATSAPP_AUTH_TOKEN}
+      # from-number: ${WHATSAPP_FROM_NUMBER}
 #  security:
 #    user:
 #      name: ikarlox

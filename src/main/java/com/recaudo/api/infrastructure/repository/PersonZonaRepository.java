@@ -11,12 +11,18 @@ import java.util.Optional;
 @Repository
 public interface PersonZonaRepository extends JpaRepository<PersonZonaEntity, Long> {
     Optional<PersonZonaEntity> findByPersonId(Long personId);
+
     Optional<PersonZonaEntity> findByPersonIdAndStatusTrue(Long personId);
+
+    // Para buscar por persona y zona específica (útil para CLIENTES)
+    Optional<PersonZonaEntity> findByPersonIdAndZonaIdAndStatusTrue(Long personId, Long zonaId);
+
+    // Para obtener todas las zonas activas de una persona (útil para ASESORES)
+    List<PersonZonaEntity> findAllByPersonIdAndStatusTrue(Long personId);
 
     List<PersonZonaEntity> findAllByZonaIdOrderByOrdenAsc(Long zonaId);
 
-    // Trae todos los clientes de la zona cuyo orden sea mayor o igual al que vamos a insertar
-   // List<PersonZonaEntity> findAllByZonaIdAndOrdenGreaterThanEqualOrderByOrdenAsc(Long zonaId, Long orden);
+    List<PersonZonaEntity> findAllByZonaIdAndStatusTrue(Long zonaId);
 
 
 }

@@ -2,7 +2,9 @@ package com.recaudo.api.domain.usecase;
 
 import com.recaudo.api.config.UseCase;
 import com.recaudo.api.domain.gateway.AmortizationTypeGateway;
+import com.recaudo.api.domain.model.dto.response.AmortizationResponseDto;
 import com.recaudo.api.domain.model.dto.response.AmortizationTypeResponseDto;
+import com.recaudo.api.domain.model.dto.rest_api.AmortizationRequestDto;
 import com.recaudo.api.domain.model.dto.rest_api.AmortizationTypeCreateDto;
 import lombok.AllArgsConstructor;
 
@@ -32,5 +34,9 @@ public class AmortizationTypeUseCase {
 
     public AmortizationTypeResponseDto delete(Long id) {
         return amortizationGateway.delete(id);
+    }
+
+    public AmortizationResponseDto calculate(AmortizationRequestDto amortizationRequestDto){
+        return amortizationGateway.calculate(amortizationRequestDto);
     }
 }

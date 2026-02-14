@@ -1,15 +1,21 @@
 package com.recaudo.api.infrastructure.controller;
 
+import com.recaudo.api.domain.model.dto.response.DailyReportDetailDto;
+import com.recaudo.api.domain.model.dto.response.DailyReportSummaryDto;
 import com.recaudo.api.domain.model.dto.response.DefaultResponseDto;
 import com.recaudo.api.domain.model.dto.response.ZonaResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.ZonaCreateDto;
 import com.recaudo.api.domain.usecase.ZonaUseCase;
 import lombok.AllArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/zona")
@@ -93,6 +99,41 @@ public class ZonaController {
                         .build()
         );
     }
+
+
+    /**
+     * Obtiene el resumen diario por zona
+     */
+    @GetMapping("/daily-summary")
+    public ResponseEntity<Optional<DailyReportSummaryDto>> getDailySummary(
+            @RequestParam String zonaName,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha
+    ) {
+        try {
+            Optional<DailyReportSummaryDto> summary = zonaUseCase.getDailySummaryByZone(zonaName, fecha);
+            return ResponseEntity.ok(summary);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Obtiene el detalle diario de recaudos
+     */
+    @GetMapping("/daily-detail")
+    public ResponseEntity<List<DailyReportDetailDto>> getDailyDetail(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha,
+            Authentication authentication
+    ) {
+        try {
+            String username = authentication.getName();
+            List<DailyReportDetailDto> details = zonaUseCase.getDailyDetailByZone(username, fecha);
+            return ResponseEntity.ok(details);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
 
 
 }
