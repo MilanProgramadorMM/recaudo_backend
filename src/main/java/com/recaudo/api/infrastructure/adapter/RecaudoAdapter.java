@@ -21,7 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -479,7 +478,7 @@ public class RecaudoAdapter {
             );
 
             // Calcular cuánto ya se ha pagado de esta cuota
-            BigDecimal totalPagadoCuota = recaudoRepository.getTotalByCuotaId(cuota.getId());
+            BigDecimal totalPagadoCuota = recaudoRepository.getTotalByCuotaId(cuota.getId()).abs();
             BigDecimal pendienteCuota = cuota.getQuotaValue().subtract(totalPagadoCuota);
 
             if (pendienteCuota.compareTo(BigDecimal.ZERO) <= 0) {
@@ -713,10 +712,11 @@ public class RecaudoAdapter {
         BigDecimal remaining = availableAmount;
 
         // Calcular cuánto ya se ha pagado de cada concepto
-        BigDecimal portfolioInsurancePaid = recaudoRepository.getPortfolioInsuranceByCuotaId(cuota.getId());
-        BigDecimal lifeInsurancePaid = recaudoRepository.getLifeInsuranceByCuotaId(cuota.getId());
-        BigDecimal interestPaid = recaudoRepository.getInterestByCuotaId(cuota.getId());
-        BigDecimal investmentPaid = recaudoRepository.getInvestmentByCuotaId(cuota.getId());
+        BigDecimal portfolioInsurancePaid = recaudoRepository.getPortfolioInsuranceByCuotaId(cuota.getId()).abs();
+        BigDecimal lifeInsurancePaid = recaudoRepository.getLifeInsuranceByCuotaId(cuota.getId()).abs();
+        BigDecimal interestPaid = recaudoRepository.getInterestByCuotaId(cuota.getId()).abs();
+        BigDecimal investmentPaid = recaudoRepository.getInvestmentByCuotaId(cuota.getId()).abs();
+
 
         // 1. Aplicar a Seguro de Cartera
         BigDecimal portfolioInsurancePending = cuota.getPortfolioInsurance().subtract(portfolioInsurancePaid);
@@ -754,9 +754,8 @@ public class RecaudoAdapter {
         return distribution;
     }
 
-    /**
-     * Distribución SOLO CAPITAL
 
+    //Distribución SOLO CAPITAL
     private PaymentDistribution distributePaymentCapitalOnly(AmortizationEntity cuota, BigDecimal availableAmount) {
         PaymentDistribution distribution = new PaymentDistribution();
 
@@ -780,8 +779,7 @@ public class RecaudoAdapter {
     }
 
 
-     * Distribución SOLO INTERESES
-
+    //Distribución SOLO INTERESES
     private PaymentDistribution distributePaymentInterestOnly(AmortizationEntity cuota, BigDecimal availableAmount) {
         PaymentDistribution distribution = new PaymentDistribution();
 
@@ -802,8 +800,6 @@ public class RecaudoAdapter {
         distribution.setDistributionType("SOLO_INTERESES");
         return distribution;
     }
-
-     */
 
     /**
      * REVERSAR RECAUDO COMPLETO

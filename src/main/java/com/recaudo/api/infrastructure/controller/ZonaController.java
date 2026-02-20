@@ -1,9 +1,6 @@
 package com.recaudo.api.infrastructure.controller;
 
-import com.recaudo.api.domain.model.dto.response.DailyReportDetailDto;
-import com.recaudo.api.domain.model.dto.response.DailyReportSummaryDto;
-import com.recaudo.api.domain.model.dto.response.DefaultResponseDto;
-import com.recaudo.api.domain.model.dto.response.ZonaResponseDto;
+import com.recaudo.api.domain.model.dto.response.*;
 import com.recaudo.api.domain.model.dto.rest_api.ZonaCreateDto;
 import com.recaudo.api.domain.usecase.ZonaUseCase;
 import lombok.AllArgsConstructor;
@@ -32,6 +29,25 @@ public class ZonaController {
 
         return ResponseEntity.ok(
                 DefaultResponseDto.<List<ZonaResponseDto>>builder()
+                        .message("Información de zonas")
+                        .status(HttpStatus.OK)
+                        .details("Se listó la información de zonas")
+                        .data(data)
+                        .build()
+        );
+    }
+
+    @GetMapping("/dashboard")
+    public ResponseEntity<DefaultResponseDto<List<DashboardSummaryProjection>>> getByStatus(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
+            @RequestParam(required = false) Long zonaId
+    ) {
+
+        List<DashboardSummaryProjection> data = zonaUseCase.getDashboardSummary(fechaInicio, fechaFin, zonaId);
+
+        return ResponseEntity.ok(
+                DefaultResponseDto.<List<DashboardSummaryProjection>>builder()
                         .message("Información de zonas")
                         .status(HttpStatus.OK)
                         .details("Se listó la información de zonas")

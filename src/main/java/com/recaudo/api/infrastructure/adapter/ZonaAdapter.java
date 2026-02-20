@@ -3,6 +3,7 @@ package com.recaudo.api.infrastructure.adapter;
 import com.recaudo.api.domain.gateway.ZonaGateway;
 import com.recaudo.api.domain.model.dto.response.DailyReportDetailDto;
 import com.recaudo.api.domain.model.dto.response.DailyReportSummaryDto;
+import com.recaudo.api.domain.model.dto.response.DashboardSummaryProjection;
 import com.recaudo.api.domain.model.dto.response.ZonaResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.ZonaCreateDto;
 import com.recaudo.api.domain.model.entity.ZonaEntity;
@@ -102,6 +103,11 @@ public class ZonaAdapter implements ZonaGateway {
     @Override
     public Optional<DailyReportSummaryDto> getDailySummaryByZone(String zonaName, LocalDate fecha) {
         return zonaRepository.getDailySummaryByZone(zonaName, fecha);
+    }
+
+    @Override
+    public List<DashboardSummaryProjection> getDashboardSummary(LocalDate fechaInicio, LocalDate fechaFin, Long zonaId) {
+        return zonaRepository.getDashboardSummary(fechaInicio, fechaFin, zonaId);
     }
 
     @Override

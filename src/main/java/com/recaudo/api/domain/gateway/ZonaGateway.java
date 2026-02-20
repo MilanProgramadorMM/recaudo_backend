@@ -2,6 +2,7 @@ package com.recaudo.api.domain.gateway;
 
 import com.recaudo.api.domain.model.dto.response.DailyReportDetailDto;
 import com.recaudo.api.domain.model.dto.response.DailyReportSummaryDto;
+import com.recaudo.api.domain.model.dto.response.DashboardSummaryProjection;
 import com.recaudo.api.domain.model.dto.response.ZonaResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.ZonaCreateDto;
 import com.recaudo.api.domain.model.entity.ZonaEntity;
@@ -20,4 +21,5 @@ public interface ZonaGateway {
     void delete(Long id);
     List<DailyReportDetailDto> getDailyDetailByZone(String username, LocalDate fech);
     Optional<DailyReportSummaryDto> getDailySummaryByZone(String zonaName, LocalDate fecha);
+    List<DashboardSummaryProjection> getDashboardSummary(LocalDate fechaInicio, LocalDate fechaFin, Long zonaId);
 }

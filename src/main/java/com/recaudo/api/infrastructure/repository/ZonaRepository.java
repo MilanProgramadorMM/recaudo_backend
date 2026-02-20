@@ -2,6 +2,7 @@ package com.recaudo.api.infrastructure.repository;
 
 import com.recaudo.api.domain.model.dto.response.DailyReportDetailDto;
 import com.recaudo.api.domain.model.dto.response.DailyReportSummaryDto;
+import com.recaudo.api.domain.model.dto.response.DashboardSummaryProjection;
 import com.recaudo.api.domain.model.entity.ZonaEntity;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -107,5 +108,68 @@ public interface ZonaRepository extends JpaRepository<ZonaEntity, Long> {
     List<DailyReportDetailDto> getDailyDetailByZone(
             @Param("username") String username,
             @Param("fecha") LocalDate fecha
+    );
+
+    @Query(value = """
+            SELECT
+                z.id AS zona_id,
+                z.value AS zona_nombre,
+                    
+                -- Total debido a cobrar
+                COALESCE(SUM(a.quota_value), 0) AS total_debido_cobrar,
+                    
+                -- Total recaudado (ya agrupado por cuota)
+                COALESCE(SUM(COALESCE(r.total_paid, 0)), 0) AS total_recaudado,
+                    
+                -- Total no pagado
+                COALESCE(SUM(
+                    CASE
+                        WHEN cv.no_pago_count > 0
+                        THEN a.quota_value
+                        ELSE 0
+                    END
+                ), 0) AS total_no_pagado
+                    
+            FROM zona z
+            INNER JOIN credit_intention ci
+                ON z.id = ci.zone_id
+            INNER JOIN credit c
+                ON ci.id = c.credit_intention_id
+                AND c.deleted_at IS NULL
+            INNER JOIN amortization a
+                ON c.id = a.credit_id
+                    
+            LEFT JOIN (
+                SELECT
+                    cuota_id,
+                    SUM(value_paid) AS total_paid
+                FROM recaudo
+                WHERE deleted_at IS NULL
+                  AND DATE(created_at) BETWEEN :fechaInicio AND :fechaFin
+                GROUP BY cuota_id
+            ) r ON a.id = r.cuota_id
+                    
+            LEFT JOIN (
+                SELECT
+                    cuota_id,
+                    SUM(CASE WHEN no_pago = 1 THEN 1 ELSE 0 END) AS no_pago_count
+                FROM collection_visit
+                WHERE visit_date BETWEEN :fechaInicio AND :fechaFin
+                GROUP BY cuota_id
+            ) cv ON a.id = cv.cuota_id
+                    
+            WHERE a.expiration_date BETWEEN :fechaInicio AND :fechaFin
+              AND z.status = 1
+              AND ci.deleted_at IS NULL
+              AND (:zonaId IS NULL OR z.id = :zonaId)
+                    
+            GROUP BY z.id, z.value, z.description
+            ORDER BY z.value;
+                    
+        """, nativeQuery = true)
+    List<DashboardSummaryProjection> getDashboardSummary(
+            @Param("fechaInicio") LocalDate fechaInicio,
+            @Param("fechaFin") LocalDate fechaFin,
+            @Param("zonaId") Long zonaId
     );
 }

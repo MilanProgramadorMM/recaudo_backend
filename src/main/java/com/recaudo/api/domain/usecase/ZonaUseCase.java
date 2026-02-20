@@ -4,8 +4,11 @@ import com.recaudo.api.config.UseCase;
 import com.recaudo.api.domain.gateway.ZonaGateway;
 import com.recaudo.api.domain.model.dto.response.DailyReportDetailDto;
 import com.recaudo.api.domain.model.dto.response.DailyReportSummaryDto;
+import com.recaudo.api.domain.model.dto.response.DashboardSummaryProjection;
 import com.recaudo.api.domain.model.dto.response.ZonaResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.ZonaCreateDto;
+import com.recaudo.api.domain.model.entity.ZonaEntity;
+import com.recaudo.api.exception.ResourceNotFoundException;
 import lombok.AllArgsConstructor;
 
 import java.time.LocalDate;
@@ -23,7 +26,23 @@ public class ZonaUseCase {
         return gateway.getStatusTrue();
     }
 
-    public List<ZonaResponseDto> getAll() {
+    public List<DashboardSummaryProjection> getDashboardSummary(LocalDate fechaInicio, LocalDate fechaFin, Long zonaId) {
+        if (zonaId != null) {
+            Optional<ZonaEntity> existzona = gateway.getById(zonaId);
+            if (!existzona.isPresent()) {
+                throw new ResourceNotFoundException("No existe la zona con ID: " + zonaId);
+            }
+        }
+
+        LocalDate hoy = LocalDate.now();
+        LocalDate inicio = (fechaInicio != null) ? fechaInicio : hoy;
+        LocalDate fin = (fechaFin != null) ? fechaFin : hoy;
+
+        return gateway.getDashboardSummary(inicio, fin, zonaId);
+    }
+
+
+        public List<ZonaResponseDto> getAll() {
         return gateway.getAll();
     }
 
