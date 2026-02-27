@@ -2,6 +2,7 @@ package com.recaudo.api.infrastructure.adapter;
 
 import com.recaudo.api.domain.gateway.ClosingSpendGateway;
 import com.recaudo.api.domain.mapper.ClosingSpendMapper;
+import com.recaudo.api.domain.model.dto.response.ClosingSpendFileDto;
 import com.recaudo.api.domain.model.dto.response.ClosingSpendResponseDto;
 import com.recaudo.api.domain.model.entity.ClosingSpendEntity;
 import com.recaudo.api.domain.model.entity.GlotypesEntity;
@@ -18,7 +19,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -151,10 +151,29 @@ public class ClosingSpendAdapter implements ClosingSpendGateway {
 
         return mapper.toDto(saved);
     }
+
     @Override
     public ClosingSpendResponseDto getSpendById(Long spendId) {
         ClosingSpendEntity closingSpend = closingSpendRepository.findById(spendId).orElse(null);
         return mapper.toDto(closingSpend);
+    }
+
+    @Transactional
+    @Override
+    public ClosingSpendFileDto getFileBySpendId(Long spendId) {
+
+        ClosingSpendEntity entity = closingSpendRepository.findById(spendId)
+                .orElseThrow(() -> new ResourceNotFoundException("No encontrado"));
+
+        if (entity.getFileData() == null) {
+            throw new ResourceNotFoundException("No hay archivo asociado");
+        }
+
+        return new ClosingSpendFileDto(
+                entity.getFileName(),
+                entity.getContentType(),
+                entity.getFileData()
+        );
     }
 
     private boolean isBase(Long spendTypeId) {

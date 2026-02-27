@@ -112,13 +112,13 @@
             double originalItemValue = creditIntentionDto.getItemValue();
             BigDecimal stationeryValueToSave = BigDecimal.ZERO;
 
-// Consultar todos los service quota con capitalización
+            // Consultar todos los service quota con capitalización
             List<CreditLineServiceQuotaEntity> capitalizableQuotas =
                     creditLineServiceQuotaRepository.findByCreditLineIdAndCapitalizeTrue(
                             creditIntentionDto.getCreditLineId()
                     );
 
-// Filtrar solo papelería (serviceQuotaId = 7)
+            // Filtrar solo papelería (serviceQuotaId = 7)
             Optional<CreditLineServiceQuotaEntity> stationeryQuota = capitalizableQuotas.stream()
                     .filter(quota -> quota.getServiceQuotaId() != null && quota.getServiceQuotaId() == 7)
                     .findFirst();
@@ -461,13 +461,75 @@
             return creditIntentionMapper.entityToDto(updated);
         }
 
+        @Transactional
         @Override
         public CreditIntentionResponseDto updateFechaTentativaCreditIntention(Long id, UpdateFechaTentativaCreditIntentionDto dto) {
             CreditIntentionEntity intention = creditIntentionRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Intención de crédito no encontrada"));
 
-            System.out.println("Fecha recibida: " + dto.getStartdate());
+            // Obtener totales de la amortización actual para validar después
+            List<CreditIntentionAmortizationEntity> amortizacionActual =
+                    creditIntentionAmortizationRepository.findByCreditIntencionId(id);
+
+            if (amortizacionActual.isEmpty())
+                throw new BadRequestException("La intención de crédito no tiene amortización registrada");
+
+            BigDecimal totalInteresActual = amortizacionActual.stream()
+                    .map(a -> a.getInterestValue() != null ? BigDecimal.valueOf(a.getInterestValue()) : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal totalCuotaActual = amortizacionActual.stream()
+                    .map(a -> a.getQuotaValue() != null ? BigDecimal.valueOf(a.getQuotaValue()) : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            // Construir DTO para simular con la nueva fecha
+            PeriodEntity period = periodRepository.findById(intention.getPeriodId())
+                    .orElseThrow(() -> new BadRequestException("Período no existe"));
+
+            CalculateCreditIntentionDto calculateDto = CalculateCreditIntentionDto.builder()
+                    .creditLineId(intention.getCreditLineId())
+                    .periodCode(period.getCod())
+                    .periodQuantity(intention.getPeriodQuantity().intValue())
+                    .itemValue(intention.getTotalCapitalValue().doubleValue())
+                    .quotaValue(intention.getQuotaValue().doubleValue())
+                    .taxValue(intention.getTaxValue().doubleValue())
+                    .inicioQuincena(intention.getInitialQuincena())
+                    .finQuincena(intention.getEndQuincena())
+                    .tipoCalculo("CALCULAR_TASA")
+                    .generarAmortizacion("SI")
+                    .startDate(dto.getStartdate())
+                    .build();
+
+            // Simular con la nueva fecha
+            List<ProyeccionAmortizacionDto> nuevaProyeccion = this.simulate(calculateDto);
+
+            if (nuevaProyeccion == null || nuevaProyeccion.isEmpty())
+                throw new RuntimeException("No se obtuvo proyección con la nueva fecha");
+
+            // Validar que los totales coincidan exactamente
+            BigDecimal totalInteresNuevo = nuevaProyeccion.stream()
+                    .map(p -> p.getDcreVlrabonointeres() != null ? BigDecimal.valueOf(p.getDcreVlrabonointeres()) : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal totalCuotaNuevo = nuevaProyeccion.stream()
+                    .map(p -> p.getDcreVlrcuota() != null ? BigDecimal.valueOf(p.getDcreVlrcuota()) : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            if (totalInteresNuevo.compareTo(totalInteresActual) != 0 || totalCuotaNuevo.compareTo(totalCuotaActual) != 0) {
+                throw new BadRequestException(
+                        "La nueva amortización no coincide con la actual. " +
+                                "Interés actual: " + totalInteresActual + " nuevo: " + totalInteresNuevo + " | " +
+                                "Cuota actual: " + totalCuotaActual + " nueva: " + totalCuotaNuevo
+                );
+            }
+
+            // borrar amortización vieja, insertar nueva y actualizar fecha
+            creditIntentionAmortizationRepository.deleteByCreditIntentionId(id);
+            insertToIntentionAmortization(calculateDto, id);
+
             intention.setDateStart(LocalDate.parse(dto.getStartdate()));
+            intention.setEditedAt(LocalDateTime.now());
+            intention.setUserEdit(getUsernameToken());
 
             CreditIntentionEntity updated = creditIntentionRepository.save(intention);
             return creditIntentionMapper.entityToDto(updated);
@@ -491,7 +553,6 @@
                     ? intention.getStationery()
                     : BigDecimal.ZERO;
 
-            // Si se está actualizando el itemValue O creditLineId, recalcular papelería
             // Si se está actualizando el itemValue O creditLineId, recalcular papelería
             if (dto.getItemValue() != null || dto.getCreditLineId() != null) {
                 Long creditLineId = dto.getCreditLineId() != null
@@ -561,13 +622,13 @@
                 intention.setEndQuincena(dto.getFinQuincena());
 
             intention.setStationery(stationeryValueToSave);
+            intention.setDateStart(LocalDate.parse(dto.getStartDate()));
             intention.setUserEdit(getUsernameToken());
             intention.setEditedAt(LocalDateTime.now());
 
             creditIntentionRepository.save(intention);
 
             // RECALCULAR AMORTIZACIÓN
-
             PeriodEntity period = periodRepository.findById(intention.getPeriodId())
                     .orElseThrow(() ->
                             new BadRequestException("Período no existe")

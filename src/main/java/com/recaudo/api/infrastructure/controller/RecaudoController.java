@@ -59,24 +59,14 @@ public class RecaudoController {
     @GetMapping("/status/{creditId}")
     public ResponseEntity<?> getPaymentStatus(@PathVariable Long creditId) {
         try {
-            log.info("Consultando estado de pago para crédito ID: {}", creditId);
-
             CreditRecaudoStatusDto status = recaudoAdapter.getCreditPaymentStatus(creditId);
-
-            log.info("Estado consultado exitosamente: {}% pagado, {} cuotas de {} pagadas",
-                    status.getPorcentajePagado(),
-                    status.getCuotasPagadas(),
-                    status.getTotalCuotas());
-
             return ResponseEntity.ok(status);
 
         } catch (RuntimeException e) {
-            log.error("Error de negocio al consultar estado del crédito: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(createErrorResponse("BUSINESS_ERROR", e.getMessage()));
 
         } catch (Exception e) {
-            log.error("Error inesperado al consultar estado del crédito", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("INTERNAL_ERROR", "Error al consultar estado"));
         }
@@ -90,20 +80,16 @@ public class RecaudoController {
 
     ) {
         try {
-            log.info("Consultando recaudos del usuario {} para la fecha {}", closinId, fecha);
-
             List<RecaudoResponseProjection> recaudos =
                     recaudoAdapter.getRecaudosByUserAndDate(closinId, fecha, zonaId);
 
             return ResponseEntity.ok(recaudos);
 
         } catch (RuntimeException e) {
-            log.error("Error de negocio al consultar recaudos: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(createErrorResponse("BUSINESS_ERROR", e.getMessage()));
 
         } catch (Exception e) {
-            log.error("Error inesperado al consultar recaudos", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("INTERNAL_ERROR", "Error al consultar recaudos"));
         }

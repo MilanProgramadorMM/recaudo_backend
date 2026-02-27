@@ -3,6 +3,7 @@ package com.recaudo.api.domain.usecase;
 import com.recaudo.api.config.UseCase;
 import com.recaudo.api.domain.gateway.ClosingGateway;
 import com.recaudo.api.domain.gateway.ClosingSpendGateway;
+import com.recaudo.api.domain.model.dto.response.ClosingSpendFileDto;
 import com.recaudo.api.domain.model.dto.response.ClosingSpendResponseDto;
 import com.recaudo.api.domain.model.entity.ClosingSpendEntity;
 import lombok.AllArgsConstructor;
@@ -131,6 +132,9 @@ public class ClosingSpendUseCase {
                     "Tipo de archivo no permitido"
             );
         }
+    }
+    public ClosingSpendFileDto getFileSpend(Long spendId) {
+        return closingSpendGateway.getFileBySpendId(spendId);
     }
 
 }

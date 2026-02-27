@@ -45,6 +45,33 @@ public interface CreditRepository extends JpaRepository<CreditEntity, Long> {
     List<CreditFullResponseDto> findAllCreditsFull();
 
     @Query("""
+    SELECT new com.recaudo.api.domain.model.dto.response.CreditFullResponseDto(
+        c.id,
+        c.creditIntentionId,
+        c.quotaValue,
+        c.periodQuantity,
+        c.totalIntentionValue,
+        c.totalInterestValue,
+        c.totalCapitalValue,
+        c.totalFinancedValue,
+        ci.zoneId,
+        z.value,
+        ci.document,
+        ci.fullname,
+        ci.phoneNumber,
+        ci.creditLineId,
+        cl.name
+    )
+    FROM CreditEntity c
+    JOIN CreditIntentionEntity ci ON ci.id = c.creditIntentionId
+    LEFT JOIN ZonaEntity z ON z.id = ci.zoneId
+    LEFT JOIN CreditLineEntity cl ON cl.id = ci.creditLineId
+    WHERE c.deletedAt IS NULL AND ci.userCreate = :username
+    ORDER BY c.createdAt DESC
+""")
+    List<CreditFullResponseDto> findCreditsByUsername(@Param("username") String username);
+
+    @Query("""
         SELECT new com.recaudo.api.domain.model.dto.response.CreditResponseDto(
             c.id,
             c.creditIntentionId,

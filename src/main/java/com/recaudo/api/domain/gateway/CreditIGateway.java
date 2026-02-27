@@ -9,10 +9,10 @@ import java.util.List;
 public interface CreditIGateway {
 
     List<CreditFullResponseDto> getAll();
+    List<CreditFullResponseDto> getByUsername(String username);
     CreditResponseDto getById(Long id);
     CreditResponseDto getByPersonId(Long personId);
     CreditResponseDto create(CreditRegisterDto dto);
     //void delete(Long id);
-
 
 }
