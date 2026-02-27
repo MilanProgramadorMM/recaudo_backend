@@ -1,5 +1,6 @@
 package com.recaudo.api.infrastructure.controller;
 
+import com.recaudo.api.domain.model.dto.response.ClosingSpendFileDto;
 import com.recaudo.api.domain.model.dto.response.ClosingSpendResponseDto;
 import com.recaudo.api.domain.model.dto.response.DefaultResponseDto;
 import com.recaudo.api.domain.usecase.ClosingSpendUseCase;
@@ -8,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -130,5 +133,23 @@ public class ClosingSpendController {
                             .build()
             );
         }
+    }
+
+    @GetMapping("/{spendId}/evidence")
+    public ResponseEntity<byte[]> downloadEvidence(@PathVariable Long spendId) {
+
+        ClosingSpendFileDto file = closingSpendUseCase.getFileSpend(spendId);
+
+        MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+
+        if (file.getContentType() != null) {
+            mediaType = MediaType.parseMediaType(file.getContentType());
+        }
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + file.getFileName() + "\"")
+                .contentType(mediaType)
+                .body(file.getFileData());
     }
 }

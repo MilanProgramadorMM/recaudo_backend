@@ -37,14 +37,12 @@ public class CreditIntentionApprovalService {
      * Generar y enviar link de aprobación
      */
     public SendApprovalLinkResponse generateAndSendApprovalLink(Long intentionId, String whatsappNumber) {
-        log.info("🔄 Generando link de aprobación para intención: {}", intentionId);
 
         CreditIntentionEntity intention = creditIntentionRepository.findById(intentionId)
                 .orElseThrow(() -> new EntityNotFoundException("Intención de crédito no encontrada"));
 
         // Generar token único y seguro
         String token = generateSecureToken();
-        log.debug("🔐 Token generado: {}", token);
 
         // Calcular fecha de expiración (7 días)
         LocalDateTime expiresAt = LocalDateTime.now().plusDays(7);
@@ -60,7 +58,6 @@ public class CreditIntentionApprovalService {
         intention.setApprovalStatus(ApprovalStatus.PENDING);
 
         creditIntentionRepository.save(intention);
-        log.info("💾 Intención actualizada en BD");
 
         // Enviar WhatsApp
         String message = buildWhatsAppMessage(intention.getFullname(), approvalLink, expiresAt);
@@ -71,7 +68,6 @@ public class CreditIntentionApprovalService {
         response.setMessage("Link de aprobación enviado exitosamente");
         response.setExpiresAt(String.valueOf(expiresAt));
 
-        log.info("✅ Link de aprobación enviado exitosamente");
         return response;
     }
     /**

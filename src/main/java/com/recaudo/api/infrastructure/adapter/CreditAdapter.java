@@ -66,6 +66,16 @@ public class CreditAdapter implements CreditIGateway {
     }
 
     @Override
+    public List<CreditFullResponseDto> getByUsername(String username) {
+        try {
+            return creditRepository.findCreditsByUsername(username);
+        } catch (Exception e) {
+            log.error("Error al obtener los créditos", e);
+            throw new RuntimeException("Error al obtener los créditos", e);
+        }
+    }
+
+    @Override
     public CreditResponseDto getById(Long id) {
         try {
             CreditResponseDto credit = creditRepository.findBy(id);

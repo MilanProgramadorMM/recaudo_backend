@@ -386,7 +386,7 @@ public class RecaudoAdapter {
             interestApplied = requestDto.getValuePaid();
         }
 
-// Registro unico en recaudo
+        // Registro unico en recaudo
         RecaudoEntity recaudo = RecaudoEntity.builder()
                 .creditId(requestDto.getCreditId())
                 .conceptId(conceptRecaudo.getId())

@@ -38,7 +38,7 @@ public class JwtUtil {
                 .getSubject();
     }
 
-    /*public Long getUserIdFromToken(String token) {
+    public Long getUserIdFromToken(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8)))
                 .build()
@@ -46,7 +46,7 @@ public class JwtUtil {
                 .getPayload();
 
         return claims.get("userId", Long.class);
-    }*/
+    }
 
     public <T> T getClaimFromToken(String token, String claim, Class<T> objectType) {
         Claims claims = Jwts.parser()

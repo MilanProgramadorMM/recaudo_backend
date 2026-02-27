@@ -1,5 +1,6 @@
 package com.recaudo.api.domain.gateway;
 
+import com.recaudo.api.domain.model.dto.response.ClosingSpendFileDto;
 import com.recaudo.api.domain.model.dto.response.ClosingSpendResponseDto;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -31,4 +32,6 @@ public interface ClosingSpendGateway {
     ) throws IOException;
 
     ClosingSpendResponseDto getSpendById(Long spendId);
+
+    ClosingSpendFileDto getFileBySpendId(Long spendId);
 }
