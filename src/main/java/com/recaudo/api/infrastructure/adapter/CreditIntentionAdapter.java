@@ -316,6 +316,31 @@
 
         }
 
+        private ObjectNode buildJson(CalculateCreditIntentionDto dto, double itemValueToSimulate){
+            ObjectNode json = JsonNodeFactory.instance.objectNode();
+            json.put("id_linea", dto.getCreditLineId());
+            json.put("id_periodo", dto.getPeriodCode());
+            json.put("id_tipo_calculo", dto.getTipoCalculo());
+            json.put("id_plazo", dto.getPeriodQuantity());
+            json.put("id_capital", itemValueToSimulate);
+            json.put("id_edad", 0);
+            json.put("id_cuota", dto.getQuotaValue());
+            json.put("id_tasa", dto.getTaxValue());
+            json.put("id_dia_inicial_quincena",
+                    dto.getInicioQuincena() != null ? dto.getInicioQuincena() : 0);
+            json.put("id_dia_final_quincena",
+                    dto.getFinQuincena() != null ? dto.getFinQuincena() : 0);
+            json.put("id_fecha_inicio",
+                    dto.getStartDate() != null
+                            ? dto.getStartDate()
+                            : LocalDate.now().toString());
+            json.put("id_generar_amortizacion",
+                    dto.getGenerarAmortizacion() != null
+                            ? dto.getGenerarAmortizacion()
+                            : "SI");
+            return json;
+        }
+
         //SIMULACION DE INTENCION DE CREDITO
         @Override
         public List<ProyeccionAmortizacionDto> simulate(CalculateCreditIntentionDto dto) {
@@ -341,32 +366,19 @@
                 }
 
                 //PREPARACION DEL JSON ENVIADO AL PROCEDIMIENTO ALMACENADO
-                ObjectNode json = JsonNodeFactory.instance.objectNode();
-
-                json.put("id_linea", dto.getCreditLineId());
-                json.put("id_periodo", dto.getPeriodCode());
-                json.put("id_tipo_calculo", dto.getTipoCalculo());
-                json.put("id_plazo", dto.getPeriodQuantity());
-                json.put("id_capital", itemValueToSimulate);
-                json.put("id_edad", 0);
-                json.put("id_cuota", dto.getQuotaValue());
-                json.put("id_tasa", dto.getTaxValue());
-                json.put("id_dia_inicial_quincena",
-                        dto.getInicioQuincena() != null ? dto.getInicioQuincena() : 0);
-                json.put("id_dia_final_quincena",
-                        dto.getFinQuincena() != null ? dto.getFinQuincena() : 0);
-                json.put("id_fecha_inicio",
-                        dto.getStartDate() != null
-                                ? dto.getStartDate()
-                                : LocalDate.now().toString());
-                json.put("id_generar_amortizacion",
-                        dto.getGenerarAmortizacion() != null
-                                ? dto.getGenerarAmortizacion()
-                                : "SI");
-
-                return creditIntentionRepository
-                        .ejecutarProyeccion(json.toString());
-
+                ObjectNode json = this.buildJson(dto, itemValueToSimulate);
+                List<ProyeccionAmortizacionDto> response = creditIntentionRepository
+                    .ejecutarProyeccion(json.toString());
+                if (dto.getTipoCalculo().equalsIgnoreCase("CALCULAR_CAPITAL")) {
+                    Double capitalResultado = response.get(0).getDcreCapital();
+                    double papeleria  = capitalResultado * 0.01;
+                    Double capitalConPapeleria = capitalResultado + papeleria;
+                    
+                    json.put("id_capital", capitalConPapeleria);
+                    json.put("id_tipo_calculo", "CALCULAR_CUOTA");
+                    response = creditIntentionRepository.ejecutarProyeccion(json.toString());
+                }
+                return response;
             }
             // Error del procedimiento / función SQL
             catch (DataAccessException e) {

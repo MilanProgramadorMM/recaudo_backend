@@ -25,6 +25,9 @@ public class CreditIntentionResponseDto {
     @JsonProperty("zone_id")
     private Long zoneId;
 
+    @JsonProperty("person_id")
+    private Long personId;
+
     @JsonProperty("document_type")
     private Long documentType;
 

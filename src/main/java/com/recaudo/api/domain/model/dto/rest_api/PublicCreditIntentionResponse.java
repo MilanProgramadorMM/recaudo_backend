@@ -18,7 +18,7 @@ public class PublicCreditIntentionResponse {
     private BigDecimal quotaValue;
     private Integer periodQuantity;
     private String namePeriod;
-    private BigDecimal totalIntentionValue;
+    private BigDecimal totalCapitalValue;
     private ApprovalStatus approvalStatus;
     private boolean tokenExpired;
     // Getters y setters

@@ -15,4 +15,5 @@ public interface ProyeccionAmortizacionDto {
     Double getDcreVlrabonointeres();
     Double getDcreVlrabonosegurocartera();
     Double getDcreVlrabonosegurovida();
+    Double getDcreCapitalBase();
 }

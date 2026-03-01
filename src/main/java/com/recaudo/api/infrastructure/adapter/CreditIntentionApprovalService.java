@@ -97,7 +97,7 @@ public class CreditIntentionApprovalService {
         response.setQuotaValue(dto.getQuotaValue());
         response.setPeriodQuantity(dto.getPeriodQuantity());
         response.setNamePeriod(dto.getPeriodName());
-        response.setTotalIntentionValue(dto.getTotalIntentionValue());
+        response.setTotalCapitalValue(dto.getTotalCapitalValue());
         // Conversión de String a ApprovalStatus enum
         ApprovalStatus status;
         try {
@@ -105,7 +105,8 @@ public class CreditIntentionApprovalService {
         } catch (IllegalArgumentException | NullPointerException e) {
             status = ApprovalStatus.PENDING;
         }
-        response.setApprovalStatus(status);        response.setTokenExpired(isExpired);
+        response.setApprovalStatus(status);
+        response.setTokenExpired(isExpired);
 
         return response;
     }

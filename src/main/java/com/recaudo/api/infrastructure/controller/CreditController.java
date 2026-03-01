@@ -1,8 +1,6 @@
 package com.recaudo.api.infrastructure.controller;
 
-import com.recaudo.api.domain.model.dto.response.CreditFullResponseDto;
-import com.recaudo.api.domain.model.dto.response.CreditResponseDto;
-import com.recaudo.api.domain.model.dto.response.DefaultResponseDto;
+import com.recaudo.api.domain.model.dto.response.*;
 import com.recaudo.api.domain.model.dto.rest_api.CreditRegisterDto;
 import com.recaudo.api.domain.usecase.CreditUseCase;
 import com.recaudo.api.infrastructure.helper.security.jwt.JwtUtil;
@@ -30,14 +28,13 @@ public class CreditController {
 
 
     @GetMapping("/get-all")
-    public ResponseEntity<DefaultResponseDto<List<CreditFullResponseDto>>> getAll(
-            HttpServletRequest request) {
+    public ResponseEntity<DefaultResponseDto<List<?>>> getAll(HttpServletRequest request) {
 
         String token = request.getHeader("Authorization").replace("Bearer ", "");
-        List<CreditFullResponseDto> data = creditUseCase.getCredits(token);
+        List<?> data = creditUseCase.getCredits(token);
 
         return ResponseEntity.ok(
-                DefaultResponseDto.<List<CreditFullResponseDto>>builder()
+                DefaultResponseDto.<List<?>>builder()
                         .message("Créditos obtenidos exitosamente")
                         .status(HttpStatus.OK)
                         .data(data)
@@ -60,16 +57,16 @@ public class CreditController {
     }
 
     @GetMapping("/get-by-person/{id}")
-    public ResponseEntity<DefaultResponseDto<CreditResponseDto>> getByPersonId(
+    public ResponseEntity<DefaultResponseDto<List<CreditProjection>>> getByPersonId(
             @PathVariable Long id) {
 
-        CreditResponseDto data = creditUseCase.getByPersonId(id);
+        List<CreditProjection> data = creditUseCase.getByPersonId(id);
 
         return ResponseEntity.ok(
-                DefaultResponseDto.<CreditResponseDto>builder()
-                        .message("Crédito obtenido exitosamente")
+                DefaultResponseDto.<List<CreditProjection>>builder()
+                        .message("Créditos obtenidos exitosamente")
                         .status(HttpStatus.OK)
-                        .details("Crédito encontrado para la persona con ID: " + id)
+                        .details("Créditos encontrados para la persona con ID: " + id)
                         .data(data)
                         .build()
         );
@@ -85,6 +82,21 @@ public class CreditController {
                         .message("Crédito creado exitosamente")
                         .status(HttpStatus.CREATED)
                         .details("El crédito ha sido causado y registrado en cartera")
+                        .data(data)
+                        .build()
+        );
+    }
+
+    @GetMapping("/causados-by-closing/{closingId}")
+    public ResponseEntity<DefaultResponseDto<List<CreditCausadoProjection>>> getCreditsCausadosByClosing(
+            @PathVariable Long closingId) {
+
+        List<CreditCausadoProjection> data = creditUseCase.getCreditsCausadosByClosing(closingId);
+
+        return ResponseEntity.ok(
+                DefaultResponseDto.<List<CreditCausadoProjection>>builder()
+                        .message("Créditos causados obtenidos")
+                        .status(HttpStatus.OK)
                         .data(data)
                         .build()
         );
