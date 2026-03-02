@@ -1,16 +1,13 @@
 package com.recaudo.api.infrastructure.adapter;
 
 import com.recaudo.api.domain.gateway.ClosingStatusGateway;
-import com.recaudo.api.domain.gateway.CreditIntentionStatusGateway;
 import com.recaudo.api.domain.mapper.ClosingStatusMapper;
-import com.recaudo.api.domain.mapper.CreditIntentionStatusMapper;
 import com.recaudo.api.domain.model.dto.response.ClosingStatusResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.ChangeClosingStatusDto;
 import com.recaudo.api.domain.model.entity.ClosingStatusEntity;
-import com.recaudo.api.domain.model.entity.ClosingStatusEntity;
 import com.recaudo.api.exception.BadRequestException;
 import com.recaudo.api.exception.CreditSimulationException;
-import com.recaudo.api.infrastructure.helper.util.ClosingStatus;
+import com.recaudo.api.domain.model.constant.ClosingStatus;
 import com.recaudo.api.infrastructure.repository.ClosingRepository;
 import com.recaudo.api.infrastructure.repository.ClosingStatusRepository;
 import jakarta.transaction.Transactional;
@@ -22,7 +19,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j

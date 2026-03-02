@@ -3,6 +3,7 @@ package com.recaudo.api.domain.gateway;
 import com.recaudo.api.domain.model.dto.response.CreditIntentionResponseDto;
 import com.recaudo.api.domain.model.dto.response.IntentionCreditResponseAllDto;
 import com.recaudo.api.domain.model.dto.response.ProyeccionAmortizacionDto;
+import com.recaudo.api.domain.model.dto.response.SimulationResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.CalculateCreditIntentionDto;
 import com.recaudo.api.domain.model.dto.rest_api.ClientDataCreditIntentionUpdateDto;
 import com.recaudo.api.domain.model.dto.rest_api.CreditIntentionDto;
@@ -16,7 +17,7 @@ public interface CreditIntentionGateway {
     List<IntentionCreditResponseAllDto> getAll();
     List<IntentionCreditResponseAllDto> getById(Long id);
     CreditIntentionResponseDto create(CreditIntentionDto creditIntentionDto);
-    List<ProyeccionAmortizacionDto> simulate(CalculateCreditIntentionDto creditIntentionDto);
+    List<SimulationResponseDto> simulate(CalculateCreditIntentionDto creditIntentionDto);
      boolean existById(Long id);
     CreditIntentionResponseDto updateDataCreditIntention(Long id, CreditIntentionUpdateDto dto);
     CreditIntentionResponseDto updateDataClient(Long id, ClientDataCreditIntentionUpdateDto dto);

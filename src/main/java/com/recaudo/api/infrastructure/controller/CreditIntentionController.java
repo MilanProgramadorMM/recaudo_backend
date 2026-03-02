@@ -37,15 +37,15 @@ public class CreditIntentionController {
     private CreditIntentionApprovalService approvalService;
 
     @PostMapping("/generate/calculation")
-    public ResponseEntity<DefaultResponseDto<List<ProyeccionAmortizacionDto>>> simulate(
+    public ResponseEntity<DefaultResponseDto<List<SimulationResponseDto>>> simulate(
             @Valid @RequestBody CalculateCreditIntentionDto dto
     ) {
 
-        List<ProyeccionAmortizacionDto> result =
+        List<SimulationResponseDto> result =
                 creditIntentionUseCase.simulationIntention(dto);
 
         return ResponseEntity.ok(
-                DefaultResponseDto.<List<ProyeccionAmortizacionDto>>builder()
+                DefaultResponseDto.<List<SimulationResponseDto>>builder()
                         .message("Proyeccion obtenida")
                         .status(HttpStatus.OK)
                         .details("Proyeccion de credito")

@@ -6,7 +6,7 @@ import com.recaudo.api.domain.model.dto.response.CreditIntentionPaymentResponseD
 import com.recaudo.api.domain.model.dto.response.DefaultResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.DisbursementMetadata;
 import com.recaudo.api.domain.usecase.CreditIntentionPaymentUseCase;
-import com.recaudo.api.infrastructure.helper.util.CreditLineType;
+import com.recaudo.api.domain.model.constant.CreditLineType;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

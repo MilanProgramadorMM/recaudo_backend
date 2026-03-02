@@ -3,7 +3,7 @@ package com.recaudo.api.domain.mapper;
 import com.recaudo.api.domain.model.dto.response.ClosingStatusResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.ChangeClosingStatusDto;
 import com.recaudo.api.domain.model.entity.ClosingStatusEntity;
-import com.recaudo.api.infrastructure.helper.util.ClosingStatus;
+import com.recaudo.api.domain.model.constant.ClosingStatus;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

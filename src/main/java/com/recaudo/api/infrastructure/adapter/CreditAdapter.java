@@ -17,7 +17,7 @@ import com.recaudo.api.domain.model.entity.CreditIntentionAmortizationEntity;
 import com.recaudo.api.domain.model.entity.UserEntity;
 import com.recaudo.api.exception.BadRequestException;
 import com.recaudo.api.exception.ResourceNotFoundException;
-import com.recaudo.api.infrastructure.helper.util.CreditStatusCode;
+import com.recaudo.api.domain.model.constant.CreditStatusCode;
 import com.recaudo.api.infrastructure.repository.AmortizationRepository;
 import com.recaudo.api.infrastructure.repository.ClosingRepository;
 import com.recaudo.api.infrastructure.repository.CreditIntentionAmortizationRepository;

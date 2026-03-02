@@ -1,6 +1,7 @@
 package com.recaudo.api.domain.model.dto.rest_api;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.recaudo.api.domain.model.constant.CalculationType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -53,7 +54,7 @@ public class CalculateCreditIntentionDto {
     private Integer edad;
 
     @JsonProperty("tipo_calculo")
-    private String tipoCalculo;
+    private CalculationType tipoCalculo;
 
     @JsonProperty("generar_amortizacion")
     private String generarAmortizacion;

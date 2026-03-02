@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.lang.Double;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 
@@ -124,6 +125,15 @@ public class CreditIntentionDto {
 
     @JsonProperty("total_financed_value")
     private Double totalFinancedValue;
+
+    @JsonProperty("stationery_value")
+    private BigDecimal stationeryValue;
+
+    @JsonProperty("base_value")
+    private BigDecimal baseValue;
+
+    @JsonProperty("base_stationary_value")
+    private BigDecimal baseStationaryValue;
 
     // --- Ubicación ---
     @JsonProperty("home_address")

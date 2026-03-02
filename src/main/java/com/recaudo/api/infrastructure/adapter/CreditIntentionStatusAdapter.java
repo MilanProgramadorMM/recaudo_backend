@@ -1,35 +1,23 @@
 package com.recaudo.api.infrastructure.adapter;
 
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.recaudo.api.domain.gateway.CreditIntentionGateway;
 import com.recaudo.api.domain.gateway.CreditIntentionStatusGateway;
-import com.recaudo.api.domain.mapper.CreditIntentionMapper;
 import com.recaudo.api.domain.mapper.CreditIntentionStatusMapper;
-import com.recaudo.api.domain.model.dto.response.CreditIntentionResponseDto;
 import com.recaudo.api.domain.model.dto.response.CreditIntentionStatusResponseDto;
-import com.recaudo.api.domain.model.dto.response.IntentionCreditResponseAllDto;
-import com.recaudo.api.domain.model.dto.response.ProyeccionAmortizacionDto;
 import com.recaudo.api.domain.model.dto.rest_api.*;
 import com.recaudo.api.domain.model.entity.*;
 import com.recaudo.api.exception.BadRequestException;
 import com.recaudo.api.exception.CreditSimulationException;
-import com.recaudo.api.infrastructure.helper.util.CreditStatusCode;
+import com.recaudo.api.domain.model.constant.CreditStatusCode;
 import com.recaudo.api.infrastructure.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.MessageSource;
-import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.*;
 
 @Slf4j
 @Service

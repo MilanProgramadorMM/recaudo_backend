@@ -18,9 +18,7 @@ public class CreditIntentionUseCase {
     private CreditIntentionGateway creditIntentionGateway;
     private CreditIntentionDocumentUseCaseJ documentUseCase;
 
-
-
-    public List<ProyeccionAmortizacionDto> simulationIntention(CalculateCreditIntentionDto data) {
+    public List<SimulationResponseDto> simulationIntention(CalculateCreditIntentionDto data) {
         return creditIntentionGateway.simulate(data);
     }
 

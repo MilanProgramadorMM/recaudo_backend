@@ -2,7 +2,7 @@
 package com.recaudo.api.domain.gateway.impl;
 
 import com.recaudo.api.domain.gateway.CreditIntentionPaymentGateway;
-import com.recaudo.api.infrastructure.helper.util.CreditLineType;
+import com.recaudo.api.domain.model.constant.CreditLineType;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
 

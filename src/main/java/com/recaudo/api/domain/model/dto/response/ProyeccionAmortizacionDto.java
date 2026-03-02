@@ -8,12 +8,11 @@ public interface ProyeccionAmortizacionDto {
     Double getDcreVlrcuota();
     Double getDcreTasa();
     Double getDcreCapital();
-
     LocalDate getDcreFvence();
     Double getDcreSaldocapital();
     Double getDcreVlrabonoinversion();
     Double getDcreVlrabonointeres();
     Double getDcreVlrabonosegurocartera();
     Double getDcreVlrabonosegurovida();
-    Double getDcreCapitalBase();
+
 }

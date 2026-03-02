@@ -1,4 +1,4 @@
-package com.recaudo.api.infrastructure.helper.util;
+package com.recaudo.api.domain.model.constant;
 
 public enum ClosingStatus {
     PRE_CIERRE,

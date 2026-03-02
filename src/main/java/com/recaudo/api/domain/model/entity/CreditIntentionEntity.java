@@ -1,6 +1,6 @@
 package com.recaudo.api.domain.model.entity;
 
-import com.recaudo.api.infrastructure.helper.util.ApprovalStatus;
+import com.recaudo.api.domain.model.constant.ApprovalStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

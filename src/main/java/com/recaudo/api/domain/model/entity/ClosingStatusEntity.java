@@ -1,7 +1,6 @@
 package com.recaudo.api.domain.model.entity;
 
-import com.recaudo.api.infrastructure.helper.util.ClosingStatus;
-import com.recaudo.api.infrastructure.helper.util.CreditStatusCode;
+import com.recaudo.api.domain.model.constant.ClosingStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,7 +9,6 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Data
 @Entity

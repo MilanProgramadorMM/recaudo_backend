@@ -5,9 +5,11 @@
     import com.recaudo.api.domain.gateway.CreditIntentionGateway;
     import com.recaudo.api.domain.gateway.CreditIntentionStatusGateway;
     import com.recaudo.api.domain.mapper.CreditIntentionMapper;
+    import com.recaudo.api.domain.model.constant.CalculationType;
     import com.recaudo.api.domain.model.dto.response.CreditIntentionResponseDto;
     import com.recaudo.api.domain.model.dto.response.IntentionCreditResponseAllDto;
     import com.recaudo.api.domain.model.dto.response.ProyeccionAmortizacionDto;
+    import com.recaudo.api.domain.model.dto.response.SimulationResponseDto;
     import com.recaudo.api.domain.model.dto.rest_api.CalculateCreditIntentionDto;
     import com.recaudo.api.domain.model.dto.rest_api.ClientDataCreditIntentionUpdateDto;
     import com.recaudo.api.domain.model.dto.rest_api.CreditIntentionDto;
@@ -16,7 +18,7 @@
     import com.recaudo.api.domain.model.entity.*;
     import com.recaudo.api.exception.BadRequestException;
     import com.recaudo.api.exception.CreditSimulationException;
-    import com.recaudo.api.infrastructure.helper.util.CreditStatusCode;
+    import com.recaudo.api.domain.model.constant.CreditStatusCode;
     import com.recaudo.api.infrastructure.repository.*;
     import jakarta.transaction.Transactional;
     import lombok.extern.slf4j.Slf4j;
@@ -30,11 +32,7 @@
     import java.math.BigDecimal;
     import java.time.LocalDate;
     import java.time.LocalDateTime;
-    import java.util.ArrayList;
-    import java.util.Arrays;
-    import java.util.List;
-    import java.util.Locale;
-    import java.util.Optional;
+    import java.util.*;
 
     @Slf4j
     @Service
@@ -108,37 +106,13 @@
             validacionIntencionCredito(creditIntentionDto);
             CreditIntentionEntity entity = creditIntentionMapper.dtoToEntity(creditIntentionDto);
 
-            //PAPELERIA
-            double originalItemValue = creditIntentionDto.getItemValue();
-            BigDecimal stationeryValueToSave = BigDecimal.ZERO;
-
-            // Consultar todos los service quota con capitalización
-            List<CreditLineServiceQuotaEntity> capitalizableQuotas =
-                    creditLineServiceQuotaRepository.findByCreditLineIdAndCapitalizeTrue(
-                            creditIntentionDto.getCreditLineId()
-                    );
-
-            // Filtrar solo papelería (serviceQuotaId = 7)
-            Optional<CreditLineServiceQuotaEntity> stationeryQuota = capitalizableQuotas.stream()
-                    .filter(quota -> quota.getServiceQuotaId() != null && quota.getServiceQuotaId() == 7)
-                    .findFirst();
-
-            if (stationeryQuota.isPresent()) {
-                // Calcular el 1% de papelería
-                double stationeryCalculated = originalItemValue * 0.01;
-                stationeryValueToSave = BigDecimal.valueOf(stationeryCalculated);
-
-                log.info("Papelería aplicada - Item Value: {}, Papelería (1%): {}",
-                        originalItemValue, stationeryCalculated);
-            }
-
             entity.setZoneId(creditIntentionDto.getZoneId());
             entity.setCreditLineId(creditIntentionDto.getCreditLineId());
             entity.setPeriodId(creditIntentionDto.getPeriodId());
             entity.setTaxTypeId(creditIntentionDto.getTaxTypeId());
             entity.setTotalCapitalValue(
                     creditIntentionDto.getTotalFinancedValue() == 0
-                            ? BigDecimal.valueOf(creditIntentionDto.getItemValue())
+                            ? creditIntentionDto.getBaseValue()
                             : BigDecimal.valueOf(creditIntentionDto.getTotalFinancedValue())
             );
             entity.setItemValue(
@@ -146,7 +120,7 @@
                             ? BigDecimal.valueOf(creditIntentionDto.getItemValue())
                             : BigDecimal.ZERO
             );
-            entity.setStationery(stationeryValueToSave);
+            entity.setStationery(creditIntentionDto.getStationeryValue());
             entity.setEndQuincena(creditIntentionDto.getFinQuincena());
             entity.setInitialQuincena(creditIntentionDto.getInicioQuincena());
             entity.setTotalInterestValue(BigDecimal.ZERO);
@@ -156,7 +130,7 @@
 
             CreditIntentionEntity savedEntity = creditIntentionRepository.save(entity);
 
-            //LLAMADA AL PROCEDIMIENTO Y INSERTAR EN AMORTIZACION
+            //LLAMADA AL PROCEDIMIENTO E INSERTAR EN AMORTIZACION
             PeriodEntity period = periodRepository.findById(
                     creditIntentionDto.getPeriodId()
             ).orElseThrow(() -> new BadRequestException("Período no existe"));
@@ -165,7 +139,7 @@
                     buildCalculateDto(creditIntentionDto, period);
 
             insertToIntentionAmortization(calculateDto, savedEntity.getId());
-            creditIntentionStatusGateway.create(savedEntity.getId(), savedEntity.getUserCreate(),CreditStatusCode.STUDY );
+            creditIntentionStatusGateway.create(savedEntity.getId(), savedEntity.getUserCreate(), CreditStatusCode.STUDY);
 
             return creditIntentionMapper.entityToDto(savedEntity);
         }
@@ -184,7 +158,7 @@
                     .taxValue(creditDto.getTaxValue())
                     .inicioQuincena(creditDto.getInicioQuincena())
                     .finQuincena(creditDto.getFinQuincena())
-                    .tipoCalculo("CALCULAR_CUOTA")
+                    .tipoCalculo(CalculationType.CALCULAR_CUOTA)
                     .generarAmortizacion("SI")
                     .startDate(creditDto.getStartDate())
                     .build();
@@ -229,7 +203,7 @@
                     .tipoCalculo(
                             dto.getTipoCalculo() != null
                                     ? dto.getTipoCalculo()
-                                    : "CALCULAR_CUOTA")
+                                    : CalculationType.CALCULAR_CUOTA)
                     .startDate(
                             dto.getStartDate() != null
                                     ? dto.getStartDate()
@@ -244,20 +218,20 @@
         private void insertToIntentionAmortization(CalculateCreditIntentionDto data, Long id){
             try {
                 // Construir el DTO para la simulación
-                CalculateCreditIntentionDto calculateDto = new CalculateCreditIntentionDto();
-                calculateDto.setCreditLineId(data.getCreditLineId());
-                calculateDto.setPeriodCode(data.getPeriodCode());
-                calculateDto.setTipoCalculo(data.getTipoCalculo());
-                calculateDto.setPeriodQuantity(data.getPeriodQuantity());
-                calculateDto.setItemValue(data.getItemValue());
-                calculateDto.setQuotaValue(data.getQuotaValue());
-                calculateDto.setTaxValue(data.getTaxValue());
-                calculateDto.setInicioQuincena(data.getInicioQuincena());
-                calculateDto.setFinQuincena(data.getFinQuincena());
-                calculateDto.setStartDate(data.getStartDate());
-                calculateDto.setGenerarAmortizacion("SI");
+//                CalculateCreditIntentionDto calculateDto = new CalculateCreditIntentionDto();
+//                calculateDto.setCreditLineId(data.getCreditLineId());
+//                calculateDto.setPeriodCode(data.getPeriodCode());
+//                calculateDto.setTipoCalculo(data.getTipoCalculo());
+//                calculateDto.setPeriodQuantity(data.getPeriodQuantity());
+//                calculateDto.setItemValue(data.getItemValue());
+//                calculateDto.setQuotaValue(data.getQuotaValue());
+//                calculateDto.setTaxValue(data.getTaxValue());
+//                calculateDto.setInicioQuincena(data.getInicioQuincena());
+//                calculateDto.setFinQuincena(data.getFinQuincena());
+//                calculateDto.setStartDate(data.getStartDate());
+                data.setGenerarAmortizacion("SI");
 
-                List<ProyeccionAmortizacionDto> proyeccion = this.simulate(calculateDto);
+                List<SimulationResponseDto> proyeccion = this.simulate(data);
 
                 if (proyeccion == null || proyeccion.isEmpty()) {
                     log.warn("No se obtuvo proyección");
@@ -269,7 +243,7 @@
                 // Registro en la tabla credit_intention_amortizacion
                 List<CreditIntentionAmortizationEntity> amortizationList = new ArrayList<>();
 
-                for (ProyeccionAmortizacionDto proyeccionDto : proyeccion) {
+                for (SimulationResponseDto proyeccionDto : proyeccion) {
                     CreditIntentionAmortizationEntity amortization = new CreditIntentionAmortizationEntity();
 
                     amortization.setCreditIntencionId(id);
@@ -320,7 +294,7 @@
             ObjectNode json = JsonNodeFactory.instance.objectNode();
             json.put("id_linea", dto.getCreditLineId());
             json.put("id_periodo", dto.getPeriodCode());
-            json.put("id_tipo_calculo", dto.getTipoCalculo());
+            json.put("id_tipo_calculo", dto.getTipoCalculo().toString());
             json.put("id_plazo", dto.getPeriodQuantity());
             json.put("id_capital", itemValueToSimulate);
             json.put("id_edad", 0);
@@ -341,14 +315,38 @@
             return json;
         }
 
+        private List<SimulationResponseDto> simulationResult(
+                List<ProyeccionAmortizacionDto> data,
+                double base, double papeleria, double totalValue) {
+            List<SimulationResponseDto> response = data.stream().map(item -> {
+               return SimulationResponseDto.builder()
+                       .dcreNumcuota(item.getDcreNumcuota())
+                       .dcreVlrcuota(item.getDcreVlrcuota())
+                       .dcreTasa(item.getDcreTasa())
+                       .dcreCapital(item.getDcreCapital())
+                       .dcreFvence(item.getDcreFvence())
+                       .dcreSaldocapital(item.getDcreSaldocapital())
+                       .dcreVlrabonoinversion(item.getDcreVlrabonoinversion())
+                       .dcreVlrabonointeres(item.getDcreVlrabonointeres())
+                       .dcreVlrabonosegurocartera(item.getDcreVlrabonosegurocartera())
+                       .dcreVlrabonosegurovida(item.getDcreVlrabonosegurovida())
+                       .dcreVlrBase(base)
+                       .dcreVlrPapeleia(papeleria)
+                       .dcreVlrBasePapeleria(totalValue)
+                       .build();
+            }).toList();
+
+
+            return response;
+        }
+
         //SIMULACION DE INTENCION DE CREDITO
         @Override
-        public List<ProyeccionAmortizacionDto> simulate(CalculateCreditIntentionDto dto) {
-
+        public List<SimulationResponseDto> simulate(CalculateCreditIntentionDto dto) {
             try {
-
                 double itemValueToSimulate = dto.getItemValue();
                 double stationeryValue = 0.0;
+                double capitalResultado = 0.0;
 
                 List<CreditLineServiceQuotaEntity> capitalizableQuotas =
                         creditLineServiceQuotaRepository.findByCreditLineIdAndCapitalizeTrue(dto.getCreditLineId());
@@ -369,16 +367,17 @@
                 ObjectNode json = this.buildJson(dto, itemValueToSimulate);
                 List<ProyeccionAmortizacionDto> response = creditIntentionRepository
                     .ejecutarProyeccion(json.toString());
-                if (dto.getTipoCalculo().equalsIgnoreCase("CALCULAR_CAPITAL")) {
-                    Double capitalResultado = response.get(0).getDcreCapital();
-                    double papeleria  = capitalResultado * 0.01;
-                    Double capitalConPapeleria = capitalResultado + papeleria;
-                    
-                    json.put("id_capital", capitalConPapeleria);
-                    json.put("id_tipo_calculo", "CALCULAR_CUOTA");
-                    response = creditIntentionRepository.ejecutarProyeccion(json.toString());
+                if (dto.getTipoCalculo().equals(CalculationType.CALCULAR_CAPITAL)) {
+                    if (stationeryQuota.isPresent()) {
+                        capitalResultado = response.get(0).getDcreCapital();
+                        stationeryValue = capitalResultado * 0.01;
+                        itemValueToSimulate = capitalResultado + stationeryValue;
+                        json.put("id_capital", itemValueToSimulate);
+                        json.put("id_tipo_calculo", CalculationType.CALCULAR_CUOTA.toString());
+                        response = creditIntentionRepository.ejecutarProyeccion(json.toString());
+                    }
                 }
-                return response;
+                return this.simulationResult(response, capitalResultado, stationeryValue, itemValueToSimulate);
             }
             // Error del procedimiento / función SQL
             catch (DataAccessException e) {
@@ -507,13 +506,13 @@
                     .taxValue(intention.getTaxValue().doubleValue())
                     .inicioQuincena(intention.getInitialQuincena())
                     .finQuincena(intention.getEndQuincena())
-                    .tipoCalculo("CALCULAR_TASA")
+                    .tipoCalculo(CalculationType.CALCULAR_TASA)
                     .generarAmortizacion("SI")
                     .startDate(dto.getStartdate())
                     .build();
 
             // Simular con la nueva fecha
-            List<ProyeccionAmortizacionDto> nuevaProyeccion = this.simulate(calculateDto);
+            List<SimulationResponseDto> nuevaProyeccion = this.simulate(calculateDto);
 
             if (nuevaProyeccion == null || nuevaProyeccion.isEmpty())
                 throw new RuntimeException("No se obtuvo proyección con la nueva fecha");
@@ -550,53 +549,11 @@
         //ACTUALIZAR DATOS DE LA SOLICITUD DE INTENCION DE CREDITO EN UNA INTENCION DE CREDITO EXISTENTE
         @Transactional
         @Override
-        public CreditIntentionResponseDto updateDataCreditIntention(
-                Long id,
-                CreditIntentionUpdateDto dto
-        ) {
-
+        public CreditIntentionResponseDto updateDataCreditIntention(Long id, CreditIntentionUpdateDto dto) {
             CreditIntentionEntity intention = creditIntentionRepository.findById(id)
-                    .orElseThrow(() ->
-                            new BadRequestException("Intención de crédito no encontrada")
-                    );
-
-            // LÓGICA DE PAPELERÍA
-            BigDecimal stationeryValueToSave = intention.getStationery() != null
-                    ? intention.getStationery()
-                    : BigDecimal.ZERO;
-
-            // Si se está actualizando el itemValue O creditLineId, recalcular papelería
-            if (dto.getItemValue() != null || dto.getCreditLineId() != null) {
-                Long creditLineId = dto.getCreditLineId() != null
-                        ? dto.getCreditLineId()
-                        : intention.getCreditLineId();
-
-                Double itemValue = dto.getItemValue() != null
-                        ? dto.getItemValue()
-                        : intention.getItemValue().doubleValue();
-
-                List<CreditLineServiceQuotaEntity> capitalizableQuotas =
-                        creditLineServiceQuotaRepository.findByCreditLineIdAndCapitalizeTrue(creditLineId);
-
-                // Filtrar solo papelería (serviceQuotaId = 7)
-                Optional<CreditLineServiceQuotaEntity> stationeryQuota = capitalizableQuotas.stream()
-                        .filter(quota -> quota.getServiceQuotaId() != null && quota.getServiceQuotaId() == 7)
-                        .findFirst();
-
-                if (stationeryQuota.isPresent()) {
-                    double stationeryCalculated = itemValue * 0.01;
-                    stationeryValueToSave = BigDecimal.valueOf(stationeryCalculated);
-
-                    log.info("Papelería recalculada - Item Value: {}, Papelería: {}",
-                            itemValue, stationeryCalculated);
-                } else {
-                    // Si ya no tiene papelería, limpiar el valor
-                    stationeryValueToSave = BigDecimal.ZERO;
-                }
-            }
+                    .orElseThrow(() -> new BadRequestException("Intención de crédito no encontrada"));
 
             // ACTUALIZAR CAMPOS
-
             if (dto.getCreditLineId() != null)
                 intention.setCreditLineId(dto.getCreditLineId());
 
@@ -616,7 +573,18 @@
                 intention.setTaxValue(BigDecimal.valueOf(dto.getTaxValue()));
 
             if (dto.getItemValue() != null)
-                intention.setItemValue(BigDecimal.valueOf(dto.getItemValue()));
+                intention.setItemValue(
+                        dto.getTotalFinancedValue() != 0
+                                ? BigDecimal.valueOf(dto.getItemValue())
+                                : BigDecimal.ZERO
+                );
+
+            if (dto.getBaseValue() != null)
+                intention.setTotalCapitalValue(
+                        dto.getTotalFinancedValue() == 0
+                                ? dto.getBaseValue()
+                                : BigDecimal.valueOf(dto.getTotalFinancedValue())
+                );
 
             if (dto.getInitialValuePayment() != null)
                 intention.setInitialValuePayment(BigDecimal.valueOf(dto.getInitialValuePayment()));
@@ -633,7 +601,7 @@
             if (dto.getFinQuincena() != null)
                 intention.setEndQuincena(dto.getFinQuincena());
 
-            intention.setStationery(stationeryValueToSave);
+            intention.setStationery(dto.getStationeryValue());
             intention.setDateStart(LocalDate.parse(dto.getStartDate()));
             intention.setUserEdit(getUsernameToken());
             intention.setEditedAt(LocalDateTime.now());
