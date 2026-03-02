@@ -3,6 +3,7 @@ package com.recaudo.api.infrastructure.controller;
 import com.recaudo.api.domain.model.dto.response.*;
 import com.recaudo.api.domain.model.dto.rest_api.ZonaCreateDto;
 import com.recaudo.api.domain.usecase.ZonaUseCase;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -23,9 +24,12 @@ public class ZonaController {
 
     @GetMapping("/status")
     public ResponseEntity<DefaultResponseDto<List<ZonaResponseDto>>> getByStatus(
+            HttpServletRequest request
             ) {
 
-        List<ZonaResponseDto> data = zonaUseCase.getStatusTrue();
+        String token = request.getHeader("Authorization").replace("Bearer ", "");
+
+        List<ZonaResponseDto> data = zonaUseCase.getStatusTrue(token);
 
         return ResponseEntity.ok(
                 DefaultResponseDto.<List<ZonaResponseDto>>builder()

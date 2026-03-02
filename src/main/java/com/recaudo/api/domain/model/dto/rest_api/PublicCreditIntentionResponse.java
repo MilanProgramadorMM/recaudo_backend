@@ -1,6 +1,6 @@
 package com.recaudo.api.domain.model.dto.rest_api;
 
-import com.recaudo.api.infrastructure.helper.util.ApprovalStatus;
+import com.recaudo.api.domain.model.constant.ApprovalStatus;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -18,7 +18,7 @@ public class PublicCreditIntentionResponse {
     private BigDecimal quotaValue;
     private Integer periodQuantity;
     private String namePeriod;
-    private BigDecimal totalIntentionValue;
+    private BigDecimal totalCapitalValue;
     private ApprovalStatus approvalStatus;
     private boolean tokenExpired;
     // Getters y setters

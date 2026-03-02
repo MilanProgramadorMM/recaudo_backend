@@ -5,10 +5,9 @@ import com.recaudo.api.domain.model.dto.rest_api.ApprovalDecisionRequest;
 import com.recaudo.api.domain.model.dto.rest_api.PublicCreditIntentionResponse;
 import com.recaudo.api.domain.model.dto.rest_api.SendApprovalLinkResponse;
 import com.recaudo.api.domain.model.entity.CreditIntentionEntity;
-import com.recaudo.api.infrastructure.helper.util.ApprovalStatus;
+import com.recaudo.api.domain.model.constant.ApprovalStatus;
 import com.recaudo.api.infrastructure.repository.CreditIntentionRepository;
 import jakarta.persistence.EntityNotFoundException;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -97,7 +96,7 @@ public class CreditIntentionApprovalService {
         response.setQuotaValue(dto.getQuotaValue());
         response.setPeriodQuantity(dto.getPeriodQuantity());
         response.setNamePeriod(dto.getPeriodName());
-        response.setTotalIntentionValue(dto.getTotalIntentionValue());
+        response.setTotalCapitalValue(dto.getTotalCapitalValue());
         // Conversión de String a ApprovalStatus enum
         ApprovalStatus status;
         try {
@@ -105,7 +104,8 @@ public class CreditIntentionApprovalService {
         } catch (IllegalArgumentException | NullPointerException e) {
             status = ApprovalStatus.PENDING;
         }
-        response.setApprovalStatus(status);        response.setTokenExpired(isExpired);
+        response.setApprovalStatus(status);
+        response.setTokenExpired(isExpired);
 
         return response;
     }

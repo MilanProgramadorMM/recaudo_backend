@@ -2,7 +2,7 @@ package com.recaudo.api.domain.gateway;
 
 import com.recaudo.api.domain.model.dto.response.ClosingStatusResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.ChangeClosingStatusDto;
-import com.recaudo.api.infrastructure.helper.util.ClosingStatus;
+import com.recaudo.api.domain.model.constant.ClosingStatus;
 
 import java.util.List;
 

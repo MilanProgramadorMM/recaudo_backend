@@ -1,7 +1,9 @@
 package com.recaudo.api.domain.usecase;
 
 import com.recaudo.api.domain.gateway.CreditIGateway;
+import com.recaudo.api.domain.model.dto.response.CreditCausadoProjection;
 import com.recaudo.api.domain.model.dto.response.CreditFullResponseDto;
+import com.recaudo.api.domain.model.dto.response.CreditProjection;
 import com.recaudo.api.domain.model.dto.response.CreditResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.CreditRegisterDto;
 import com.recaudo.api.domain.model.entity.CreditEntity;
@@ -27,14 +29,16 @@ public class CreditUseCase {
         return creditGateway.getAll();
     }
 
-    public List<CreditFullResponseDto> getCredits(String token) {
+    public List<?> getCredits(String token) {
         try {
             String role = jwtUtil.getClaimFromToken(token, "role", String.class);
+
             if ("Asesor".equals(role)) {
                 String username = jwtUtil.getUsernameFromToken(token);
-                return creditGateway.getByUsername(username);
+                return creditGateway.getByAsesorUsername(username); // ← usa el nuevo método
             }
-            return creditGateway.getAll();
+
+            return creditGateway.getAll(); // Admin / Backoffice ven todo
         } catch (Exception e) {
             log.error("Error al obtener los créditos", e);
             throw new RuntimeException("Error al obtener los créditos", e);
@@ -45,11 +49,15 @@ public class CreditUseCase {
         return creditGateway.getById(id);
     }
 
-    public CreditResponseDto getByPersonId(Long personId) {
+    public List<CreditProjection> getByPersonId(Long personId) {
         return creditGateway.getByPersonId(personId);
     }
 
     public CreditResponseDto create(CreditRegisterDto dto) {
         return creditGateway.create(dto);
+    }
+
+    public List<CreditCausadoProjection> getCreditsCausadosByClosing(Long closingId) {
+        return creditGateway.getCreditsCausadosByClosing(closingId);
     }
 }

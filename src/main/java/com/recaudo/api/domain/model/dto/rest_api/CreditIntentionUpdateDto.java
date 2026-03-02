@@ -1,7 +1,10 @@
 package com.recaudo.api.domain.model.dto.rest_api;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.recaudo.api.domain.model.constant.CalculationType;
 import lombok.Data;
+
+import java.math.BigDecimal;
 
 @Data
 public class CreditIntentionUpdateDto {
@@ -39,6 +42,15 @@ public class CreditIntentionUpdateDto {
     @JsonProperty("total_intention_value")
     private Double totalIntentionValue;
 
+    @JsonProperty("stationery_value")
+    private BigDecimal stationeryValue;
+
+    @JsonProperty("base_value")
+    private BigDecimal baseValue;
+
+    @JsonProperty("base_stationary_value")
+    private BigDecimal baseStationaryValue;
+
     @JsonProperty("inicio_quincena")
     private Integer inicioQuincena;
 
@@ -49,5 +61,5 @@ public class CreditIntentionUpdateDto {
     private String startDate;
 
     @JsonProperty("tipo_calculo")
-    private String tipoCalculo;
+    private CalculationType tipoCalculo;
 }

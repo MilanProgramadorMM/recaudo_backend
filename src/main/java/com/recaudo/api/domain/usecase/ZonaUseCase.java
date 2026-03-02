@@ -22,7 +22,7 @@ public class ZonaUseCase {
     private ZonaGateway gateway;
 
 
-    public List<ZonaResponseDto> getStatusTrue() {
+    public List<ZonaResponseDto> getStatusTrue(String token) {
         return gateway.getStatusTrue();
     }
 

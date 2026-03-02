@@ -56,9 +56,9 @@ public interface DailyCollectionRepository
                  )
                  -- FILTRO POR CREADOR DEL CREDITO: solo muestra créditos creados por el usuario
                  -- Si se quiere quitar el filtro, comentar la siguiente línea
-                  AND ci.user_create = :username
+                  -- AND ci.user_create = :username
              ORDER BY
-                 z.value,   
+                 z.value,
                  pz_cliente.orden,
                  a.expiration_date,
                  a.quota_number

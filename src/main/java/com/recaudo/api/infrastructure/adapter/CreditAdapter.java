@@ -3,6 +3,7 @@ package com.recaudo.api.infrastructure.adapter;
 import com.recaudo.api.domain.gateway.CreditIGateway;
 import com.recaudo.api.domain.gateway.CreditIntentionStatusGateway;
 import com.recaudo.api.domain.mapper.CreditMapper;
+import com.recaudo.api.domain.model.dto.response.CreditCausadoProjection;
 import com.recaudo.api.domain.model.dto.response.CreditFullResponseDto;
 import com.recaudo.api.domain.model.dto.response.CreditIntentionStatusResponseDto;
 import com.recaudo.api.domain.model.dto.response.CreditProjection;
@@ -10,13 +11,18 @@ import com.recaudo.api.domain.model.dto.response.CreditResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.ChangeCreditStatusDto;
 import com.recaudo.api.domain.model.dto.rest_api.CreditRegisterDto;
 import com.recaudo.api.domain.model.entity.AmortizationEntity;
+import com.recaudo.api.domain.model.entity.ClosingEntity;
 import com.recaudo.api.domain.model.entity.CreditEntity;
 import com.recaudo.api.domain.model.entity.CreditIntentionAmortizationEntity;
+import com.recaudo.api.domain.model.entity.UserEntity;
 import com.recaudo.api.exception.BadRequestException;
-import com.recaudo.api.infrastructure.helper.util.CreditStatusCode;
+import com.recaudo.api.exception.ResourceNotFoundException;
+import com.recaudo.api.domain.model.constant.CreditStatusCode;
 import com.recaudo.api.infrastructure.repository.AmortizationRepository;
+import com.recaudo.api.infrastructure.repository.ClosingRepository;
 import com.recaudo.api.infrastructure.repository.CreditIntentionAmortizationRepository;
 import com.recaudo.api.infrastructure.repository.CreditRepository;
+import com.recaudo.api.infrastructure.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.mapstruct.factory.Mappers;
@@ -27,10 +33,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -50,6 +53,12 @@ public class CreditAdapter implements CreditIGateway {
 
     @Autowired
     private CreditIntentionStatusGateway creditIntentionStatusGateway;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private ClosingRepository closingRepository;
 
     @Autowired(required = false)
     CreditMapper creditMapper = Mappers.getMapper(CreditMapper.class);
@@ -94,38 +103,12 @@ public class CreditAdapter implements CreditIGateway {
     }
 
     @Override
-    public CreditResponseDto getByPersonId(Long personId) {
-        try {
-            Optional<CreditProjection> creditProjection =
+    public List<CreditProjection> getByPersonId(Long personId) {
+            List<CreditProjection> projections =
                     creditRepository.findCreditDetailsByPersonId(personId);
 
-            if (!creditProjection.isPresent()) {
-                throw new BadRequestException(
-                        messageSource.getMessage("credit.not.found", null, Locale.getDefault())
-                );
-            }
-
-            CreditProjection projection = creditProjection.get();
-
-            return CreditResponseDto.builder()
-                    .id(projection.getId())
-                    .creditIntentionId(projection.getCreditIntentionId())
-                    .quotaValue(projection.getQuotaValue())
-                    .periodQuantity(projection.getPeriodQuantity())
-                    .totalIntentionValue(projection.getTotalIntentionValue())
-                    .totalInterestValue(projection.getTotalInterestValue())
-                    .totalCapitalValue(projection.getTotalCapitalValue())
-                    .totalFinancedValue(projection.getTotalFinancedValue())
-                    .creditLineId(projection.getCreditLineId())
-                    .build();
-
-        } catch (BadRequestException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Error al obtener el crédito por personId: {}", personId, e);
-            throw new RuntimeException("Error al obtener el crédito", e);
+            return projections;
         }
-    }
 
     @Transactional
     @Override
@@ -239,5 +222,33 @@ public class CreditAdapter implements CreditIGateway {
             log.error("Error inesperado al insertar amortización para el crédito ID: {}", creditId, e);
             throw new RuntimeException("Error al procesar la amortización del crédito", e);
         }
+    }
+
+    @Override
+    public List<CreditProjection> getByAsesorUsername(String username) {
+        try {
+            return creditRepository.findActiveCreditsByAsesorUsername(username);
+        } catch (Exception e) {
+            log.error("Error al obtener créditos del asesor: {}", username, e);
+            throw new RuntimeException("Error al obtener créditos del asesor", e);
+        }
+    }
+
+    //SERVICIO PARA OBTENER CREDITOS CAUSADOS EL DIA DE HOY ASOCIADOS A UN ASESOR
+    @Override
+    public List<CreditCausadoProjection> getCreditsCausadosByClosing(Long closingId) {
+        // 1. Obtener el cierre
+        ClosingEntity closing = closingRepository.findById(closingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cierre no encontrado"));
+
+        // 2. Obtener el username del asesor por su person_id
+        UserEntity user = userRepository.findByPersonId(closing.getPersonId())
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado para esta persona"));
+
+        // 3. Buscar créditos causados ese día por ese asesor
+        return creditRepository.findCreditsCausadosByAsesorAndDate(
+                user.getUsername(),
+                closing.getClosingDate()
+        );
     }
 }

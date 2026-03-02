@@ -1,6 +1,6 @@
 package com.recaudo.api.domain.model.entity;
 
-import com.recaudo.api.infrastructure.helper.util.ConceptNature;
+import com.recaudo.api.domain.model.constant.ConceptNature;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;

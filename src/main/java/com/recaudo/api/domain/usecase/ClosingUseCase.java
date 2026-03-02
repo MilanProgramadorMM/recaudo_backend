@@ -11,7 +11,7 @@ import com.recaudo.api.domain.model.dto.response.UserDto;
 import com.recaudo.api.domain.model.dto.rest_api.ApproveClosingDto;
 import com.recaudo.api.domain.model.dto.rest_api.ChangeClosingStatusDto;
 import com.recaudo.api.domain.model.dto.rest_api.ClosingDto;
-import com.recaudo.api.infrastructure.helper.util.ClosingStatus;
+import com.recaudo.api.domain.model.constant.ClosingStatus;
 import lombok.AllArgsConstructor;
 
 import java.util.Arrays;

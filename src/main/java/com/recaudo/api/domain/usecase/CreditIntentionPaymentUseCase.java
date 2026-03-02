@@ -7,7 +7,7 @@ import com.recaudo.api.domain.model.dto.response.CreditIntentionPaymentResponseD
 import com.recaudo.api.domain.model.dto.rest_api.DisbursementData;
 import com.recaudo.api.domain.model.dto.rest_api.DisbursementMetadata;
 import com.recaudo.api.domain.model.entity.BasePaymentEntity;
-import com.recaudo.api.infrastructure.helper.util.CreditLineType;
+import com.recaudo.api.domain.model.constant.CreditLineType;
 import com.recaudo.api.infrastructure.repository.GlotypesRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -1,7 +1,7 @@
 package com.recaudo.api.domain.model.dto.rest_api;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.recaudo.api.infrastructure.helper.util.CreditStatusCode;
+import com.recaudo.api.domain.model.constant.CreditStatusCode;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 

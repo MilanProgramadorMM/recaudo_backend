@@ -9,7 +9,7 @@ import com.recaudo.api.domain.model.dto.rest_api.DisbursementMetadata;
 import com.recaudo.api.domain.model.entity.CreditIntentionDisbursementEntity;
 import com.recaudo.api.domain.model.entity.CreditIntentionInitialPaymentEntity;
 import com.recaudo.api.domain.model.entity.GlotypesEntity;
-import com.recaudo.api.infrastructure.helper.util.CreditLineType;
+import com.recaudo.api.domain.model.constant.CreditLineType;
 import com.recaudo.api.infrastructure.repository.GlotypesRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;

@@ -25,6 +25,9 @@ public class CreditIntentionResponseDto {
     @JsonProperty("zone_id")
     private Long zoneId;
 
+    @JsonProperty("person_id")
+    private Long personId;
+
     @JsonProperty("document_type")
     private Long documentType;
 
@@ -84,7 +87,7 @@ public class CreditIntentionResponseDto {
     private BigDecimal taxValue;
 
     @JsonProperty("total_intention_value")
-    private BigDecimal totalIntentionValue; // valor a desembolsar
+    private BigDecimal totalIntentionValue;
 
     @JsonProperty("total_interest_value")
     private BigDecimal totalInterestValue;

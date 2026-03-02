@@ -12,4 +12,9 @@ public interface CreditProjection {
     BigDecimal getTotalCapitalValue();
     BigDecimal getTotalFinancedValue();
     Long getCreditLineId();
+    String getCreditLineName();
+    String getFullname();
+    String getDocument();
+    String getZoneName();
+    String getPeriodName();
 }

@@ -9,7 +9,7 @@ import com.recaudo.api.domain.model.dto.rest_api.ClosingDto;
 import com.recaudo.api.domain.model.entity.*;
 import com.recaudo.api.exception.BadRequestException;
 import com.recaudo.api.exception.ResourceNotFoundException;
-import com.recaudo.api.infrastructure.helper.util.ClosingStatus;
+import com.recaudo.api.domain.model.constant.ClosingStatus;
 import com.recaudo.api.infrastructure.repository.*;
 import jakarta.transaction.Transactional;
 import org.mapstruct.factory.Mappers;
