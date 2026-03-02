@@ -87,7 +87,7 @@ public class CreditIntentionResponseDto {
     private BigDecimal taxValue;
 
     @JsonProperty("total_intention_value")
-    private BigDecimal totalIntentionValue; // valor a desembolsar
+    private BigDecimal totalIntentionValue;
 
     @JsonProperty("total_interest_value")
     private BigDecimal totalInterestValue;

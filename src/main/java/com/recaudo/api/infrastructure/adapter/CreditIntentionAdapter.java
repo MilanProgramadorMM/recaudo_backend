@@ -112,7 +112,7 @@
             entity.setTaxTypeId(creditIntentionDto.getTaxTypeId());
             entity.setTotalCapitalValue(
                     creditIntentionDto.getTotalFinancedValue() == 0
-                            ? creditIntentionDto.getBaseValue()
+                            ? BigDecimal.valueOf(creditIntentionDto.getItemValue())
                             : BigDecimal.valueOf(creditIntentionDto.getTotalFinancedValue())
             );
             entity.setItemValue(
@@ -208,6 +208,16 @@
                             dto.getStartDate() != null
                                     ? dto.getStartDate()
                                     : entity.getCreatedAt().toString())
+                    .totalFinancedValue(
+                            dto.getTotalFinancedValue() != null
+                                ? dto.getTotalFinancedValue()
+                                : entity.getTotalFinancedValue().doubleValue()
+                    )
+                    .initialValuePayment(
+                            dto.getInitialValuePayment() != null
+                                ? dto.getInitialValuePayment()
+                                : entity.getInitialValuePayment().doubleValue()
+                    )
                     .generarAmortizacion("SI")
                     .build();
         }
@@ -344,9 +354,11 @@
         @Override
         public List<SimulationResponseDto> simulate(CalculateCreditIntentionDto dto) {
             try {
-                double itemValueToSimulate = dto.getItemValue();
+                double itemValueToSimulate = dto.getTotalFinancedValue() != null
+                        ? dto.getTotalFinancedValue() : dto.getItemValue();
                 double stationeryValue = 0.0;
-                double capitalResultado = 0.0;
+                double capitalResultado = dto.getTotalFinancedValue() != null
+                        ? dto.getTotalFinancedValue() : dto.getItemValue();
 
                 List<CreditLineServiceQuotaEntity> capitalizableQuotas =
                         creditLineServiceQuotaRepository.findByCreditLineIdAndCapitalizeTrue(dto.getCreditLineId());
@@ -358,9 +370,10 @@
 
                 if (stationeryQuota.isPresent()) {
                     // Calcular el 1% de papelería
-                    stationeryValue = dto.getItemValue() * 0.01;
+                    stationeryValue = dto.getTotalFinancedValue() != null
+                            ? dto.getTotalFinancedValue() * 0.01 : dto.getItemValue() * 0.01;
                     // Sumar al itemValue para la simulación
-                    itemValueToSimulate = dto.getItemValue() + stationeryValue;
+                    itemValueToSimulate += stationeryValue;
                 }
 
                 //PREPARACION DEL JSON ENVIADO AL PROCEDIMIENTO ALMACENADO
@@ -574,17 +587,16 @@
 
             if (dto.getItemValue() != null)
                 intention.setItemValue(
-                        dto.getTotalFinancedValue() != 0
+                        dto.getTotalFinancedValue() != null && dto.getTotalFinancedValue() != 0
                                 ? BigDecimal.valueOf(dto.getItemValue())
                                 : BigDecimal.ZERO
                 );
 
-            if (dto.getBaseValue() != null)
-                intention.setTotalCapitalValue(
-                        dto.getTotalFinancedValue() == 0
-                                ? dto.getBaseValue()
-                                : BigDecimal.valueOf(dto.getTotalFinancedValue())
-                );
+            intention.setTotalCapitalValue(
+                    dto.getTotalFinancedValue() != null && dto.getTotalFinancedValue() != 0
+                            ? BigDecimal.valueOf(dto.getTotalFinancedValue())
+                            : BigDecimal.valueOf(dto.getItemValue())
+            );
 
             if (dto.getInitialValuePayment() != null)
                 intention.setInitialValuePayment(BigDecimal.valueOf(dto.getInitialValuePayment()));

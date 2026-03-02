@@ -72,10 +72,10 @@ public class CalculateCreditIntentionDto {
     @JsonProperty("item_value")
     private Double itemValue;
 
-    /*@JsonProperty("initial_value_payment")
+    @JsonProperty("initial_value_payment")
     private Double initialValuePayment;
 
     @JsonProperty("total_financed_value")
-    private Double totalFinancedValue;*/
+    private Double totalFinancedValue;
 
 }
