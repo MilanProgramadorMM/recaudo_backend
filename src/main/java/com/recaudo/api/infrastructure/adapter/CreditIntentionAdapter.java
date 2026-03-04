@@ -127,6 +127,7 @@
             entity.setUserCreate(getUsernameToken());
             entity.setCreatedAt(LocalDateTime.now());
             entity.setDateStart(LocalDate.parse(creditIntentionDto.getStartDate()));
+            entity.setStationery(entity.getTotalCapitalValue().multiply(BigDecimal.valueOf(0.01)));
 
             CreditIntentionEntity savedEntity = creditIntentionRepository.save(entity);
 

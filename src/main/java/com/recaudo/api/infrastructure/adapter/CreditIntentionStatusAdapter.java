@@ -143,6 +143,4 @@ public class CreditIntentionStatusAdapter implements CreditIntentionStatusGatewa
             );
         }
     }
-
-
 }

@@ -42,7 +42,7 @@ public interface CreditRepository extends JpaRepository<CreditEntity, Long> {
         LEFT JOIN ZonaEntity z ON z.id = ci.zoneId
         LEFT JOIN CreditLineEntity cl ON cl.id = ci.creditLineId
         WHERE c.deletedAt IS NULL
-        ORDER BY c.createdAt DESC
+        ORDER BY c.id DESC
     """)
     List<CreditFullResponseDto> findAllCreditsFull();
 
@@ -133,38 +133,38 @@ public interface CreditRepository extends JpaRepository<CreditEntity, Long> {
 
 
     @Query(value = """
-    SELECT
-        c.id                          AS id,
-        c.credit_intention_id         AS creditIntentionId,
-        c.quota_value                 AS quotaValue,
-        c.period_quantity             AS periodQuantity,
-        c.total_intention_value       AS totalIntentionValue,
-        c.total_interest_value        AS totalInterestValue,
-        c.total_capital_value         AS totalCapitalValue,
-        c.total_financed_value        AS totalFinancedValue,
-        ci.zone_id                    AS zoneId,
-        z.value                       AS zoneName,
-        ci.document                   AS document,
-        ci.fullname                   AS fullname,
-        ci.phone_number               AS phoneNumber,
-        ci.credit_line_id             AS creditLineId,
-        cl.name                       AS creditLineName
-    FROM credit c
-    JOIN credit_intention ci
-        ON ci.id = c.credit_intention_id
-    JOIN zona z
-        ON z.id = ci.zone_id
-    JOIN person_zona pz_asesor
-        ON pz_asesor.zona_id = z.id
-        AND pz_asesor.orden = 0
-    JOIN user u
-        ON u.person_id = pz_asesor.person_id
-        AND u.username = :username
-    LEFT JOIN credit_line cl
-        ON cl.id = ci.credit_line_id
-    WHERE c.deleted_at IS NULL
-    ORDER BY z.value, ci.fullname
-""", nativeQuery = true)
+            SELECT
+                c.id                          AS id,
+                c.credit_intention_id         AS creditIntentionId,
+                c.quota_value                 AS quotaValue,
+                c.period_quantity             AS periodQuantity,
+                c.total_intention_value       AS totalIntentionValue,
+                c.total_interest_value        AS totalInterestValue,
+                c.total_capital_value         AS totalCapitalValue,
+                c.total_financed_value        AS totalFinancedValue,
+                ci.zone_id                    AS zoneId,
+                z.value                       AS zoneName,
+                ci.document                   AS document,
+                ci.fullname                   AS fullname,
+                ci.phone_number               AS phoneNumber,
+                ci.credit_line_id             AS creditLineId,
+                cl.name                       AS creditLineName
+            FROM credit c
+            JOIN credit_intention ci
+                ON ci.id = c.credit_intention_id
+            JOIN zona z
+                ON z.id = ci.zone_id
+            JOIN person_zona pz_asesor
+                ON pz_asesor.zona_id = z.id
+                AND pz_asesor.orden = 0
+            JOIN user u
+                ON u.person_id = pz_asesor.person_id
+                AND u.username = :username
+            LEFT JOIN credit_line cl
+                ON cl.id = ci.credit_line_id
+            WHERE c.deleted_at IS NULL
+            ORDER BY c.id DESC
+        """, nativeQuery = true)
     List<CreditProjection> findActiveCreditsByAsesorUsername(@Param("username") String username);
 
 

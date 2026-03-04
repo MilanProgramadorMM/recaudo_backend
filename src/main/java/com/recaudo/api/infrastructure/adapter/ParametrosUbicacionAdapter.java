@@ -35,7 +35,7 @@ public class ParametrosUbicacionAdapter {
 
 
     public List<OptionDTO> listarDepartamentosPorPais(Long idPais) {
-        return departamentoRepository.findByIdPaisAndStatusTrueOrderByValueDesc(idPais)
+        return departamentoRepository.findByIdPaisAndStatusTrueOrderByValueAsc(idPais)
                 .stream()
                 .map(d -> new OptionDTO(d.getId(), d.getValue()))
                 .toList();
@@ -49,7 +49,7 @@ public class ParametrosUbicacionAdapter {
     }
 
     public List<OptionDTO> listarBarriosPorMunicipio(Long idMunicipio) {
-        return barrioRepository.findByIdMunicipioAndStatusTrueOrderByValueDesc(idMunicipio)
+        return barrioRepository.findByIdMunicipioAndStatusTrueOrderByValueAsc(idMunicipio)
                 .stream()
                 .map(b -> new OptionDTO(b.getId(), b.getValue()))
                 .toList();

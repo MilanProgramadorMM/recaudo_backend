@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface BarrioRepository extends JpaRepository<BarrioEntity, Long> {
 
-    List<BarrioEntity> findByIdMunicipioAndStatusTrueOrderByValueDesc(Long idMunicipio);
+    List<BarrioEntity> findByIdMunicipioAndStatusTrueOrderByValueAsc(Long idMunicipio);
     boolean existsByValueIgnoreCaseAndIdMunicipio(String value, Long idMunicipio);
     boolean existsByValueIgnoreCaseAndIdMunicipioAndIdNot(String value, Long idMunicipio, Long id);
 
