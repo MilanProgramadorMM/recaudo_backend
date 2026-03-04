@@ -114,13 +114,10 @@ public interface ZonaRepository extends JpaRepository<ZonaEntity, Long> {
             SELECT
                 z.id AS zona_id,
                 z.value AS zona_nombre,
-                    
                 -- Total debido a cobrar
                 COALESCE(SUM(a.quota_value), 0) AS total_debido_cobrar,
-                    
                 -- Total recaudado (ya agrupado por cuota)
                 COALESCE(SUM(COALESCE(r.total_paid, 0)), 0) AS total_recaudado,
-                    
                 -- Total no pagado
                 COALESCE(SUM(
                     CASE
@@ -129,7 +126,6 @@ public interface ZonaRepository extends JpaRepository<ZonaEntity, Long> {
                         ELSE 0
                     END
                 ), 0) AS total_no_pagado
-                    
             FROM zona z
             INNER JOIN credit_intention ci
                 ON z.id = ci.zone_id
@@ -138,7 +134,6 @@ public interface ZonaRepository extends JpaRepository<ZonaEntity, Long> {
                 AND c.deleted_at IS NULL
             INNER JOIN amortization a
                 ON c.id = a.credit_id
-                    
             LEFT JOIN (
                 SELECT
                     cuota_id,
@@ -148,7 +143,6 @@ public interface ZonaRepository extends JpaRepository<ZonaEntity, Long> {
                   AND DATE(created_at) BETWEEN :fechaInicio AND :fechaFin
                 GROUP BY cuota_id
             ) r ON a.id = r.cuota_id
-                    
             LEFT JOIN (
                 SELECT
                     cuota_id,
@@ -157,15 +151,12 @@ public interface ZonaRepository extends JpaRepository<ZonaEntity, Long> {
                 WHERE visit_date BETWEEN :fechaInicio AND :fechaFin
                 GROUP BY cuota_id
             ) cv ON a.id = cv.cuota_id
-                    
             WHERE a.expiration_date BETWEEN :fechaInicio AND :fechaFin
               AND z.status = 1
               AND ci.deleted_at IS NULL
-              AND (:zonaId IS NULL OR z.id = :zonaId)
-                    
+              AND (:zonaId IS NULL OR z.id = :zonaId)                    
             GROUP BY z.id, z.value, z.description
-            ORDER BY z.value;
-                    
+            ORDER BY z.value;                    
         """, nativeQuery = true)
     List<DashboardSummaryProjection> getDashboardSummary(
             @Param("fechaInicio") LocalDate fechaInicio,
