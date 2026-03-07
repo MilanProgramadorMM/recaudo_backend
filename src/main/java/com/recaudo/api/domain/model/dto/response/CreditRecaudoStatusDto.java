@@ -23,7 +23,9 @@ public class CreditRecaudoStatusDto {
     private BigDecimal totalIntentionValue;
     private BigDecimal totalInterestValue;
     private BigDecimal totalCapitalValue;
-    
+    private BigDecimal taxValue;
+    private BigDecimal stationery;
+
     // Resumen de cuotas
     private Integer totalCuotas;
     private Integer cuotasPagadas;

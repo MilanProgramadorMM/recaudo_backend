@@ -32,9 +32,9 @@ public class ClosingUseCase {
         return closingGateway.getById(id);
     }
 
-    public List<ClosingResponseDto> getBypersonId(Long id){
+    public List<ClosingResponseDto> getBypersonId(Long id, String token){
         UserDto person = userGateway.getById(id);
-        return closingGateway.getByPersonId(person.getPersonId());
+        return closingGateway.getByPersonId(person.getPersonId(), token);
     }
 
     public TodayClosingProjection getTodayClosingByPerson(Long personId) {
@@ -78,7 +78,7 @@ public class ClosingUseCase {
 
         switch (dto.getDeliveryType()) {
             case "admin":
-                if (amountAdmin <= 0) {
+                if (amountAdmin < 0) {
                     throw new IllegalArgumentException("El monto para admin debe ser mayor a cero");
                 }
                 if (amountAsesor != 0) {
@@ -87,7 +87,7 @@ public class ClosingUseCase {
                 break;
 
             case "asesor":
-                if (amountAsesor <= 0) {
+                if (amountAsesor < 0) {
                     throw new IllegalArgumentException("El monto para asesor debe ser mayor a cero");
                 }
                 if (amountAdmin != 0) {
@@ -96,7 +96,7 @@ public class ClosingUseCase {
                 break;
 
             case "parcial":
-                if (amountAdmin <= 0 || amountAsesor <= 0) {
+                if (amountAdmin < 0 || amountAsesor < 0) {
                     throw new IllegalArgumentException("Ambos montos deben ser mayores a cero para entrega parcial");
                 }
                 break;

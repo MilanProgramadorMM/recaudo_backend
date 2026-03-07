@@ -1,6 +1,7 @@
 package com.recaudo.api.domain.model.dto.response;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public interface CreditProjection {
     Long getId();
@@ -17,4 +18,5 @@ public interface CreditProjection {
     String getDocument();
     String getZoneName();
     String getPeriodName();
+    LocalDateTime getCreatedAt();
 }

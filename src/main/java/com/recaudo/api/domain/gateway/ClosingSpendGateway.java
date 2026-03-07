@@ -1,5 +1,6 @@
 package com.recaudo.api.domain.gateway;
 
+import com.recaudo.api.domain.model.dto.response.ClosingResponseDto;
 import com.recaudo.api.domain.model.dto.response.ClosingSpendFileDto;
 import com.recaudo.api.domain.model.dto.response.ClosingSpendResponseDto;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,7 +16,8 @@ public interface ClosingSpendGateway {
             Long zonaId,
             Double amount,
             MultipartFile file,
-            String description
+            String description,
+            boolean isBase
     ) throws IOException;
 
     List<ClosingSpendResponseDto> getSpendsByClosingId(Long closingId);
@@ -34,4 +36,6 @@ public interface ClosingSpendGateway {
     ClosingSpendResponseDto getSpendById(Long spendId);
 
     ClosingSpendFileDto getFileBySpendId(Long spendId);
+
+    void insertPreviousBaseValue(ClosingResponseDto closingData);
 }

@@ -155,6 +155,8 @@
                     .periodCode(period.getCod())
                     .periodQuantity(creditDto.getPeriodQuantity())
                     .itemValue(creditDto.getItemValue())
+                    .initialValuePayment(creditDto.getInitialValuePayment())
+                    .totalFinancedValue(creditDto.getTotalFinancedValue())
                     .quotaValue(creditDto.getQuotaValue())
                     .taxValue(creditDto.getTaxValue())
                     .inicioQuincena(creditDto.getInicioQuincena())
@@ -356,9 +358,11 @@
         public List<SimulationResponseDto> simulate(CalculateCreditIntentionDto dto) {
             try {
                 double itemValueToSimulate = dto.getTotalFinancedValue() != null
+                        && dto.getTotalFinancedValue() > 0
                         ? dto.getTotalFinancedValue() : dto.getItemValue();
                 double stationeryValue = 0.0;
                 double capitalResultado = dto.getTotalFinancedValue() != null
+                        && dto.getTotalFinancedValue() > 0
                         ? dto.getTotalFinancedValue() : dto.getItemValue();
 
                 List<CreditLineServiceQuotaEntity> capitalizableQuotas =
@@ -372,6 +376,7 @@
                 if (stationeryQuota.isPresent()) {
                     // Calcular el 1% de papelería
                     stationeryValue = dto.getTotalFinancedValue() != null
+                            && dto.getTotalFinancedValue() > 0
                             ? dto.getTotalFinancedValue() * 0.01 : dto.getItemValue() * 0.01;
                     // Sumar al itemValue para la simulación
                     itemValueToSimulate += stationeryValue;

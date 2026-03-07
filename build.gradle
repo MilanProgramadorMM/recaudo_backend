@@ -37,6 +37,7 @@ dependencies {
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	implementation group: 'org.springframework.boot', name: 'spring-boot-starter-validation', version: '3.5.3'
+	implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 
 	//mapper
 	implementation("org.mapstruct:mapstruct:1.5.5.Final")

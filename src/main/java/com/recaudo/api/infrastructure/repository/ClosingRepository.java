@@ -67,27 +67,59 @@ public interface ClosingRepository extends JpaRepository<ClosingEntity, Long> {
     //RESUMEN DE CIERRES POR ASESOR
     @Query(value = """
             SELECT
-                                c.id               AS id,
-                                c.closing_date     AS closingDate,
-                                c.observation      AS observation,
-                                c.user_create      AS userCreate,
-                                p.fullname         AS namePerson,
-                                c.created_at       AS createdAt,
-                                cs.code            AS closingStatus,
-                                z.value 		   AS zona,
-                                z.id               AS zonaId
-                            FROM closing c
-                            INNER JOIN person p ON p.id = c.person_id
-                            INNER JOIN zona z ON c.zona_id = z.id
-                            INNER JOIN closing_status cs ON cs.closing_id = c.id
-                            WHERE c.person_id = :personId
-                            AND c.status = 1
-                            AND cs.status = 1
-                            AND z.status = 1
-                            ORDER BY c.closing_date DESC
+                c.id               AS id,
+                c.closing_date     AS closingDate,
+                c.observation      AS observation,
+                c.user_create      AS userCreate,
+                p.fullname         AS namePerson,
+                c.created_at       AS createdAt,
+                cs.code            AS closingStatus,
+                z.value 		   AS zona,
+                z.id               AS zonaId
+            FROM closing c
+            INNER JOIN person p ON p.id = c.person_id
+            INNER JOIN zona z ON c.zona_id = z.id
+            INNER JOIN closing_status cs ON cs.closing_id = c.id
+            WHERE c.person_id = :personId
+            AND c.status = 1
+            AND cs.status = 1
+            AND z.status = 1
+            ORDER BY c.closing_date DESC
         """,
             nativeQuery = true)
     List<Object[]> findClosingResume(Long personId);
 
+    @Query(value = """
+            SELECT
+                c.id               AS id,
+                c.closing_date     AS closingDate,
+                c.observation      AS observation,
+                c.user_create      AS userCreate,
+                p.fullname         AS namePerson,
+                c.created_at       AS createdAt,
+                cs.code            AS closingStatus,
+                z.value 		   AS zona,
+                z.id               AS zonaId
+            FROM closing c
+            INNER JOIN person p ON p.id = c.person_id
+            INNER JOIN zona z ON c.zona_id = z.id
+            INNER JOIN closing_status cs ON cs.closing_id = c.id
+            WHERE c.status = 1
+            AND cs.status = 1
+            AND z.status = 1
+            ORDER BY c.closing_date DESC
+        """,
+            nativeQuery = true)
+    List<Object[]> findClosingAllResume();
+
+    @Query(nativeQuery = true, value = """
+        SELECT c.amount_asesor 
+        FROM closing AS c 
+        INNER JOIN closing_status AS cs ON cs.closing_id = c.id
+        WHERE cs.code = 'APPROVED'
+        AND c.person_id = :personId
+        AND c.closing_date = :date
+    """)
+    List<Double> findByPersonIdAndClosingDate(@Param("personId")  Long personId, @Param("date")  LocalDate date);
 
 }

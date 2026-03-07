@@ -66,10 +66,11 @@ public class ClosingController {
 
     @GetMapping("/person/{personId}")
     public ResponseEntity<DefaultResponseDto<List<ClosingResponseDto>>> getByPersonId(
+            @RequestHeader("Authorization") String token,
             @PathVariable Long personId
     ) {
-
-        List<ClosingResponseDto> dtos =  closingUseCase.getBypersonId(personId);
+        token = token.replace("Bearer ", "");
+        List<ClosingResponseDto> dtos =  closingUseCase.getBypersonId(personId, token);
         return ResponseEntity.ok(
                 DefaultResponseDto.<List<ClosingResponseDto>>builder()
                         .status(HttpStatus.OK)

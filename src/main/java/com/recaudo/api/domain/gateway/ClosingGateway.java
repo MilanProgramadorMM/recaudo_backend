@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public interface ClosingGateway {
 
-    List<ClosingResponseDto> getByPersonId(Long personId);
+    List<ClosingResponseDto> getByPersonId(Long personId, String token);
     public ClosingResponseDto getById(Long id);
     public ClosingResponseDto save(ClosingDto dto);
     public ClosingResponseDto edit(Long id, ClosingDto dto);

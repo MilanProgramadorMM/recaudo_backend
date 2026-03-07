@@ -10,6 +10,7 @@ import com.recaudo.api.domain.model.entity.*;
 import com.recaudo.api.exception.BadRequestException;
 import com.recaudo.api.exception.ResourceNotFoundException;
 import com.recaudo.api.domain.model.constant.ClosingStatus;
+import com.recaudo.api.infrastructure.helper.security.jwt.JwtUtil;
 import com.recaudo.api.infrastructure.repository.*;
 import jakarta.transaction.Transactional;
 import org.mapstruct.factory.Mappers;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,17 +49,24 @@ public class ClosingAdapter implements ClosingGateway {
     @Autowired
     ZonaGateway zonaGateway;
 
+    @Autowired
+    JwtUtil jwtUtil;
 
     @Override
-    public List<ClosingResponseDto> getByPersonId(Long personId) {
+    public List<ClosingResponseDto> getByPersonId(Long personId, String token) {
         GlotypesEntity glotypesEntityBase
                 = glotypesAdapter.getByCodeAndKey("TIPGAS", "BASE")
                     .orElse(null);
         if(glotypesEntityBase == null){
             throw new ResourceNotFoundException("Registro no encontrado");
         }
-
-        List<Object[]> results = closingRepository.findClosingResume(personId);
+        String role = jwtUtil.getClaimFromToken(token, "role", String.class);
+        List<Object[]> results = Collections.emptyList();
+        if ("Asesor".equals(role)) {
+            results = closingRepository.findClosingResume(personId);
+        } else {
+            results = closingRepository.findClosingAllResume();
+        }
 
         return results.stream()
                 .map(row -> {

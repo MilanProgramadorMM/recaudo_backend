@@ -225,9 +225,9 @@ public class CreditAdapter implements CreditIGateway {
     }
 
     @Override
-    public List<CreditProjection> getByAsesorUsername(String username) {
+    public List<CreditFullResponseDto> getByAsesorUsername(String username) {
         try {
-            return creditRepository.findActiveCreditsByAsesorUsername(username);
+            return creditRepository.findCreditsByUsername(username);
         } catch (Exception e) {
             log.error("Error al obtener créditos del asesor: {}", username, e);
             throw new RuntimeException("Error al obtener créditos del asesor", e);

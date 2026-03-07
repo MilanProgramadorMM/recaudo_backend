@@ -27,15 +27,14 @@ public interface CreditRepository extends JpaRepository<CreditEntity, Long> {
             c.totalInterestValue,
             c.totalCapitalValue,
             c.totalFinancedValue,
-
             ci.zoneId,
             z.value,
             ci.document,
             ci.fullname,
             ci.phoneNumber,
-
             ci.creditLineId,
-            cl.name
+            cl.name,
+            c.createdAt
         )
         FROM CreditEntity c
         JOIN CreditIntentionEntity ci ON ci.id = c.creditIntentionId
@@ -62,7 +61,8 @@ public interface CreditRepository extends JpaRepository<CreditEntity, Long> {
         ci.fullname,
         ci.phoneNumber,
         ci.creditLineId,
-        cl.name
+        cl.name,
+        c.createdAt
     )
     FROM CreditEntity c
     JOIN CreditIntentionEntity ci ON ci.id = c.creditIntentionId
@@ -142,6 +142,7 @@ public interface CreditRepository extends JpaRepository<CreditEntity, Long> {
                 c.total_interest_value        AS totalInterestValue,
                 c.total_capital_value         AS totalCapitalValue,
                 c.total_financed_value        AS totalFinancedValue,
+                c.created_at                  AS createdAt,
                 ci.zone_id                    AS zoneId,
                 z.value                       AS zoneName,
                 ci.document                   AS document,

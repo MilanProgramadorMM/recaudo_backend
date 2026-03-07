@@ -1,9 +1,12 @@
 package com.recaudo.api.domain.model.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
@@ -26,5 +29,8 @@ public class CreditFullResponseDto {
 
     private Long creditLineId;
     private String creditLineName;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime createdAt;
 
 }

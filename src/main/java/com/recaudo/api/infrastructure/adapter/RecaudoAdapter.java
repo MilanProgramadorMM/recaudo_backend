@@ -271,6 +271,8 @@ public class RecaudoAdapter {
                     .totalIntentionValue(credit.getTotalIntentionValue())
                     .totalInterestValue(credit.getTotalInterestValue())
                     .totalCapitalValue(credit.getTotalCapitalValue())
+                    .taxValue(credit.getTaxValue())
+                    .stationery(credit.getStationery())
                     .totalCuotas(cuotas.size())
                     .cuotasPagadas((int) cuotasPagadas)
                     .cuotasPendientes((int) cuotasPendientes)

@@ -2,11 +2,14 @@ package com.recaudo.api.infrastructure.adapter;
 
 import com.recaudo.api.domain.gateway.ClosingSpendGateway;
 import com.recaudo.api.domain.mapper.ClosingSpendMapper;
+import com.recaudo.api.domain.model.dto.response.ClosingResponseDto;
 import com.recaudo.api.domain.model.dto.response.ClosingSpendFileDto;
 import com.recaudo.api.domain.model.dto.response.ClosingSpendResponseDto;
+import com.recaudo.api.domain.model.entity.ClosingEntity;
 import com.recaudo.api.domain.model.entity.ClosingSpendEntity;
 import com.recaudo.api.domain.model.entity.GlotypesEntity;
 import com.recaudo.api.exception.ResourceNotFoundException;
+import com.recaudo.api.infrastructure.repository.ClosingRepository;
 import com.recaudo.api.infrastructure.repository.ClosingSpendRepository;
 import com.recaudo.api.infrastructure.repository.GlotypesRepository;
 import jakarta.transaction.Transactional;
@@ -17,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -25,6 +29,7 @@ import java.util.List;
 @AllArgsConstructor
 public class ClosingSpendAdapter implements ClosingSpendGateway {
 
+    private final ClosingRepository closingRepository;
     private final ClosingSpendRepository closingSpendRepository;
     private final GlotypesRepository glotypesRepository;
     private final ClosingSpendMapper mapper;
@@ -38,11 +43,10 @@ public class ClosingSpendAdapter implements ClosingSpendGateway {
             Long zonaId,
             Double amount,
             MultipartFile file,
-            String description) throws IOException {
+            String description,
+            boolean isBase) throws IOException {
 
-        boolean isBase = isBase(spendTypeId);
-
-        if (isBase && amount == null && amount <= 0) {
+        if (isBase && amount == null && amount < 0) {
             throw new IllegalArgumentException("Base debe ser mayor a cero");
         }
 
@@ -191,5 +195,35 @@ public class ClosingSpendAdapter implements ClosingSpendGateway {
                 .getAuthentication()
                 .getPrincipal())
                 .getUsername();
+    }
+
+    @Override
+    public void insertPreviousBaseValue(ClosingResponseDto closingData) {
+        List<Double> closings = closingRepository.findByPersonIdAndClosingDate(
+                closingData.getPersonId(), LocalDate.parse(closingData.getClosingDate()).minusDays(1)
+        );
+        Double previousClosingValue = closings.stream()
+                .findFirst()
+                .orElse(0.0);
+
+        GlotypesEntity baseType = glotypesRepository.findByKeyAndCode("TIPGAS", "BASE ANTERIOR").orElse(null);
+
+        if (baseType != null) {
+            try {
+                saveSpend(
+                        closingData.getId(),
+                        baseType.getId(),
+                        closingData.getZonaId(), // TODO GET ZONA FROM PERSON
+                        previousClosingValue,
+                        null,
+                        "VALOR DÍA ANTERIOR",
+                        true
+                        );
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+
     }
 }

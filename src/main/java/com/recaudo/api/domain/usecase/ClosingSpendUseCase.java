@@ -3,6 +3,7 @@ package com.recaudo.api.domain.usecase;
 import com.recaudo.api.config.UseCase;
 import com.recaudo.api.domain.gateway.ClosingGateway;
 import com.recaudo.api.domain.gateway.ClosingSpendGateway;
+import com.recaudo.api.domain.model.dto.response.ClosingResponseDto;
 import com.recaudo.api.domain.model.dto.response.ClosingSpendFileDto;
 import com.recaudo.api.domain.model.dto.response.ClosingSpendResponseDto;
 import com.recaudo.api.domain.model.entity.ClosingSpendEntity;
@@ -30,19 +31,22 @@ public class ClosingSpendUseCase {
     ) throws IOException {
 
         // Validar que el cierre exista
+        ClosingResponseDto closingData = closingGateway.getById(closingId);
         if (closingGateway.getById(closingId) == null) {
             throw new IllegalArgumentException("El cierre no existe");
         }
 
         // Regla de negocio: BASE no requiere evidencia
         if (isBase) {
+            closingSpendGateway.insertPreviousBaseValue(closingData);
             return closingSpendGateway.saveSpend(
                     closingId,
                     spendTypeId,
                     zonaId,
                     amount,
                     null,
-                    description
+                    description,
+                    isBase
             );
         }
 
@@ -62,7 +66,8 @@ public class ClosingSpendUseCase {
                 zonaId,
                 negativeValue,
                 file,
-                description
+                description,
+                false
         );
     }
 
