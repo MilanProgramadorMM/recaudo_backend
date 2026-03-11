@@ -8,6 +8,7 @@ import com.recaudo.api.domain.model.dto.rest_api.RecaudoRequestDto;
 import com.recaudo.api.domain.model.dto.rest_api.ReverseCapitalInterestRequestDto;
 import com.recaudo.api.domain.model.dto.rest_api.ReverseRecaudoRequestDto;
 import com.recaudo.api.infrastructure.adapter.RecaudoAdapter;
+import com.recaudo.api.infrastructure.helper.security.jwt.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,17 +32,25 @@ public class RecaudoController {
     @Autowired
     private RecaudoAdapter recaudoAdapter;
 
+    @Autowired
+    private JwtUtil jwtService;
+
     @PostMapping(value = "/save", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> processPayment(
             @RequestPart("data") @Valid RecaudoRequestDto request,
-            @RequestPart(value = "file", required = false) MultipartFile file
+            @RequestPart(value = "file", required = false) MultipartFile file,
+            @RequestHeader("Authorization") String token
     ) {
         try {
+            token = token.substring(7);
+            Long userId = jwtService.getClaimFromToken(token, "userId", Long.class);
+            Long personId = jwtService.getClaimFromToken(token, "personId", Long.class);
 
             RecaudoResultDto result = recaudoAdapter.processPayment(
                     request,
-                    file
-
+                    file,
+                    personId,
+                    token
             );
 
             return ResponseEntity.ok(result);

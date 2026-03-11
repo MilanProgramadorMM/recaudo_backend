@@ -23,4 +23,8 @@ public class GlotypesAdapter {
     public Optional<GlotypesEntity> getByCodeAndKey(String key, String code) {
         return glotypesRepository.findByKeyAndCode(key, code);
     }
+
+    public GlotypesEntity getById(Long id) {
+        return glotypesRepository.findById(id).orElse(null);
+    }
 }

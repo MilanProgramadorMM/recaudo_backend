@@ -1,14 +1,13 @@
 package com.recaudo.api.infrastructure.adapter;
 
+import com.recaudo.api.domain.gateway.CreditIntentionGateway;
+import com.recaudo.api.domain.gateway.PersonZonaGateway;
 import com.recaudo.api.domain.model.dto.response.*;
 import com.recaudo.api.domain.model.dto.rest_api.RecaudoRequestDto;
 import com.recaudo.api.domain.model.dto.rest_api.ReverseCapitalInterestRequestDto;
 import com.recaudo.api.domain.model.dto.rest_api.ReverseRecaudoRequestDto;
-import com.recaudo.api.domain.model.entity.AmortizationEntity;
-import com.recaudo.api.domain.model.entity.ConceptEntity;
-import com.recaudo.api.domain.model.entity.CreditEntity;
-import com.recaudo.api.domain.model.entity.PeriodEntity;
-import com.recaudo.api.domain.model.entity.RecaudoEntity;
+import com.recaudo.api.domain.model.entity.*;
+import com.recaudo.api.exception.BadRequestException;
 import com.recaudo.api.infrastructure.repository.AmortizationRepository;
 import com.recaudo.api.infrastructure.repository.ConceptRepository;
 import com.recaudo.api.infrastructure.repository.CreditRepository;
@@ -51,7 +50,8 @@ public class RecaudoAdapter {
     @Autowired
     private CollectionVisitAdapter collectionVisitAdapter;
 
-
+    @Autowired
+    private ClosingAdapter closingAdapter;
 
     /**
      * Obtiene el estado completo de pago de un crédito
@@ -330,13 +330,26 @@ public class RecaudoAdapter {
         return intentions;
     }
 
+    private void validateClosingStatus(RecaudoRequestDto requestDto, Long personId, String token) {
+        List<ClosingResponseDto> closings = closingAdapter.getByPersonId(personId, token);
+        ClosingResponseDto cierreActivo = closings.stream().filter(
+                closing -> closing.getClosingStatus().equalsIgnoreCase("PRE_CIERRE"))
+                .findFirst().orElse(null);
+        if (cierreActivo == null) {
+            throw new BadRequestException("No puede recaudar sin un cierre activo");
+        }
+
+    }
+
     @Transactional
-    public RecaudoResultDto processPayment(RecaudoRequestDto requestDto, MultipartFile file) {
+    public RecaudoResultDto processPayment(RecaudoRequestDto requestDto, MultipartFile file, Long personId, String token) {
         try {
             // Validar que el valor pagado sea positivo
             if (requestDto.getValuePaid().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new IllegalArgumentException("El valor pagado debe ser mayor a cero");
             }
+
+            this.validateClosingStatus(requestDto, personId, token);
 
             // Validar tipo de distribución
             String distributionType = requestDto.getDistributionType() != null

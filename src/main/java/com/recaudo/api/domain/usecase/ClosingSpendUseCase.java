@@ -7,6 +7,8 @@ import com.recaudo.api.domain.model.dto.response.ClosingResponseDto;
 import com.recaudo.api.domain.model.dto.response.ClosingSpendFileDto;
 import com.recaudo.api.domain.model.dto.response.ClosingSpendResponseDto;
 import com.recaudo.api.domain.model.entity.ClosingSpendEntity;
+import com.recaudo.api.domain.model.entity.GlotypesEntity;
+import com.recaudo.api.infrastructure.adapter.GlotypesAdapter;
 import lombok.AllArgsConstructor;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -19,6 +21,7 @@ public class ClosingSpendUseCase {
 
     private final ClosingSpendGateway closingSpendGateway;
     private final ClosingGateway closingGateway;
+    private final GlotypesAdapter glotypesAdapter;
 
     public ClosingSpendResponseDto registerSpend(
             Long closingId,
@@ -38,7 +41,12 @@ public class ClosingSpendUseCase {
 
         // Regla de negocio: BASE no requiere evidencia
         if (isBase) {
-            closingSpendGateway.insertPreviousBaseValue(closingData);
+            GlotypesEntity entity = glotypesAdapter.getById(spendTypeId);
+            if (entity != null) {
+                if ("BASE".equalsIgnoreCase(entity.getCode())) {
+                    closingSpendGateway.insertPreviousBaseValue(closingData);
+                }
+            }
             return closingSpendGateway.saveSpend(
                     closingId,
                     spendTypeId,

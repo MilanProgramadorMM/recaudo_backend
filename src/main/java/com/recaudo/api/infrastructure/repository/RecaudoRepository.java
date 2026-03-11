@@ -28,40 +28,40 @@ public interface RecaudoRepository extends JpaRepository<RecaudoEntity, Long> {
     FROM RecaudoEntity r
     JOIN ConceptEntity c ON r.conceptId = c.id
     WHERE r.creditId = :creditId
-    ORDER BY r.createdAt DESC
+    ORDER BY r.id DESC
 """)
     List<RecaudoEntity> findRecaudosRRByCreditId(@Param("creditId") Long creditId);
 
     @Query(value = """
         SELECT
-                    r.id                                   AS recaudoId,
-                    ci.fullname                            AS clientName,
-                    r.value_paid                           AS valuePaid,
-                    r.investment_value                     AS investmentValue,
-                    r.interest_value                       AS interestValue,
-                    r.life_insurance                       AS lifeInsurance,
-                    r.portfolio_insurance                  AS portfolioInsurance,
-                    r.user_create                          AS userCreate,
-                    z.value                                AS zona,
-                    DATE_FORMAT(r.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
-                FROM closing cl
-                INNER JOIN person p
-                    ON p.id = cl.person_id
-                INNER JOIN user u
-                    ON u.person_id = p.id
-                INNER JOIN recaudo r
-                    ON r.user_create COLLATE utf8mb4_general_ci = u.username
-                INNER JOIN credit c
-                    ON c.id = r.credit_id
-                INNER JOIN credit_intention ci
-                    ON ci.id = c.credit_intention_id
-                INNER JOIN zona z
-                    ON z.id = ci.zone_id
-                WHERE cl.id = :closingId
-                  AND DATE(r.created_at) = :fecha
-                  AND ci.zone_id = :zonaId
-                  AND r.deleted_at IS NULL
-                ORDER BY r.created_at DESC;
+            r.id                                   AS recaudoId,
+            ci.fullname                            AS clientName,
+            r.value_paid                           AS valuePaid,
+            r.investment_value                     AS investmentValue,
+            r.interest_value                       AS interestValue,
+            r.life_insurance                       AS lifeInsurance,
+            r.portfolio_insurance                  AS portfolioInsurance,
+            r.user_create                          AS userCreate,
+            z.value                                AS zona,
+            DATE_FORMAT(r.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
+        FROM closing cl
+        INNER JOIN person p
+            ON p.id = cl.person_id
+        INNER JOIN user u
+            ON u.person_id = p.id
+        INNER JOIN recaudo r
+            ON r.user_create COLLATE utf8mb4_general_ci = u.username
+        INNER JOIN credit c
+            ON c.id = r.credit_id
+        INNER JOIN credit_intention ci
+            ON ci.id = c.credit_intention_id
+        INNER JOIN zona z
+            ON z.id = ci.zone_id
+        WHERE cl.id = :closingId
+          AND DATE(r.created_at) = :fecha
+          AND ci.zone_id = :zonaId
+          AND r.deleted_at IS NULL
+        ORDER BY r.id ASC;
     """, nativeQuery = true)
     List<RecaudoResponseProjection> findRecaudosWithClientName(
             @Param("closingId") Long closingId,
