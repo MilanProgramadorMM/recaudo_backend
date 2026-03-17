@@ -161,7 +161,7 @@
                     .taxValue(creditDto.getTaxValue())
                     .inicioQuincena(creditDto.getInicioQuincena())
                     .finQuincena(creditDto.getFinQuincena())
-                    .tipoCalculo(CalculationType.CALCULAR_CUOTA)
+                    .tipoCalculo(CalculationType.CALCULAR_TASA)
                     .generarAmortizacion("SI")
                     .startDate(creditDto.getStartDate())
                     .build();
@@ -206,7 +206,7 @@
                     .tipoCalculo(
                             dto.getTipoCalculo() != null
                                     ? dto.getTipoCalculo()
-                                    : CalculationType.CALCULAR_CUOTA)
+                                    : CalculationType.CALCULAR_TASA)
                     .startDate(
                             dto.getStartDate() != null
                                     ? dto.getStartDate()
@@ -392,7 +392,7 @@
                         stationeryValue = capitalResultado * 0.01;
                         itemValueToSimulate = capitalResultado + stationeryValue;
                         json.put("id_capital", itemValueToSimulate);
-                        json.put("id_tipo_calculo", CalculationType.CALCULAR_CUOTA.toString());
+                        json.put("id_tipo_calculo", CalculationType.CALCULAR_TASA.toString());
                         response = creditIntentionRepository.ejecutarProyeccion(json.toString());
                     }
                 }

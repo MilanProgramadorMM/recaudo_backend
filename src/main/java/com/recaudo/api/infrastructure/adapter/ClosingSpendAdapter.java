@@ -59,9 +59,10 @@ public class ClosingSpendAdapter implements ClosingSpendGateway {
         }
 
         // BASE solo una vez por cierre
-        if (isBase &&
+        GlotypesEntity entity = glotypesRepository.findById(spendTypeId).orElse(null);
+        if (entity != null && isBase &&
                 closingSpendRepository
-                        .existsByClosingIdAndSpendTypeIdAndStatusTrue(closingId, spendTypeId)) {
+                        .existsByClosingIdAndSpendTypeIdAndStatusTrue(closingId, spendTypeId) && !"AJUSTE BASE".equalsIgnoreCase(entity.getCode())) {
 
             throw new IllegalStateException("Ya existe una base registrada para este cierre");
         }

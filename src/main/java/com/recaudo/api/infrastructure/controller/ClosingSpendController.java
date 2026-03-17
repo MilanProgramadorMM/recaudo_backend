@@ -47,7 +47,7 @@ public class ClosingSpendController {
             return ResponseEntity.ok(
                     DefaultResponseDto.builder()
                             .status(HttpStatus.OK)
-                            .message("Gasto registrado correctamente")
+                            .message("Registrado correctamente")
                             .data(spend)
                             .timestamp(LocalDateTime.now().toString())
                             .build()
@@ -57,7 +57,7 @@ public class ClosingSpendController {
             return ResponseEntity.badRequest().body(
                     DefaultResponseDto.builder()
                             .status(HttpStatus.BAD_REQUEST)
-                            .message("Error al registrar gasto")
+                            .message("Error al realizar registrar")
                             .details(e.getMessage())
                             .timestamp(LocalDateTime.now().toString())
                             .build()
