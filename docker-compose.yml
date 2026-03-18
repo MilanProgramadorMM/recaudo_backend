@@ -13,7 +13,7 @@ services:
     image: recaudo
     container_name: frontend
     ports:
-      - "80:80"      # Angular servido por Nginx
+      - "3000:80"      # Angular servido por Nginx
     depends_on:
       - backend
     networks:
