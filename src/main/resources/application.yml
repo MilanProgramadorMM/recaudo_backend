@@ -47,7 +47,7 @@ app:
   jwt-token-type: Bearer
 
   frontend:
-    url: https://www.businesssam.com
+    url: https://www.businesssam.com/app
 
     whatsapp:
       enabled: false  # false = modo simulado para desarrollo
