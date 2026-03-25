@@ -11,6 +11,7 @@ import com.recaudo.api.exception.BadRequestException;
 import com.recaudo.api.infrastructure.adapter.CreditIntentionApprovalService;
 import com.recaudo.api.infrastructure.helper.security.jwt.JwtUtil;
 import com.recaudo.api.infrastructure.helper.util.DocumentMetadata;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -166,8 +167,11 @@ public class CreditIntentionController {
     }
 
     @GetMapping("/get-intention/all")
-    public ResponseEntity<DefaultResponseDto<List<IntentionCreditResponseAllDto>>> getAllIncludingClosed() {
-        List<IntentionCreditResponseAllDto> data = creditIntentionUseCase.getAllIncludingClosed();
+    public ResponseEntity<DefaultResponseDto<List<IntentionCreditResponseAllDto>>> getAllIncludingClosed(
+            HttpServletRequest request
+    ) {
+        String token = request.getHeader("Authorization").replace("Bearer ", "");
+        List<IntentionCreditResponseAllDto> data = creditIntentionUseCase.getAllIncludingClosed(token);
         return ResponseEntity.ok(
                 DefaultResponseDto.<List<IntentionCreditResponseAllDto>>builder()
                         .message("Todas las intenciones obtenidas")

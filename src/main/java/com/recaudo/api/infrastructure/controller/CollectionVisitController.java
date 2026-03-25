@@ -3,6 +3,7 @@ package com.recaudo.api.infrastructure.controller;
 import com.recaudo.api.domain.model.dto.response.DailyCollectionProjection;
 import com.recaudo.api.infrastructure.adapter.CollectionVisitAdapter;
 import com.recaudo.api.infrastructure.adapter.DailyCollectionService;
+import com.recaudo.api.infrastructure.adapter.UserDetailsImpl;
 import com.recaudo.api.infrastructure.repository.RecaudoRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,9 +41,11 @@ public class CollectionVisitController {
             Authentication authentication
     ) {
         String username = authentication.getName();
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        Long personId = userDetails.getUserEntity().getPersonId();
 
         return ResponseEntity.ok(
-                dailyCollectionService.getDailyCollection(username, date)
+                dailyCollectionService.getDailyCollection(username, personId, date)
         );
     }
 

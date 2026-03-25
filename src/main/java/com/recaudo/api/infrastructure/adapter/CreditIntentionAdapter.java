@@ -105,6 +105,16 @@
         }
 
         @Override
+        public List<IntentionCreditResponseAllDto> getAllIncludingClosedByUsername(String username) {
+            try {
+                return creditIntentionRepository.findAllCreditIntentionsIncludingClosedByUsername(username);
+            } catch (Exception e) {
+                log.error("Error al obtener todas las intenciones de crédito", e);
+                throw new RuntimeException("Error al obtener todas las intenciones de crédito", e);
+            }
+        }
+
+        @Override
         public List<IntentionCreditResponseAllDto> getById(Long id) {
             try {
                 return creditIntentionRepository.findByIdProjection(id);

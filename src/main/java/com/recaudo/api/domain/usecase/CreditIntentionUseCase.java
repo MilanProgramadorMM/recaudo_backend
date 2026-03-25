@@ -4,8 +4,10 @@ import com.recaudo.api.config.UseCase;
 import com.recaudo.api.domain.gateway.CreditIntentionGateway;
 import com.recaudo.api.domain.model.dto.response.*;
 import com.recaudo.api.domain.model.dto.rest_api.*;
+import com.recaudo.api.infrastructure.helper.security.jwt.JwtUtil;
 import com.recaudo.api.infrastructure.helper.util.DocumentMetadata;
 import lombok.AllArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -17,6 +19,7 @@ public class CreditIntentionUseCase {
 
     private CreditIntentionGateway creditIntentionGateway;
     private CreditIntentionDocumentUseCaseJ documentUseCase;
+    private JwtUtil jwtUtil;
 
     public List<SimulationResponseDto> simulationIntention(CalculateCreditIntentionDto data) {
         return creditIntentionGateway.simulate(data);
@@ -29,8 +32,20 @@ public class CreditIntentionUseCase {
     public List<IntentionCreditResponseAllDto> getAll(){
         return creditIntentionGateway.getAll();
     }
-    public List<IntentionCreditResponseAllDto> getAllIncludingClosed(){
-        return creditIntentionGateway.getAllIncludingClosed();
+
+    public List<IntentionCreditResponseAllDto> getAllIncludingClosed(String token) {
+        try {
+            String role = jwtUtil.getClaimFromToken(token, "role", String.class);
+
+            if ("Asesor".equals(role)) {
+                String username = jwtUtil.getUsernameFromToken(token);
+                return creditIntentionGateway.getAllIncludingClosedByUsername(username); // ← usa el nuevo método
+            }
+
+            return creditIntentionGateway.getAllIncludingClosed(); // Admin / Backoffice ven todo
+        } catch (Exception e) {
+            throw new RuntimeException("Error al obtener las intenciones", e);
+        }
     }
 
     public List<IntentionCreditResponseAllDto> getById(Long id){

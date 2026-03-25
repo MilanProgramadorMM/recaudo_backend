@@ -29,17 +29,18 @@ public interface DailyCollectionRepository
              a.liquidated AS liquidated,
              cv.payment_promise_date AS paymentPromiseDate,
              COALESCE(cv.no_pago, 0) AS noPago,
-             cv.no_pago_reason AS noPagoReason
+             cv.no_pago_reason AS noPagoReason,
+             p.name AS periodo
          FROM amortization a
          JOIN credit c ON c.id = a.credit_id
          JOIN credit_intention ci ON ci.id = c.credit_intention_id
-         JOIN zona z ON z.id = ci.zone_id
+         JOIN period p ON c.period_id = p.id
+         JOIN zona z ON z.id = ci.zone_id AND z.value = :zona
          JOIN person_zona pz_asesor
              ON pz_asesor.zona_id = z.id
              AND pz_asesor.orden = 0
          JOIN user u
              ON u.person_id = pz_asesor.person_id
-             AND u.username = :username
          JOIN person_zona pz_cliente
              ON pz_cliente.zona_id = z.id
              AND pz_cliente.person_id = c.person_id
@@ -60,7 +61,7 @@ public interface DailyCollectionRepository
              a.quota_number
     """, nativeQuery = true)
     List<DailyCollectionProjection> findDailyCollection(
-            @Param("username") String username,
+            @Param("zona") String zona,
             @Param("fecha") LocalDate fecha
     );
 }

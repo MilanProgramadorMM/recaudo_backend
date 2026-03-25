@@ -16,6 +16,7 @@ public interface CreditIntentionGateway {
 
     List<IntentionCreditResponseAllDto> getAll();
     List<IntentionCreditResponseAllDto> getAllIncludingClosed();
+    List<IntentionCreditResponseAllDto> getAllIncludingClosedByUsername(String username);
     List<IntentionCreditResponseAllDto> getById(Long id);
     CreditIntentionResponseDto create(CreditIntentionDto creditIntentionDto, String token, Long personId);
     List<SimulationResponseDto> simulate(CalculateCreditIntentionDto creditIntentionDto);
