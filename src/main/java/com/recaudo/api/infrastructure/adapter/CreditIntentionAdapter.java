@@ -4,21 +4,17 @@
     import com.fasterxml.jackson.databind.node.ObjectNode;
     import com.recaudo.api.domain.gateway.CreditIntentionGateway;
     import com.recaudo.api.domain.gateway.CreditIntentionStatusGateway;
+    import com.recaudo.api.domain.gateway.PersonGateway;
+    import com.recaudo.api.domain.gateway.UserGateway;
     import com.recaudo.api.domain.mapper.CreditIntentionMapper;
     import com.recaudo.api.domain.model.constant.CalculationType;
-    import com.recaudo.api.domain.model.dto.response.CreditIntentionResponseDto;
-    import com.recaudo.api.domain.model.dto.response.IntentionCreditResponseAllDto;
-    import com.recaudo.api.domain.model.dto.response.ProyeccionAmortizacionDto;
-    import com.recaudo.api.domain.model.dto.response.SimulationResponseDto;
-    import com.recaudo.api.domain.model.dto.rest_api.CalculateCreditIntentionDto;
-    import com.recaudo.api.domain.model.dto.rest_api.ClientDataCreditIntentionUpdateDto;
-    import com.recaudo.api.domain.model.dto.rest_api.CreditIntentionDto;
-    import com.recaudo.api.domain.model.dto.rest_api.CreditIntentionUpdateDto;
-    import com.recaudo.api.domain.model.dto.rest_api.UpdateFechaTentativaCreditIntentionDto;
+    import com.recaudo.api.domain.model.dto.response.*;
+    import com.recaudo.api.domain.model.dto.rest_api.*;
     import com.recaudo.api.domain.model.entity.*;
     import com.recaudo.api.exception.BadRequestException;
     import com.recaudo.api.exception.CreditSimulationException;
     import com.recaudo.api.domain.model.constant.CreditStatusCode;
+    import com.recaudo.api.infrastructure.helper.security.jwt.JwtUtil;
     import com.recaudo.api.infrastructure.repository.*;
     import jakarta.transaction.Transactional;
     import lombok.extern.slf4j.Slf4j;
@@ -73,6 +69,15 @@
         @Autowired
         private  CreditIntentionStatusRepository creditIntentionStatusRepository;
 
+        @Autowired
+        private ClosingAdapter closingAdapter;
+
+        @Autowired
+        private PersonGateway personGateway;
+
+        @Autowired
+        private UserRepository userRepository;
+
 
         @Autowired(required = false)
         CreditIntentionMapper creditIntentionMapper = Mappers.getMapper(CreditIntentionMapper.class);
@@ -90,6 +95,16 @@
         }
 
         @Override
+        public List<IntentionCreditResponseAllDto> getAllIncludingClosed() {
+            try {
+                return creditIntentionRepository.findAllCreditIntentionsIncludingClosed();
+            } catch (Exception e) {
+                log.error("Error al obtener todas las intenciones de crédito", e);
+                throw new RuntimeException("Error al obtener todas las intenciones de crédito", e);
+            }
+        }
+
+        @Override
         public List<IntentionCreditResponseAllDto> getById(Long id) {
             try {
                 return creditIntentionRepository.findByIdProjection(id);
@@ -101,8 +116,9 @@
 
         @Transactional
         @Override
-        public CreditIntentionResponseDto create(CreditIntentionDto creditIntentionDto) {
+        public CreditIntentionResponseDto create(CreditIntentionDto creditIntentionDto, String token, Long PersonId) {
 
+            this.validateClosingStatus(token,PersonId);
             validacionIntencionCredito(creditIntentionDto);
             CreditIntentionEntity entity = creditIntentionMapper.dtoToEntity(creditIntentionDto);
 
@@ -155,8 +171,6 @@
                     .periodCode(period.getCod())
                     .periodQuantity(creditDto.getPeriodQuantity())
                     .itemValue(creditDto.getItemValue())
-                    .initialValuePayment(creditDto.getInitialValuePayment())
-                    .totalFinancedValue(creditDto.getTotalFinancedValue())
                     .quotaValue(creditDto.getQuotaValue())
                     .taxValue(creditDto.getTaxValue())
                     .inicioQuincena(creditDto.getInicioQuincena())
@@ -357,12 +371,10 @@
         @Override
         public List<SimulationResponseDto> simulate(CalculateCreditIntentionDto dto) {
             try {
-                double itemValueToSimulate = dto.getTotalFinancedValue() != null
-                        && dto.getTotalFinancedValue() > 0
+                    double itemValueToSimulate = dto.getTotalFinancedValue() != null
                         ? dto.getTotalFinancedValue() : dto.getItemValue();
                 double stationeryValue = 0.0;
                 double capitalResultado = dto.getTotalFinancedValue() != null
-                        && dto.getTotalFinancedValue() > 0
                         ? dto.getTotalFinancedValue() : dto.getItemValue();
 
                 List<CreditLineServiceQuotaEntity> capitalizableQuotas =
@@ -376,7 +388,6 @@
                 if (stationeryQuota.isPresent()) {
                     // Calcular el 1% de papelería
                     stationeryValue = dto.getTotalFinancedValue() != null
-                            && dto.getTotalFinancedValue() > 0
                             ? dto.getTotalFinancedValue() * 0.01 : dto.getItemValue() * 0.01;
                     // Sumar al itemValue para la simulación
                     itemValueToSimulate += stationeryValue;
@@ -676,5 +687,15 @@
         todo: hacer metodo para consulatr info de persona por su documento devolver informacion para llenar en el form
          */
 
+        private void validateClosingStatus(String token, Long personId) {
+            List<ClosingResponseDto> closings = closingAdapter.getByPersonId(personId, token);
+            ClosingResponseDto cierreActivo = closings.stream().filter(
+                            closing -> closing.getClosingStatus().equalsIgnoreCase("PRE_CIERRE"))
+                    .findFirst().orElse(null);
+            if (cierreActivo == null) {
+                throw new BadRequestException("No puede registra intencion sin un cierre activo");
+            }
+
+        }
 
     }

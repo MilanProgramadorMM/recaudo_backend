@@ -15,8 +15,9 @@ import java.util.List;
 public interface CreditIntentionGateway {
 
     List<IntentionCreditResponseAllDto> getAll();
+    List<IntentionCreditResponseAllDto> getAllIncludingClosed();
     List<IntentionCreditResponseAllDto> getById(Long id);
-    CreditIntentionResponseDto create(CreditIntentionDto creditIntentionDto);
+    CreditIntentionResponseDto create(CreditIntentionDto creditIntentionDto, String token, Long personId);
     List<SimulationResponseDto> simulate(CalculateCreditIntentionDto creditIntentionDto);
      boolean existById(Long id);
     CreditIntentionResponseDto updateDataCreditIntention(Long id, CreditIntentionUpdateDto dto);

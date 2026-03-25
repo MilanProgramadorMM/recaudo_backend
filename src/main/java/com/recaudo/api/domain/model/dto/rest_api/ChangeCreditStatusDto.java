@@ -16,4 +16,16 @@ public class ChangeCreditStatusDto {
     @NotNull
     @JsonProperty("new_status")
     private CreditStatusCode newStatus;
+
+    @NotNull
+    @JsonProperty("current_status")
+    private CreditStatusCode currentStatus;
+
+    @JsonProperty("observation")
+    private String observation;
+
+    @NotNull
+    @JsonProperty("activity")
+    private String activity;
+
 }

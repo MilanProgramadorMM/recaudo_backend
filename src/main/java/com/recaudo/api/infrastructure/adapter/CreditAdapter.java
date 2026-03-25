@@ -153,6 +153,8 @@ public class CreditAdapter implements CreditIGateway {
             ChangeCreditStatusDto newStatus = new ChangeCreditStatusDto();
             newStatus.setCreditId(dto.getCreditIntentionId());
             newStatus.setNewStatus(CreditStatusCode.TERMINATED);
+            newStatus.setActivity("GENERACION DE CREDITO");
+            newStatus.setObservation("SE CREO CREDITO EXITOSAMENTE");
             CreditIntentionStatusResponseDto response = updateStatusCreditIntention(newStatus);
 
             // Retornar DTO

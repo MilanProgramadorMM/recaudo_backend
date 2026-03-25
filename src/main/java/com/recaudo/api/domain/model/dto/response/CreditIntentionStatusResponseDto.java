@@ -1,6 +1,7 @@
 package com.recaudo.api.domain.model.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.recaudo.api.domain.model.constant.CreditStatusCode;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,7 +25,7 @@ public class CreditIntentionStatusResponseDto {
     private Long creditIntentionId;
 
     @JsonProperty("code")
-    private String code;
+    private CreditStatusCode code;
 
     @JsonProperty("user_start")
     private String userStart;
@@ -37,5 +38,6 @@ public class CreditIntentionStatusResponseDto {
 
     @JsonProperty("end_date")
     private String endDate;
+
 
 }

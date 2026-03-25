@@ -9,6 +9,7 @@ import com.recaudo.api.domain.usecase.CreditIntentionDocumentUseCaseJ;
 import com.recaudo.api.domain.usecase.CreditIntentionUseCase;
 import com.recaudo.api.exception.BadRequestException;
 import com.recaudo.api.infrastructure.adapter.CreditIntentionApprovalService;
+import com.recaudo.api.infrastructure.helper.security.jwt.JwtUtil;
 import com.recaudo.api.infrastructure.helper.util.DocumentMetadata;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
@@ -35,6 +36,9 @@ public class CreditIntentionController {
 
     @Autowired
     private CreditIntentionApprovalService approvalService;
+
+    @Autowired
+    private JwtUtil jwtService;
 
     @PostMapping("/generate/calculation")
     public ResponseEntity<DefaultResponseDto<List<SimulationResponseDto>>> simulate(
@@ -161,11 +165,25 @@ public class CreditIntentionController {
 
     }
 
+    @GetMapping("/get-intention/all")
+    public ResponseEntity<DefaultResponseDto<List<IntentionCreditResponseAllDto>>> getAllIncludingClosed() {
+        List<IntentionCreditResponseAllDto> data = creditIntentionUseCase.getAllIncludingClosed();
+        return ResponseEntity.ok(
+                DefaultResponseDto.<List<IntentionCreditResponseAllDto>>builder()
+                        .message("Todas las intenciones obtenidas")
+                        .status(HttpStatus.OK)
+                        .details("Incluye terminadas y rechazadas")
+                        .data(data)
+                        .build()
+        );
+    }
+
     @PostMapping("/create-with-documents")
     public ResponseEntity<?> createIntentionWithCedula(
             @RequestPart("intention") String intentionJson,
             @RequestPart(value = "documents", required = false) List<MultipartFile> files,
-            @RequestPart(value = "metadata", required = false) String metadataJson) {
+            @RequestPart(value = "metadata", required = false) String metadataJson,
+            @RequestHeader("Authorization") String token) {
 
         try {
             ObjectMapper mapper = new ObjectMapper();
@@ -179,11 +197,16 @@ public class CreditIntentionController {
                     ? mapper.readValue(metadataJson, new TypeReference<>() {})
                     : null;
 
+            token = token.substring(7);
+            Long userId = jwtService.getClaimFromToken(token, "userId", Long.class);
+            Long personId = jwtService.getClaimFromToken(token, "personId", Long.class);
             CreditIntentionResponseDto response =
                     creditIntentionUseCase.createWithDocuments(
                             intentionDTO,
                             files,
-                            metadata
+                            metadata,
+                            token,
+                            personId
                     );
 
             return ResponseEntity.ok(DefaultResponseDto.builder()

@@ -3,7 +3,6 @@ package com.recaudo.api.domain.usecase;
 import com.recaudo.api.config.UseCase;
 import com.recaudo.api.domain.gateway.ClosingGateway;
 import com.recaudo.api.domain.gateway.ClosingStatusGateway;
-import com.recaudo.api.domain.gateway.PersonGateway;
 import com.recaudo.api.domain.gateway.UserGateway;
 import com.recaudo.api.domain.model.dto.response.ClosingResponseDto;
 import com.recaudo.api.domain.model.dto.response.TodayClosingProjection;
@@ -23,7 +22,6 @@ import java.util.List;
 public class ClosingUseCase {
 
     private ClosingGateway closingGateway;
-    private PersonGateway personGateway;
     private UserGateway userGateway;
     private ClosingStatusGateway closingStatusGateway;
 

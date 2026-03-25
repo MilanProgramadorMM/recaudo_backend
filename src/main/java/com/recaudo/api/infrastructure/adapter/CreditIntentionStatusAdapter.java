@@ -1,7 +1,9 @@
 package com.recaudo.api.infrastructure.adapter;
 
+import com.recaudo.api.domain.gateway.CreditIntentionObservationGateway;
 import com.recaudo.api.domain.gateway.CreditIntentionStatusGateway;
 import com.recaudo.api.domain.mapper.CreditIntentionStatusMapper;
+import com.recaudo.api.domain.model.dto.response.CreditIntentionObservationResponseDto;
 import com.recaudo.api.domain.model.dto.response.CreditIntentionStatusResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.*;
 import com.recaudo.api.domain.model.entity.*;
@@ -28,6 +30,9 @@ public class CreditIntentionStatusAdapter implements CreditIntentionStatusGatewa
 
     @Autowired
     private  CreditIntentionStatusRepository creditIntentionStatusRepository;
+
+    @Autowired
+    private CreditIntentionObservationGateway creditIntentionObservationGateway;
 
 
     @Autowired(required = false)
@@ -91,6 +96,16 @@ public class CreditIntentionStatusAdapter implements CreditIntentionStatusGatewa
         lastEntity.setUserEnd(getUsernameToken());
 
         creditIntentionStatusRepository.save(lastEntity);
+
+
+        //GUARDAR OBSERVACION PARA PASAR A SIGUIENTE FASE
+        creditIntentionObservationGateway.create(
+                lastEntity.getCreditIntentionId(),
+                dto.getObservation(),
+                dto.getActivity(),
+                lastStatus.toString(),
+                dto.getNewStatus().toString()
+        );
 
         CreditIntentionStatusEntity entity = new CreditIntentionStatusEntity();
         entity.setCreditIntentionId(dto.getCreditId());

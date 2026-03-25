@@ -55,9 +55,6 @@ public class PersonRegisterAdapter implements PersonGateway {
     @Autowired(required = false)
     PersonMapper personMapper = Mappers.getMapper(PersonMapper.class);
 
-    private RegisterUseCase registerUseCase;
-
-
     @Override
     public PersonEntity getByUserName(String username) {
         return null;

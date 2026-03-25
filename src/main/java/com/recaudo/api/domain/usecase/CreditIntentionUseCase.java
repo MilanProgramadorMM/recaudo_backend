@@ -22,12 +22,15 @@ public class CreditIntentionUseCase {
         return creditIntentionGateway.simulate(data);
     }
 
-    public CreditIntentionResponseDto create(CreditIntentionDto creditIntentionDto){
-        return creditIntentionGateway.create(creditIntentionDto);
+    public CreditIntentionResponseDto create(CreditIntentionDto creditIntentionDto, String token, Long personId){
+        return creditIntentionGateway.create(creditIntentionDto, token, personId);
     }
 
     public List<IntentionCreditResponseAllDto> getAll(){
         return creditIntentionGateway.getAll();
+    }
+    public List<IntentionCreditResponseAllDto> getAllIncludingClosed(){
+        return creditIntentionGateway.getAllIncludingClosed();
     }
 
     public List<IntentionCreditResponseAllDto> getById(Long id){
@@ -49,11 +52,13 @@ public class CreditIntentionUseCase {
     public CreditIntentionResponseDto createWithDocuments(
             CreditIntentionDto intention,
             List<MultipartFile> files,
-            List<DocumentMetadata> metadata
+            List<DocumentMetadata> metadata,
+            String token,
+            Long personId
     ) throws IOException {
 
         CreditIntentionResponseDto saved =
-                creditIntentionGateway.create(intention);
+                creditIntentionGateway.create(intention, token, personId);
 
         if (files != null && !files.isEmpty()) {
             documentUseCase.saveDocument(

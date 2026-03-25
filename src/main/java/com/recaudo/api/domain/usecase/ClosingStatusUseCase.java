@@ -2,11 +2,8 @@ package com.recaudo.api.domain.usecase;
 
 import com.recaudo.api.config.UseCase;
 import com.recaudo.api.domain.gateway.ClosingStatusGateway;
-import com.recaudo.api.domain.gateway.CreditIntentionStatusGateway;
 import com.recaudo.api.domain.model.dto.response.ClosingStatusResponseDto;
-import com.recaudo.api.domain.model.dto.response.CreditIntentionStatusResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.ChangeClosingStatusDto;
-import com.recaudo.api.domain.model.dto.rest_api.ChangeCreditStatusDto;
 import lombok.AllArgsConstructor;
 
 import java.util.List;

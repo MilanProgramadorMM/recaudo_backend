@@ -280,13 +280,7 @@ public class UserAdapter implements UserGateway {
                 .getUsername();
     }
 
-    private Long getUserIdToken() {
-        return ((UserDetailsImpl) SecurityContextHolder
-                .getContext()
-                .getAuthentication()
-                .getPrincipal())
-                .getId();
-    }
+
 
 
     @Override
@@ -311,29 +305,26 @@ public class UserAdapter implements UserGateway {
     @Override
     @Transactional
     public void updatePassword(UpdateUserPasswordDto userDto) {
-        Optional<UserEntity> optionalUser = userRepository.findById(getUserIdToken());
 
-        if (optionalUser.isEmpty())
-            throw new BadRequestException("Usuario no encontrado con ID: " + getUserIdToken());
+        UserEntity user = userRepository.findById(userDto.getUserId()).orElse(null);
+        String hashedPassword = passwordEncoder.encode(userDto.getNewPassword());
+        if (userDto.getCurrentPassword() == null || userDto.getCurrentPassword().isEmpty()) {
+            user.setPassword(hashedPassword);
+            user.setPasswordChange(LocalDateTime.now());
+            user.setEditedAt(LocalDateTime.now());
+        } else {
+            //  verificar contraseña actual
+            if (!passwordEncoder.matches(userDto.getCurrentPassword(), user.getPassword()))
+                throw new BadRequestException("La contraseña actual es incorrecta");
 
-        UserEntity user = optionalUser.get();
+            String newPassword = userDto.getNewPassword();
+            if (newPassword == null || !newPassword.matches("^(?=.*[A-Za-z])(?=.*\\d).+$"))
+                throw new BadRequestException("La contraseña debe contener letras y números");
 
-        if (!passwordEncoder.matches(userDto.getCurrentPassword(), user.getPassword())) {
-            throw new BadRequestException("La contraseña actual es incorrecta");
+            user.setPassword(hashedPassword);
+            user.setPasswordChange(LocalDateTime.now());
+            user.setEditedAt(LocalDateTime.now());
         }
-
-        // Validar nueva contraseña
-        String password = userDto.getNewPassword();
-        if (password == null || !password.matches("^(?=.*[A-Za-z])(?=.*\\d).+$")) {
-            throw new BadRequestException("La contraseña debe contener letras y números");
-        }
-
-        // Guardar nueva contraseña
-        String hashedPassword = passwordEncoder.encode(password);
-        user.setPassword(hashedPassword);
-        user.setPasswordChange(LocalDateTime.now());
-        user.setEditedAt(LocalDateTime.now());
-
         userRepository.saveAndFlush(user);
     }
 
