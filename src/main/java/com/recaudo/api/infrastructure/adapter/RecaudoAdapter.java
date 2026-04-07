@@ -146,7 +146,7 @@ public class RecaudoAdapter {
                         BigDecimal totalPagadoCuota = recaudoRepository.getTotalByCuotaId(cuota.getId());
 
                         // Calcular saldo pendiente REAL
-                        BigDecimal saldoPendiente = cuota.getQuotaValue().subtract(totalPagadoCuota);
+                        BigDecimal saldoPendiente = cuota.getQuotaValue().add(totalPagadoCuota);
 
                         // Asegurar que no sea negativo
                         if (saldoPendiente.compareTo(BigDecimal.ZERO) < 0) {

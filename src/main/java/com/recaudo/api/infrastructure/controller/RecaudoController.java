@@ -86,7 +86,6 @@ public class RecaudoController {
             @PathVariable Long closinId,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha,
             @PathVariable Long zonaId
-
     ) {
         try {
             List<RecaudoResponseProjection> recaudos =

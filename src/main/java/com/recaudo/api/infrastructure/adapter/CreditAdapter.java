@@ -14,6 +14,7 @@ import com.recaudo.api.domain.model.entity.AmortizationEntity;
 import com.recaudo.api.domain.model.entity.ClosingEntity;
 import com.recaudo.api.domain.model.entity.CreditEntity;
 import com.recaudo.api.domain.model.entity.CreditIntentionAmortizationEntity;
+import com.recaudo.api.domain.model.entity.CreditLineEntity;
 import com.recaudo.api.domain.model.entity.UserEntity;
 import com.recaudo.api.exception.BadRequestException;
 import com.recaudo.api.exception.ResourceNotFoundException;
@@ -21,6 +22,7 @@ import com.recaudo.api.domain.model.constant.CreditStatusCode;
 import com.recaudo.api.infrastructure.repository.AmortizationRepository;
 import com.recaudo.api.infrastructure.repository.ClosingRepository;
 import com.recaudo.api.infrastructure.repository.CreditIntentionAmortizationRepository;
+import com.recaudo.api.infrastructure.repository.CreditLineRepository;
 import com.recaudo.api.infrastructure.repository.CreditRepository;
 import com.recaudo.api.infrastructure.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -59,6 +61,9 @@ public class CreditAdapter implements CreditIGateway {
 
     @Autowired
     private ClosingRepository closingRepository;
+
+    @Autowired
+    private CreditLineRepository creditLineRepository;
 
     @Autowired(required = false)
     CreditMapper creditMapper = Mappers.getMapper(CreditMapper.class);
@@ -247,10 +252,15 @@ public class CreditAdapter implements CreditIGateway {
         UserEntity user = userRepository.findByPersonId(closing.getPersonId())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado para esta persona"));
 
+        // 3. Obtener las líneas de desembolso
+        List<CreditLineEntity> creditLines = creditLineRepository.findByLoanDisbursementIsTrue();
+        List<Long> ids = creditLines.stream().map(CreditLineEntity::getId).toList();
+
         // 3. Buscar créditos causados ese día por ese asesor
-        return creditRepository.findCreditsCausadosByAsesorAndDate(
+        return creditRepository.findCreditsCausadosByAsesorAndDateAndCreditLine(
                 user.getUsername(),
-                closing.getClosingDate()
+                closing.getClosingDate(),
+                ids
         );
     }
 }

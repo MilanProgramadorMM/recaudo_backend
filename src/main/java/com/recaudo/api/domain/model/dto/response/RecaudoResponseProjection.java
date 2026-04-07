@@ -14,4 +14,5 @@ public interface RecaudoResponseProjection {
     String getUserCreate();
     String getCreatedAt();
     String getZona();
+    String getDescription();
 }

@@ -43,7 +43,8 @@ public interface RecaudoRepository extends JpaRepository<RecaudoEntity, Long> {
             r.portfolio_insurance                  AS portfolioInsurance,
             r.user_create                          AS userCreate,
             z.value                                AS zona,
-            DATE_FORMAT(r.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt
+            DATE_FORMAT(r.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
+            'Pago de Cuota' AS description
         FROM closing cl
         INNER JOIN person p
             ON p.id = cl.person_id
@@ -61,7 +62,29 @@ public interface RecaudoRepository extends JpaRepository<RecaudoEntity, Long> {
           AND DATE(r.created_at) = :fecha
           AND ci.zone_id = :zonaId
           AND r.deleted_at IS NULL
-        ORDER BY r.id ASC;
+        
+        UNION ALL
+        
+        SELECT
+        	1 AS recaudoId,
+            p.fullname AS clientName,
+            c.initial_value_payment AS valuePaid,
+            0 AS investmentValue,
+            0 AS interestValue,
+            0 AS lifeInsurance,
+            0 AS portfolioInsurance,
+            c.user_create AS userCreate,
+            z.value AS zona,
+            DATE_FORMAT(c.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
+            'Cuota Inicial' AS description
+        FROM credit c
+        INNER JOIN person p ON c.person_id = p.id
+        INNER JOIN credit_intention ci ON c.credit_intention_id = ci.id
+        INNER JOIN zona z ON ci.zone_id = z.id
+        WHERE 1=1
+        AND DATE(c.created_at) = :fecha
+        AND c.initial_value_payment > 0
+        AND z.id = :zonaId;
     """, nativeQuery = true)
     List<RecaudoResponseProjection> findRecaudosWithClientName(
             @Param("closingId") Long closingId,
@@ -70,15 +93,7 @@ public interface RecaudoRepository extends JpaRepository<RecaudoEntity, Long> {
     );
 
     @Query(value = """
-        SELECT COALESCE(
-            SUM(
-                COALESCE(interest_value, 0) +
-                COALESCE(portfolio_insurance, 0) +
-                COALESCE(life_insurance, 0) +
-                COALESCE(investment_value, 0)
-            ),
-            0
-        )
+        SELECT COALESCE(SUM(value_paid), 0)
         FROM recaudo
         WHERE cuota_id = :cuotaId
         """, nativeQuery = true)

@@ -181,9 +181,11 @@ public interface CreditRepository extends JpaRepository<CreditEntity, Long> {
             WHERE ci.user_create = :asesorUsername
               AND DATE(c.created_at) = :closingDate
               AND c.deleted_at IS NULL
-""", nativeQuery = true)
-    List<CreditCausadoProjection> findCreditsCausadosByAsesorAndDate(
+              AND c.credit_line_id IN (:ids)
+    """, nativeQuery = true)
+    List<CreditCausadoProjection> findCreditsCausadosByAsesorAndDateAndCreditLine(
             @Param("asesorUsername") String asesorUsername,
-            @Param("closingDate") LocalDate closingDate
+            @Param("closingDate") LocalDate closingDate,
+            @Param("ids") List<Long> ids
     );
 }

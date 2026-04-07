@@ -62,7 +62,7 @@ public class DelayPenaltyAgreementAdapter implements DelayPenaltyAgreementGatewa
                 .map(cuota -> {
                     BigDecimal totalPagado = recaudoRepository.getTotalByCuotaId(cuota.getId());
                     BigDecimal saldoPendiente = cuota.getQuotaValue()
-                            .subtract(totalPagado)
+                            .add(totalPagado)
                             .max(BigDecimal.ZERO);
 
                     int daysOverdue = (int) ChronoUnit.DAYS.between(cuota.getExpirationDate(), today);

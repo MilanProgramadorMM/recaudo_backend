@@ -236,7 +236,7 @@
                                     ? dto.getStartDate()
                                     : entity.getCreatedAt().toString())
                     .totalFinancedValue(
-                            dto.getTotalFinancedValue() != null
+                            dto.getTotalFinancedValue() != null && dto.getTotalFinancedValue() > 0
                                 ? dto.getTotalFinancedValue()
                                 : entity.getTotalFinancedValue().doubleValue()
                     )
@@ -382,9 +382,11 @@
         public List<SimulationResponseDto> simulate(CalculateCreditIntentionDto dto) {
             try {
                     double itemValueToSimulate = dto.getTotalFinancedValue() != null
+                            && dto.getTotalFinancedValue() > 0
                         ? dto.getTotalFinancedValue() : dto.getItemValue();
                 double stationeryValue = 0.0;
                 double capitalResultado = dto.getTotalFinancedValue() != null
+                        && dto.getTotalFinancedValue() > 0
                         ? dto.getTotalFinancedValue() : dto.getItemValue();
 
                 List<CreditLineServiceQuotaEntity> capitalizableQuotas =
@@ -398,6 +400,7 @@
                 if (stationeryQuota.isPresent()) {
                     // Calcular el 1% de papelería
                     stationeryValue = dto.getTotalFinancedValue() != null
+                            && dto.getTotalFinancedValue() > 0
                             ? dto.getTotalFinancedValue() * 0.01 : dto.getItemValue() * 0.01;
                     // Sumar al itemValue para la simulación
                     itemValueToSimulate += stationeryValue;
@@ -614,13 +617,13 @@
 
             if (dto.getItemValue() != null)
                 intention.setItemValue(
-                        dto.getTotalFinancedValue() != null && dto.getTotalFinancedValue() != 0
+                        dto.getTotalFinancedValue() != null && dto.getTotalFinancedValue() > 0
                                 ? BigDecimal.valueOf(dto.getItemValue())
                                 : BigDecimal.ZERO
                 );
 
             intention.setTotalCapitalValue(
-                    dto.getTotalFinancedValue() != null && dto.getTotalFinancedValue() != 0
+                    dto.getTotalFinancedValue() != null && dto.getTotalFinancedValue() > 0
                             ? BigDecimal.valueOf(dto.getTotalFinancedValue())
                             : BigDecimal.valueOf(dto.getItemValue())
             );
@@ -628,7 +631,7 @@
             if (dto.getInitialValuePayment() != null)
                 intention.setInitialValuePayment(BigDecimal.valueOf(dto.getInitialValuePayment()));
 
-            if (dto.getTotalFinancedValue() != null)
+            if (dto.getTotalFinancedValue() != null && dto.getTotalFinancedValue() > 0)
                 intention.setTotalFinancedValue(BigDecimal.valueOf(dto.getTotalFinancedValue()));
 
             if (dto.getTotalIntentionValue() != null)
