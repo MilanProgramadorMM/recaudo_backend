@@ -29,16 +29,15 @@ public class CreditUseCase {
         return creditGateway.getAll();
     }
 
-    public List<?> getCredits(String token) {
+    public List<?> getCredits(String token, String username, Long personId) {
         try {
             String role = jwtUtil.getClaimFromToken(token, "role", String.class);
 
             if ("Asesor".equals(role)) {
-                String username = jwtUtil.getUsernameFromToken(token);
-                return creditGateway.getByAsesorUsername(username); // ← usa el nuevo método
+                return creditGateway.getByAsesorZone(personId);
             }
 
-            return creditGateway.getAll(); // Admin / Backoffice ven todo
+            return creditGateway.getAll();
         } catch (Exception e) {
             log.error("Error al obtener los créditos", e);
             throw new RuntimeException("Error al obtener los créditos", e);

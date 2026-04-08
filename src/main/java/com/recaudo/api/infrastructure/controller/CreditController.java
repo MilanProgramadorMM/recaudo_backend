@@ -3,12 +3,14 @@ package com.recaudo.api.infrastructure.controller;
 import com.recaudo.api.domain.model.dto.response.*;
 import com.recaudo.api.domain.model.dto.rest_api.CreditRegisterDto;
 import com.recaudo.api.domain.usecase.CreditUseCase;
+import com.recaudo.api.infrastructure.adapter.UserDetailsImpl;
 import com.recaudo.api.infrastructure.helper.security.jwt.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.ZoneId;
@@ -28,10 +30,15 @@ public class CreditController {
 
 
     @GetMapping("/get-all")
-    public ResponseEntity<DefaultResponseDto<List<?>>> getAll(HttpServletRequest request) {
+    public ResponseEntity<DefaultResponseDto<List<?>>> getAll(
+            HttpServletRequest request, Authentication authentication) {
+
+        String username = authentication.getName();
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        Long personId = userDetails.getUserEntity().getPersonId();
 
         String token = request.getHeader("Authorization").replace("Bearer ", "");
-        List<?> data = creditUseCase.getCredits(token);
+        List<?> data = creditUseCase.getCredits(token, username, personId);
 
         return ResponseEntity.ok(
                 DefaultResponseDto.<List<?>>builder()

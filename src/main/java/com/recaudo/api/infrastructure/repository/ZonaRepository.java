@@ -114,47 +114,42 @@ public interface ZonaRepository extends JpaRepository<ZonaEntity, Long> {
             SELECT
                 z.id AS zona_id,
                 z.value AS zona_nombre,
-                -- Total debido a cobrar
                 COALESCE(SUM(a.quota_value), 0) AS total_debido_cobrar,
-                -- Total recaudado (ya agrupado por cuota)
-                COALESCE(SUM(COALESCE(r.total_paid, 0)), 0) AS total_recaudado,
-                -- Total no pagado
+                COALESCE((
+                    SELECT SUM(r2.value_paid)
+                    FROM recaudo r2
+                    INNER JOIN amortization a2 ON a2.id = r2.cuota_id
+                    INNER JOIN credit c2 ON c2.id = a2.credit_id
+                    INNER JOIN credit_intention ci2 ON ci2.id = c2.credit_intention_id
+                    WHERE ci2.zone_id = z.id
+                      AND r2.deleted_at IS NULL
+                      AND r2.created_at >= :fechaInicio
+                      AND r2.created_at < :fechaFin
+                ), 0) AS total_recaudado,
                 COALESCE(SUM(
                     CASE
-                        WHEN cv.no_pago_count > 0
-                        THEN a.quota_value
+                        WHEN cv.no_pago_count > 0 THEN a.quota_value
                         ELSE 0
                     END
                 ), 0) AS total_no_pagado
             FROM zona z
-            INNER JOIN credit_intention ci
-                ON z.id = ci.zone_id
-            INNER JOIN credit c
-                ON ci.id = c.credit_intention_id
-                AND c.deleted_at IS NULL
-            INNER JOIN amortization a
-                ON c.id = a.credit_id
-            LEFT JOIN (
-                SELECT
-                    cuota_id,
-                    SUM(value_paid) AS total_paid
-                FROM recaudo
-                WHERE deleted_at IS NULL
-                  AND DATE(created_at) BETWEEN :fechaInicio AND :fechaFin
-                GROUP BY cuota_id
-            ) r ON a.id = r.cuota_id
+            INNER JOIN credit_intention ci ON z.id = ci.zone_id
+            INNER JOIN credit c ON ci.id = c.credit_intention_id AND c.deleted_at IS NULL
+            INNER JOIN amortization a ON c.id = a.credit_id
             LEFT JOIN (
                 SELECT
                     cuota_id,
                     SUM(CASE WHEN no_pago = 1 THEN 1 ELSE 0 END) AS no_pago_count
                 FROM collection_visit
-                WHERE visit_date BETWEEN :fechaInicio AND :fechaFin
+                WHERE visit_date >= :fechaInicio
+                  AND visit_date < :fechaFin
                 GROUP BY cuota_id
             ) cv ON a.id = cv.cuota_id
-            WHERE a.expiration_date BETWEEN :fechaInicio AND :fechaFin
+            WHERE a.expiration_date >= :fechaInicio
+              AND a.expiration_date < :fechaFin
               AND z.status = 1
               AND ci.deleted_at IS NULL
-              AND (:zonaId IS NULL OR z.id = :zonaId)                    
+              AND (:zonaId IS NULL OR z.id = :zonaId)
             GROUP BY z.id, z.value, z.description
             ORDER BY z.value;                    
         """, nativeQuery = true)

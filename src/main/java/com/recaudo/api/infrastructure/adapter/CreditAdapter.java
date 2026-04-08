@@ -24,6 +24,7 @@ import com.recaudo.api.infrastructure.repository.ClosingRepository;
 import com.recaudo.api.infrastructure.repository.CreditIntentionAmortizationRepository;
 import com.recaudo.api.infrastructure.repository.CreditLineRepository;
 import com.recaudo.api.infrastructure.repository.CreditRepository;
+import com.recaudo.api.infrastructure.repository.PersonRepository;
 import com.recaudo.api.infrastructure.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -64,6 +65,9 @@ public class CreditAdapter implements CreditIGateway {
 
     @Autowired
     private CreditLineRepository creditLineRepository;
+
+    @Autowired
+    private PersonRepository personRepository;
 
     @Autowired(required = false)
     CreditMapper creditMapper = Mappers.getMapper(CreditMapper.class);
@@ -239,6 +243,20 @@ public class CreditAdapter implements CreditIGateway {
             log.error("Error al obtener créditos del asesor: {}", username, e);
             throw new RuntimeException("Error al obtener créditos del asesor", e);
         }
+    }
+
+    @Override
+    public List<CreditFullResponseDto> getByAsesorZone(Long personId) {
+        Long zona = personRepository.getZonasIdByAsesor(personId).stream().findFirst().orElse(null);
+        if (zona != null) {
+            try {
+                return creditRepository.findCreditsByZona(zona);
+            } catch (Exception e) {
+                log.error("Error al obtener créditos de la zona ID: {}", zona, e);
+                throw new RuntimeException("Error al obtener créditos del asesor", e);
+            }
+        }
+        return List.of();
     }
 
     //SERVICIO PARA OBTENER CREDITOS CAUSADOS EL DIA DE HOY ASOCIADOS A UN ASESOR

@@ -16,6 +16,7 @@ public interface CreditIGateway {
     List<CreditProjection> getByPersonId(Long personId);
     CreditResponseDto create(CreditRegisterDto dto);
     List<CreditFullResponseDto> getByAsesorUsername(String username);
+    List<CreditFullResponseDto> getByAsesorZone(Long personId);
     List<CreditCausadoProjection> getCreditsCausadosByClosing(Long closingId);
     //void delete(Long id);
 

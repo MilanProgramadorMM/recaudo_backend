@@ -254,6 +254,18 @@ public interface PersonRepository extends JpaRepository<PersonEntity, Long> {
     List<String> getZonasByAsesor(@Param("asesorId") Long asesorId);
 
     @Query(value = """
+            SELECT z.id
+                FROM person p
+                INNER JOIN type_person tp ON p.type_person_id = tp.id
+                    AND tp.value = 'asesor'
+                INNER JOIN person_zona pz ON p.id = pz.person_id
+                INNER JOIN zona z ON pz.zona_id = z.id
+                WHERE p.id = :asesorId
+                ORDER BY z.value
+        """, nativeQuery = true)
+    List<Long> getZonasIdByAsesor(@Param("asesorId") Long asesorId);
+
+    @Query(value = """
         SELECT 
             p.id AS id,
             p.document_type AS documentType,

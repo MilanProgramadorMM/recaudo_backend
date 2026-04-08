@@ -143,8 +143,8 @@
             );
             entity.setItemValue(
                     creditIntentionDto.getTotalFinancedValue() != 0
-                            ? BigDecimal.valueOf(creditIntentionDto.getItemValue())
-                            : BigDecimal.ZERO
+                            ? BigDecimal.valueOf(creditIntentionDto.getTotalFinancedValue())
+                            : BigDecimal.valueOf(creditIntentionDto.getItemValue())
             );
             entity.setStationery(creditIntentionDto.getStationeryValue());
             entity.setEndQuincena(creditIntentionDto.getFinQuincena());
@@ -180,7 +180,11 @@
                     .creditLineId(creditDto.getCreditLineId())
                     .periodCode(period.getCod())
                     .periodQuantity(creditDto.getPeriodQuantity())
-                    .itemValue(creditDto.getItemValue())
+                    .itemValue(
+                            creditDto.getTotalFinancedValue() != null && creditDto.getTotalFinancedValue() != 0
+                                    ? creditDto.getTotalFinancedValue()
+                                    : creditDto.getItemValue()
+                    )
                     .quotaValue(creditDto.getQuotaValue())
                     .taxValue(creditDto.getTaxValue())
                     .inicioQuincena(creditDto.getInicioQuincena())

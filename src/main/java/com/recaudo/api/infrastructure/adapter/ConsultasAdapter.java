@@ -13,6 +13,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Date;
 import java.util.List;
 
@@ -34,12 +35,12 @@ public class ConsultasAdapter implements ConsultasGateway {
 
     @Override
     public List<DefaultConsultasDTO> getSaldoVencidoPorZona(LocalDate startDate, LocalDate endDate) {
-        return consultasRepository.getSaldoVencidoPorZona(startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay());
+        return consultasRepository.getSaldoVencidoPorZona(startDate.atStartOfDay(), endDate.atStartOfDay());
     }
 
     @Override
     public List<DetalleSaldoVencidoDTO> getDetalleSaldoVencidoPorZona(LocalDate startDate, LocalDate endDate, Long zona) {
-        return consultasRepository.getDetalleSaldoVencidoPorZona(startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay(), zona);
+        return consultasRepository.getDetalleSaldoVencidoPorZona(startDate.atStartOfDay(), endDate.atStartOfDay(), zona);
     }
 
     @Override

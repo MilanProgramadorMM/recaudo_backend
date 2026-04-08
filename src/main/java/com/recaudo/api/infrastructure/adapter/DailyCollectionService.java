@@ -23,7 +23,7 @@ public class DailyCollectionService {
             Long personId,
             LocalDate date
     ) {
-        String zona = personRepository.getZonasByAsesor(personId).stream().findFirst().orElse("");
+        Long zona = personRepository.getZonasIdByAsesor(personId).stream().findFirst().orElse(null);
         return dailyCollectionRepository.findDailyCollection(zona, date);
     }
 }

@@ -8,6 +8,7 @@ import com.recaudo.api.domain.model.dto.response.ZonaResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.ZonaCreateDto;
 import com.recaudo.api.domain.model.entity.ZonaEntity;
 import com.recaudo.api.exception.BadRequestException;
+import com.recaudo.api.infrastructure.helper.util.Utils;
 import com.recaudo.api.infrastructure.repository.ZonaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
@@ -107,7 +108,7 @@ public class ZonaAdapter implements ZonaGateway {
 
     @Override
     public List<DashboardSummaryProjection> getDashboardSummary(LocalDate fechaInicio, LocalDate fechaFin, Long zonaId) {
-        return zonaRepository.getDashboardSummary(fechaInicio, fechaFin, zonaId);
+        return zonaRepository.getDashboardSummary(fechaInicio, fechaFin.plusDays(1).atStartOfDay().toLocalDate(), zonaId);
     }
 
     @Override

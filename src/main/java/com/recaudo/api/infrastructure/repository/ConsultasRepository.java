@@ -44,7 +44,7 @@ public class ConsultasRepository {
         """;
 
         QueryBuilder qb = new QueryBuilder(baseSql)
-            .addFilter("r.created_at > :startDate", "startDate", startDate)
+            .addFilter("r.created_at >= :startDate", "startDate", startDate)
             .addFilter("r.created_at < :endDate", "endDate", endDate)
             .buildWhere()
             .append("GROUP BY z.id, z.value")
@@ -91,7 +91,7 @@ public class ConsultasRepository {
                 .addFilter("ci.zone_id = :zona", "zona", zona)
                 .addFilter("r.concept_id = :concept", "concept", concept)
                 .addFilter("r.payment_type_id = :paymentType", "paymentType", paymentType)
-                .addFilter("r.created_at > :startDate", "startDate", startDate)
+                .addFilter("r.created_at >= :startDate", "startDate", startDate)
                 .addFilter("r.created_at < :endDate", "endDate", endDate)
                 .buildWhere();
 
@@ -126,7 +126,7 @@ public class ConsultasRepository {
             LEFT JOIN credit c ON c.credit_intention_id = ci.id
             LEFT JOIN amortization a
                 ON a.credit_id = c.id
-                AND a.expiration_date BETWEEN :startDate AND :endDate
+                AND a.expiration_date < :endDate
                 AND a.paid_full = 'N'
             LEFT JOIN (
                 SELECT cuota_id, SUM(value_paid) AS total_paid
@@ -137,7 +137,6 @@ public class ConsultasRepository {
         """;
 
         QueryBuilder qb = new QueryBuilder(baseSql)
-                .addFilter("", "startDate", startDate)
                 .addFilter("", "endDate", endDate)
                 .buildWhere()
                 .append("GROUP BY z.id, z.value")
@@ -180,7 +179,7 @@ public class ConsultasRepository {
             LEFT JOIN person p ON c.person_id = p.id
             LEFT JOIN amortization a
                 ON a.credit_id = c.id
-                AND a.expiration_date BETWEEN :startDate AND :endDate
+                AND a.expiration_date < :endDate
                 AND a.paid_full = 'N'
             LEFT JOIN recaudos_agrupados r
                 ON r.cuota_id = a.id
@@ -222,7 +221,7 @@ public class ConsultasRepository {
                     FROM credit c
                     INNER JOIN credit_intention ci ON c.credit_intention_id = ci.id
                     WHERE ci.zone_id = z.id
-                    AND c.created_at > :startDate AND c.created_at < :endDate
+                    AND c.created_at >= :startDate AND c.created_at < :endDate
                 ) AS creditos
             FROM zona z
         """;
@@ -271,7 +270,7 @@ public class ConsultasRepository {
         """;
 
         QueryBuilder qb = new QueryBuilder(baseSql)
-                .addFilter("c.created_at > :startDate", "startDate", startDate)
+                .addFilter("c.created_at >= :startDate", "startDate", startDate)
                 .addFilter("c.created_at < :endDate", "endDate", endDate)
                 .addFilter("z.id = :zona", "zona", zona)
                 .buildWhere();
@@ -312,7 +311,40 @@ public class ConsultasRepository {
 
         QueryBuilder qb = new QueryBuilder(baseSql)
                 .addFilter("a.expiration_date >= :startDate", "startDate", startDate)
-                .addFilter("a.expiration_date <= :endDate", "endDate", endDate)
+                .addFilter("a.expiration_date < :endDate", "endDate", endDate)
+                .buildWhere()
+                .append("GROUP BY z.id")
+                .append("ORDER BY z.value");
+
+        return jdbcTemplate.query(
+                qb.getSql(),
+                qb.getParams(),
+                (rs, rowNum) -> new DebidoCobrarDTO(
+                        rs.getLong("id"),
+                        rs.getString("zona"),
+                        rs.getBigDecimal("quota_value"),
+                        rs.getBigDecimal("interest_value"),
+                        rs.getBigDecimal("investment_value")
+                )
+        );
+    }
+
+    public List<DebidoCobrarDTO> getDebidoCobrarPorZona(LocalDateTime startDate, LocalDateTime endDate, Long zona) {
+        String baseSql = """
+            SELECT  z.id, z.value AS zona,
+                    SUM(a.quota_value) AS quota_value,
+                    SUM(a.interest_value) AS interest_value,
+                    SUM(a.investment_value) AS investment_value
+            FROM amortization AS a
+            INNER JOIN credit AS c ON a.credit_id = c.id
+            INNER JOIN credit_intention AS ci ON c.credit_intention_id = ci.id
+            INNER JOIN zona AS z ON ci.zone_id = z.id
+        """;
+
+        QueryBuilder qb = new QueryBuilder(baseSql)
+                .addFilter("a.expiration_date >= :startDate", "startDate", startDate)
+                .addFilter("a.expiration_date < :endDate", "endDate", endDate)
+                .addFilter("z.id = :zona", "zona", zona)
                 .buildWhere()
                 .append("GROUP BY z.id")
                 .append("ORDER BY z.value");
