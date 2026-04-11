@@ -18,6 +18,7 @@ public interface DailyCollectionRepository
     @Query(value = """
         SELECT
              c.id AS creditId,
+             c.created_at AS fechaCredito,
              a.id AS cuotaId,
              a.quota_number AS quotaNumber,
              a.expiration_date AS expirationDate,
@@ -99,44 +100,45 @@ public interface DailyCollectionRepository
 
     @Query(value = """
         WITH pagos AS (
-            SELECT
-                credit_id,
-                cuota_id,
-                value_paid,
-                created_at,
-                LAG(created_at) OVER (
-                    PARTITION BY credit_id
-                    ORDER BY created_at
-                ) AS prev_time
-            FROM recaudo
-            WHERE credit_id IN (:credits)
-        ),
-        grupos AS (
-            SELECT *,
-                CASE
-                    WHEN prev_time IS NULL
-                         OR TIMESTAMPDIFF(SECOND, prev_time, created_at) > 300
-                    THEN 1 ELSE 0
-                END AS nuevo_grupo
-            FROM pagos
-        ),
-        grupo_final AS (
-            SELECT *,
-                SUM(nuevo_grupo) OVER (
-                    PARTITION BY credit_id
-                    ORDER BY created_at
-                ) AS grupo_id
-            FROM grupos
-        )
-        SELECT
-            credit_id,
-            grupo_id,
-            MIN(created_at) AS fecha_inicio,
-            MAX(created_at) AS fecha_fin,
-            SUM(value_paid) AS total_pagado
-        FROM grupo_final
-        GROUP BY credit_id, grupo_id
-        ORDER BY fecha_inicio;
+          SELECT
+              credit_id,
+              cuota_id,
+              value_paid,
+              created_at,
+              LAG(created_at) OVER (
+                  PARTITION BY credit_id
+                  ORDER BY created_at
+              ) AS prev_time
+          FROM recaudo
+          WHERE credit_id IN (:credits)
+      ),
+      grupos AS (
+          SELECT *,
+              CASE
+                  WHEN prev_time IS NULL
+                       OR TIMESTAMPDIFF(SECOND, prev_time, created_at) > 300
+                  THEN 1 ELSE 0
+              END AS nuevo_grupo
+          FROM pagos
+      ),
+      grupo_final AS (
+          SELECT *,
+              SUM(nuevo_grupo) OVER (
+                  PARTITION BY credit_id
+                  ORDER BY created_at
+              ) AS grupo_id
+          FROM grupos
+      )
+      SELECT
+          credit_id,
+          grupo_id,
+          MIN(created_at) AS fecha_inicio,
+          MAX(created_at) AS fecha_fin,
+          SUM(value_paid) AS total_pagado,
+          DAYNAME(MIN(created_at)) AS nombre_dia
+      FROM grupo_final
+      GROUP BY credit_id, grupo_id
+      ORDER BY fecha_inicio;
     """, nativeQuery = true)
     List<DailyCollectionRespaldoProjection> finDailyCollectionRespaldo(@Param("credits") List<Long> credits);
 }

@@ -6,6 +6,7 @@ import java.time.LocalDate;
 
 public interface DailyCollectionProjection {
     Long getCreditId();
+    LocalDate getFechaCredito();
     Long getCuotaId();
     Integer getQuotaNumber();
     LocalDate getExpirationDate();

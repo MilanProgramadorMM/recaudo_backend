@@ -16,5 +16,5 @@ public interface DailyCollectionRespaldoProjection {
     @JsonFormat(pattern = "yyyy-MM-dd")
     LocalDateTime getFechaFin();
     BigDecimal getTotalPagado();
-
+    String getNombreDia();
 }
