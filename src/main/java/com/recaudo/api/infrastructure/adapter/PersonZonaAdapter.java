@@ -33,7 +33,7 @@ public class PersonZonaAdapter implements PersonZonaGateway {
     @Autowired
     private ZonaRepository zonaRepository;
 
-    // Método para asignar múltiples zonas a un ASESOR
+    // Metodo para asignar múltiples zonas a un ASESOR
     @Override
     @Transactional
     public void assignZonasToAsesor(Long personId, List<Long> zonasIds) {
@@ -43,7 +43,7 @@ public class PersonZonaAdapter implements PersonZonaGateway {
 
         // 1. Desactivar todas las zonas actuales del asesor
         List<PersonZonaEntity> zonasActuales =
-                personzonaRepository.findAllByPersonIdAndStatusTrue(personId);
+                personzonaRepository.findByPersonIdAndStatusTrueAndIsAsesorTrue(personId);
 
         zonasActuales.forEach(zona -> {
             zona.setStatus(false);
@@ -55,15 +55,16 @@ public class PersonZonaAdapter implements PersonZonaGateway {
         List<PersonZonaEntity> nuevasAsignaciones = new ArrayList<>();
 
         for (Long zonaId : zonasIds) {
-            PersonZonaEntity nuevaAsignacion = PersonZonaEntity.builder()
+            nuevasAsignaciones.add(
+                    PersonZonaEntity.builder()
                     .personId(personId)
                     .zonaId(zonaId)
                     .orden(0) // Los asesores no necesitan orden
                     .status(true)
+                    .isAsesor(true)
                     .createdAt(LocalDateTime.now())
-                    .build();
-
-            nuevasAsignaciones.add(nuevaAsignacion);
+                    .build()
+            );
         }
 
         personzonaRepository.saveAll(nuevasAsignaciones);
@@ -73,7 +74,7 @@ public class PersonZonaAdapter implements PersonZonaGateway {
     @Override
     public List<AsesorZonaDto> getZonasByAsesor(Long personId) {
         List<PersonZonaEntity> zonasAsesor =
-                personzonaRepository.findAllByPersonIdAndStatusTrue(personId);
+                personzonaRepository.findByPersonIdAndStatusTrueAndIsAsesorTrue(personId);
 
         return zonasAsesor.stream()
                 .map(pz -> {
@@ -88,6 +89,7 @@ public class PersonZonaAdapter implements PersonZonaGateway {
                 })
                 .collect(Collectors.toList());
     }
+
     @Override
     @Transactional
     public void updateOrdenClientes(UpdateOrdenList list) {
@@ -107,7 +109,7 @@ public class PersonZonaAdapter implements PersonZonaGateway {
 
         // Asignar los nuevos órdenes según la lista recibida
         for (UpdateOrdenPerson clienteDto : list.getClientes()) {
-            personzonaRepository.findByPersonIdAndStatusTrue(clienteDto.getPersonId())
+            personzonaRepository.findByPersonIdAndStatusTrueAndIsAsesorFalse(clienteDto.getPersonId())
                     .ifPresent(entity -> {
                         entity.setOrden(clienteDto.getOrden());
                         entity.setEditedAt(LocalDateTime.now());
@@ -127,7 +129,7 @@ public class PersonZonaAdapter implements PersonZonaGateway {
 
         // 1. Buscar si ya tiene una zona activa
         Optional<PersonZonaEntity> currentZoneOpt =
-                personzonaRepository.findByPersonIdAndStatusTrue(personId);
+                personzonaRepository.findByPersonIdAndStatusTrueAndIsAsesorFalse(personId);
 
         // Si ya está en esa zona, no hacer nada
         if (currentZoneOpt.isPresent() && currentZoneOpt.get().getZonaId().equals(zonaId)) {
@@ -151,6 +153,7 @@ public class PersonZonaAdapter implements PersonZonaGateway {
                 .zonaId(zonaId)
                 .orden(nuevoOrden) // <--- Se asigna el int correctamente
                 .status(true)
+                .isAsesor(false)
                 .createdAt(LocalDateTime.now())
                 .build();
 

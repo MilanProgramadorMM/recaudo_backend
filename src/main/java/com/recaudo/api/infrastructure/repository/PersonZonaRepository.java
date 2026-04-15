@@ -13,6 +13,8 @@ public interface PersonZonaRepository extends JpaRepository<PersonZonaEntity, Lo
     Optional<PersonZonaEntity> findByPersonId(Long personId);
 
     Optional<PersonZonaEntity> findByPersonIdAndStatusTrue(Long personId);
+    Optional<PersonZonaEntity> findByPersonIdAndStatusTrueAndIsAsesorFalse(Long personId);
+    List<PersonZonaEntity> findByPersonIdAndStatusTrueAndIsAsesorTrue(Long personId);
 
     // Para buscar por persona y zona específica (útil para CLIENTES)
     Optional<PersonZonaEntity> findByPersonIdAndZonaIdAndStatusTrue(Long personId, Long zonaId);

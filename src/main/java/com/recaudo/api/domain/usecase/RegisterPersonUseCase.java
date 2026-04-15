@@ -45,7 +45,7 @@ public class RegisterPersonUseCase {
     }
 
     public List<PersonInterfaceResponseDto> getByZona(String type, String zona) {
-        return personGateway.getByZona(type,zona);
+        return personGateway.getByZona(type, zona);
     }
 
     public List<String> getZonaByAsesor(Long asesorId) {

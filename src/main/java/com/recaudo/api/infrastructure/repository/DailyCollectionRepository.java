@@ -57,7 +57,7 @@ public interface DailyCollectionRepository
          JOIN credit c ON c.id = a.credit_id
          JOIN credit_intention ci ON ci.id = c.credit_intention_id
          JOIN period p ON c.period_id = p.id
-         JOIN zona z ON z.id = ci.zone_id AND z.id = :zona
+         JOIN zona z ON z.id = ci.zone_id AND z.id IN (:zonas)
          JOIN person_zona pz_asesor
              ON pz_asesor.zona_id = z.id AND pz_asesor.orden = 0
          JOIN user u ON u.person_id = pz_asesor.person_id
@@ -94,7 +94,7 @@ public interface DailyCollectionRepository
          ORDER BY z.value, pz_cliente.orden, a.expiration_date, a.quota_number
     """, nativeQuery = true)
     List<DailyCollectionProjection> findDailyCollection(
-            @Param("zona") Long zona,
+            @Param("zonas") List<Long> zonas,
             @Param("fecha") LocalDate fecha
     );
 

@@ -63,7 +63,7 @@ public interface PersonRepository extends JpaRepository<PersonEntity, Long> {
                 	               AND u.status = true
                 	            LEFT JOIN person_zona pz
                 	                ON p.id = pz.person_id
-                	               AND pz.status = true
+                	               AND pz.status = true AND pz.is_asesor = :isAsesor
                 	            LEFT JOIN zona z
                 	                ON pz.zona_id = z.id
                 	            LEFT JOIN contact_info ci_cel
@@ -115,7 +115,7 @@ public interface PersonRepository extends JpaRepository<PersonEntity, Long> {
                 	                ci_dir.description
                 	            ORDER BY p.id DESC;
         """, nativeQuery = true)
-    List<PersonInterfaceResponseDto> getByTypePerson (@Param("type") String type);
+    List<PersonInterfaceResponseDto> getByTypePerson (@Param("type") String type, @Param("isAsesor") Boolean isAsesor);
 
     @Query(value = """
             SELECT
@@ -151,7 +151,7 @@ public interface PersonRepository extends JpaRepository<PersonEntity, Long> {
                                     INNER JOIN type_person tp
                                         ON p.type_person_id = tp.id AND p.document = :document
                                     LEFT JOIN person_zona pz
-                                        ON p.id = pz.person_id AND pz.status = true
+                                        ON p.id = pz.person_id AND pz.status = true AND pz.is_asesor = false
                                     LEFT JOIN zona z
                                         ON pz.zona_id = z.id
                                     LEFT JOIN contact_info ci_cel
@@ -229,26 +229,23 @@ public interface PersonRepository extends JpaRepository<PersonEntity, Long> {
                                          z.id AS zonaId,
                                          z.value AS zona
                                      FROM person p
-                                     INNER JOIN type_person tp
-                                         ON p.type_person_id = tp.id
-                                         AND tp.value = :type
                                      INNER JOIN person_zona pz
-                                         ON p.id = pz.person_id
+                                         ON p.id = pz.person_id AND pz.is_asesor = :isAsesor
                                      INNER JOIN zona z
                                          ON pz.zona_id = z.id
                                          AND z.value = :zona
                                      ORDER BY pz.orden ASC;
             """, nativeQuery = true)
-    List<PersonInterfaceResponseDto> getByZona(@Param("type") String type, @Param("zona") String zona);
+    List<PersonInterfaceResponseDto> getByZona(@Param("type") String type, @Param("zona") String zona, @Param("isAsesor") Boolean isAsesor);
 
     @Query(value = """
             SELECT z.value
                 FROM person p
                 INNER JOIN type_person tp ON p.type_person_id = tp.id
                     AND tp.value = 'asesor'
-                INNER JOIN person_zona pz ON p.id = pz.person_id
+                INNER JOIN person_zona pz ON p.id = pz.person_id AND pz.is_asesor = true
                 INNER JOIN zona z ON pz.zona_id = z.id
-                WHERE p.id = :asesorId
+                WHERE p.id = :asesorId AND pz.status = true
                 ORDER BY z.value
         """, nativeQuery = true)
     List<String> getZonasByAsesor(@Param("asesorId") Long asesorId);
@@ -258,9 +255,9 @@ public interface PersonRepository extends JpaRepository<PersonEntity, Long> {
                 FROM person p
                 INNER JOIN type_person tp ON p.type_person_id = tp.id
                     AND tp.value = 'asesor'
-                INNER JOIN person_zona pz ON p.id = pz.person_id
+                INNER JOIN person_zona pz ON p.id = pz.person_id AND pz.is_asesor = true
                 INNER JOIN zona z ON pz.zona_id = z.id
-                WHERE p.id = :asesorId
+                WHERE p.id = :asesorId AND pz.status = true
                 ORDER BY z.value
         """, nativeQuery = true)
     List<Long> getZonasIdByAsesor(@Param("asesorId") Long asesorId);

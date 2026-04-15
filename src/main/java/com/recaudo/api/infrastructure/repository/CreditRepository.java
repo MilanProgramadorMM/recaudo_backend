@@ -141,7 +141,7 @@ public interface CreditRepository extends JpaRepository<CreditEntity, Long> {
                                         per.name AS periodName
                                     FROM credit c
                                     INNER JOIN person p ON c.person_id = p.id
-                                    LEFT JOIN person_zona pz ON p.id = pz.person_id
+                                    LEFT JOIN person_zona pz ON p.id = pz.person_id AND pz.is_asesor = false
                                     LEFT JOIN zona z ON pz.zona_id = z.id
                                     LEFT JOIN credit_line cl ON c.credit_line_id = cl.id
                                     LEFT JOIN period per ON c.period_id = per.id

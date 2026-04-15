@@ -77,7 +77,7 @@ public class PersonRegisterAdapter implements PersonGateway {
 
     @Override
     public List<PersonInterfaceResponseDto> getByType(String type) {
-        return personRepository.getByTypePerson(type);
+        return personRepository.getByTypePerson(type, "ASESOR".equalsIgnoreCase(type));
     }
 
     @Override
@@ -92,7 +92,7 @@ public class PersonRegisterAdapter implements PersonGateway {
 
     @Override
     public List<PersonInterfaceResponseDto> getByZona(String type, String zona) {
-        return personRepository.getByZona(type, zona);
+        return personRepository.getByZona(type, zona, "ASESOR".equalsIgnoreCase(type));
     }
 
     @Override
@@ -213,6 +213,7 @@ public class PersonRegisterAdapter implements PersonGateway {
                 .personId(id)
                 .zonaId(zonaId)
                 .orden(orden)
+                .isAsesor(false)
                 .status(true)
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -250,29 +251,27 @@ public class PersonRegisterAdapter implements PersonGateway {
         }
 
         Long personId = personByDocument.getId();
-
-        PersonEntity entity = personRepository.findById(personId)
+        PersonEntity personData = personRepository.findById(personId)
                 .orElseThrow(() -> new BadRequestException("La persona a actualizar no existe"));
 
         String uniqueCode = setUniqueCode(dto);
-        entity = personMapper.dtoToEntity(dto);
+        PersonEntity entity = personMapper.dtoToEntity(dto);
         entity.setId(personId);
 
-
-        TypePersonEntity typeEntity = typePersonRepository
-                .findByValue(dto.getTypePerson())
+        TypePersonEntity typeEntity = typePersonRepository.findById(personData.getTypePersonId())
                 .orElseThrow(() -> new BadRequestException("Tipo de persona no encontrado"));
         entity.setEditedAt(LocalDateTime.now());
         entity.setUniqueCode(uniqueCode);
         entity.setUserEdit(getUsernameToken());
-        entity.setTypePersonId(typeEntity.getId());
-
+        entity.setTypePersonId(personData.getTypePersonId());
 
         // Actualizar zonas según el tipo de persona
-        if ("ASESOR".equalsIgnoreCase(dto.getTypePerson())) {
+        if ("ASESOR".equalsIgnoreCase(typeEntity.getValue())) {
             // Para asesores: actualizar múltiples zonas
             if (dto.getZonas() != null && !dto.getZonas().isEmpty()) {
                 personZonaGateway.assignZonasToAsesor(personId, dto.getZonas());
+            } else if (dto.getZona() != null) {
+                personZonaGateway.updateClientToZone(personId, dto.getZona());
             } else {
                 throw new BadRequestException("Debe asignar al menos una zona al asesor");
             }

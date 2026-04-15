@@ -27,8 +27,8 @@ public class DailyCollectionService {
             Long personId,
             LocalDate date
     ) {
-        Long zona = personRepository.getZonasIdByAsesor(personId).stream().findFirst().orElse(null);
-        List<DailyCollectionProjection> dailyData = dailyCollectionRepository.findDailyCollection(zona, date);
+        List<Long> zonas = personRepository.getZonasIdByAsesor(personId);
+        List<DailyCollectionProjection> dailyData = dailyCollectionRepository.findDailyCollection(zonas, date);
         List<Long> creditIds = dailyData.stream()
                 .map(DailyCollectionProjection::getCreditId)
                 .distinct()

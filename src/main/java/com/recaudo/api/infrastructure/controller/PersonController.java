@@ -140,7 +140,7 @@ public class PersonController {
     public ResponseEntity<DefaultResponseDto<List<PersonInterfaceResponseDto>>> getPersonsByZona(
             @PathVariable("type") String type, @PathVariable("zona") String zona) {
 
-        List<PersonInterfaceResponseDto> persons = personUseCase.getByZona(type,zona);
+        List<PersonInterfaceResponseDto> persons = personUseCase.getByZona(type, zona);
 
         return ResponseEntity.ok(
                 DefaultResponseDto.<List<PersonInterfaceResponseDto>>builder()

@@ -45,5 +45,9 @@ public class PersonZonaEntity implements Serializable {
     @Column(name = "edited_at")
     private LocalDateTime editedAt;
 
+    @Builder.Default
+    @Column(name = "is_asesor")
+    private boolean isAsesor = false;
+
 
 }
