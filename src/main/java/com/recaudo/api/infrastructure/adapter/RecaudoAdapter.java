@@ -861,7 +861,7 @@ public class RecaudoAdapter {
 
                 recaudoRepository.save(reversa);
 
-                /* Actualizar estado de la cuota
+                //Actualizar estado de la cuota
                 if (recaudoOriginal.getCuotaId() != null) {
                     AmortizationEntity cuota = amortizationRepository.findById(recaudoOriginal.getCuotaId())
                             .orElse(null);
@@ -884,7 +884,6 @@ public class RecaudoAdapter {
                         amortizationRepository.save(cuota);
                     }
                 }
-                 */
 
                 totalReversado = totalReversado.add(recaudoOriginal.getValuePaid().abs());
                 recaudosReversados++;
