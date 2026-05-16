@@ -28,6 +28,11 @@ public class QuotaDetailDto {
     private BigDecimal interestPending;
     private BigDecimal investmentPending;
     private BigDecimal totalPending;
+    private BigDecimal moraAcumulada;
+
+    private boolean moraSaldada;
+
+    private long diasMoraRegistrados;
     
     // Información de estado
     private Boolean isPaid;

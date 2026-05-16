@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Data
@@ -15,5 +16,10 @@ public class DailyCollectionDTO {
 
     private DailyCollectionProjection data;
     private List<DailyCollectionRespaldoProjection> recaudos;
+
+    public boolean tieneInterestMora() {
+        return data.getInterestMora() != null
+                && data.getInterestMora().compareTo(BigDecimal.ZERO) > 0;
+    }
 
 }

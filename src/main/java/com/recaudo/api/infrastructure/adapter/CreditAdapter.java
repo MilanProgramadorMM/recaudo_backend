@@ -10,22 +10,11 @@ import com.recaudo.api.domain.model.dto.response.CreditProjection;
 import com.recaudo.api.domain.model.dto.response.CreditResponseDto;
 import com.recaudo.api.domain.model.dto.rest_api.ChangeCreditStatusDto;
 import com.recaudo.api.domain.model.dto.rest_api.CreditRegisterDto;
-import com.recaudo.api.domain.model.entity.AmortizationEntity;
-import com.recaudo.api.domain.model.entity.ClosingEntity;
-import com.recaudo.api.domain.model.entity.CreditEntity;
-import com.recaudo.api.domain.model.entity.CreditIntentionAmortizationEntity;
-import com.recaudo.api.domain.model.entity.CreditLineEntity;
-import com.recaudo.api.domain.model.entity.UserEntity;
+import com.recaudo.api.domain.model.entity.*;
 import com.recaudo.api.exception.BadRequestException;
 import com.recaudo.api.exception.ResourceNotFoundException;
 import com.recaudo.api.domain.model.constant.CreditStatusCode;
-import com.recaudo.api.infrastructure.repository.AmortizationRepository;
-import com.recaudo.api.infrastructure.repository.ClosingRepository;
-import com.recaudo.api.infrastructure.repository.CreditIntentionAmortizationRepository;
-import com.recaudo.api.infrastructure.repository.CreditLineRepository;
-import com.recaudo.api.infrastructure.repository.CreditRepository;
-import com.recaudo.api.infrastructure.repository.PersonRepository;
-import com.recaudo.api.infrastructure.repository.UserRepository;
+import com.recaudo.api.infrastructure.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.mapstruct.factory.Mappers;
@@ -34,9 +23,9 @@ import org.springframework.context.MessageSource;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -44,9 +33,6 @@ public class CreditAdapter implements CreditIGateway {
 
     @Autowired
     private CreditRepository creditRepository;
-
-    @Autowired
-    private CreditIntentionAmortizationRepository creditIntentionAmortizationRepository;
 
     @Autowired
     private AmortizationRepository amortizationRepository;
@@ -68,6 +54,19 @@ public class CreditAdapter implements CreditIGateway {
 
     @Autowired
     private PersonRepository personRepository;
+
+    @Autowired
+    private CreditIntentionAmortizationNRepository creditIntentionAmortizationNRepository;
+
+    @Autowired
+    private CreditIntentionAmortizationDetailRepository creditIntentionAmortizationDetailRepository;
+
+    @Autowired
+    private CreditAmortizationNRepository  creditAmortizationRepository;
+
+    @Autowired
+    private CreditAmortizationDetailRepository creditAmortizationDetailRepository;
+
 
     @Autowired(required = false)
     CreditMapper creditMapper = Mappers.getMapper(CreditMapper.class);
@@ -190,48 +189,74 @@ public class CreditAdapter implements CreditIGateway {
     }
 
 
-    @Transactional
+    @Transactional()
     private void insertToCreditAmortization(Long creditIntentionId, Long creditId) {
         try {
-            // Obtener la amortización proyectada de la intención de crédito
-            List<CreditIntentionAmortizationEntity> proyecciones =
-                    creditIntentionAmortizationRepository.findByCreditIntencionId(creditIntentionId);
 
-            if (proyecciones == null || proyecciones.isEmpty()) {
-                log.warn("No se encontró amortización para la intención de crédito ID: {}", creditIntentionId);
+            // leer maestros de la Intención
+            List<CreditIntentionAmortizationNEntity> origen =
+                    creditIntentionAmortizationNRepository
+                            .findByCreditIntentionIdOrderByQuotaNumber(creditIntentionId);
+
+            if (origen == null || origen.isEmpty()) {
+                log.warn("No existe amortización para la intención ID: {} — " +
+                        "verifique que la intención haya sido calculada.", creditIntentionId);
                 return;
             }
 
-            // Crear la lista de amortizaciones para el crédito
-            List<AmortizationEntity> amortizationList = new ArrayList<>();
+            // construir maestros de Crédito
+            List<CreditAmortizationNEntity> maestrosCredito = origen.stream()
+                    .map(o -> CreditAmortizationNEntity.builder()
+                            .creditId(creditId)
+                            .quotaNumber(o.getQuotaNumber())
+                            .expirationDate(o.getExpirationDate())
+                            .totalQuotaValue(o.getTotalQuotaValue())
+                            .liquidated("N")
+                            .paidFull("N")
+                            .build())
+                    .collect(Collectors.toList());
 
-            for (CreditIntentionAmortizationEntity proyeccion : proyecciones) {
-                AmortizationEntity amortization = AmortizationEntity.builder()
-                        .creditId(creditId)
-                        .quotaNumber(proyeccion.getQuotaNumber())
-                        .expirationDate(proyeccion.getExpirationDate())
-                        .capitalBalance(BigDecimal.valueOf(proyeccion.getCapitalBalance()))
-                        .investmentValue(BigDecimal.valueOf(proyeccion.getInvestmentValue()))
-                        .interestValue(BigDecimal.valueOf(proyeccion.getInterestValue()))
-                        .lifeInsurance(BigDecimal.valueOf(proyeccion.getLifeInsurance()))
-                        .portfolioInsurance(BigDecimal.valueOf(proyeccion.getPortfolioInsurance()))
-                        .liquidated("N")
-                        .paidFull("N")
-                        .quotaValue(BigDecimal.valueOf(proyeccion.getQuotaValue()))
-                        .build();
+            creditAmortizationRepository.saveAll(maestrosCredito);
 
-                amortizationList.add(amortization);
+            log.info("Maestros credit_amortization guardados: {} cuotas — crédito ID: {}",
+                    maestrosCredito.size(), creditId);
+
+            // construir detalles de Crédito
+            List<CreditAmortizationDetailEntity> detallesCredito = new ArrayList<>();
+
+            for (int i = 0; i < origen.size(); i++) {
+                Long origenMaestroId  = origen.get(i).getId();
+                Long destinoMaestroId = maestrosCredito.get(i).getId();
+
+                List<CreditIntentionAmortizationDetailEntity> detallesOrigen =
+                        creditIntentionAmortizationDetailRepository
+                                .findByAmortizationId(origenMaestroId);
+
+                if (detallesOrigen.isEmpty()) {
+                    log.warn("Sin detalles en origen para cuota origen_id: {} (intención ID: {})",
+                            origenMaestroId, creditIntentionId);
+                    continue;
+                }
+
+                for (CreditIntentionAmortizationDetailEntity detOrigen : detallesOrigen) {
+                    detallesCredito.add(CreditAmortizationDetailEntity.builder()
+                            .amortizationId(destinoMaestroId)
+                            .conceptId(detOrigen.getConceptId())
+                            .value(detOrigen.getValue())
+                            .build());
+                }
             }
 
-            // Guardar todos los registros de amortización
-            amortizationRepository.saveAll(amortizationList);
+            creditAmortizationDetailRepository.saveAll(detallesCredito);
 
-            log.info("Se insertaron {} registros de amortización para el crédito ID: {}",
-                    amortizationList.size(), creditId);
+            log.info("Detalles credit_amortization_detail guardados: {} registros — crédito ID: {}",
+                    detallesCredito.size(), creditId);
 
         } catch (Exception e) {
-            log.error("Error inesperado al insertar amortización para el crédito ID: {}", creditId, e);
-            throw new RuntimeException("Error al procesar la amortización del crédito", e);
+            log.error("Error al replicar amortización — intención ID: {}, crédito ID: {}",
+                    creditIntentionId, creditId, e);
+            throw new RuntimeException(
+                    "Error al procesar la amortización del crédito ID: " + creditId, e);
         }
     }
 
