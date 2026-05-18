@@ -4,15 +4,7 @@ import com.recaudo.api.domain.model.dto.response.*;
 import com.recaudo.api.domain.model.dto.rest_api.RecaudoRequestDto;
 import com.recaudo.api.domain.model.dto.rest_api.ReverseRecaudoRequestDto;
 import com.recaudo.api.domain.model.dto.rest_api.ReverseCapitalInterestRequestDto;
-import com.recaudo.api.domain.model.entity.ConceptEntity;
-import com.recaudo.api.domain.model.entity.CreditAmortizationDetailEntity;
-import com.recaudo.api.domain.model.entity.CreditAmortizationNEntity;
-import com.recaudo.api.domain.model.entity.CreditEntity;
-import com.recaudo.api.domain.model.entity.CreditOtherConceptDetailEntity;
-import com.recaudo.api.domain.model.entity.GlotypesEntity;
-import com.recaudo.api.domain.model.entity.NewRecaudoEntity;
-import com.recaudo.api.domain.model.entity.PeriodEntity;
-import com.recaudo.api.domain.model.entity.RecaudoDetailEntity;
+import com.recaudo.api.domain.model.entity.*;
 import com.recaudo.api.exception.BadRequestException;
 import com.recaudo.api.infrastructure.repository.*;
 import jakarta.transaction.Transactional;
@@ -28,6 +20,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -76,6 +69,9 @@ public class NewRecaudoAdapter {
 
             List<NewRecaudoEntity> recaudos = recaudoRepository.findByCreditId(creditId);
 
+            // Pre-fetch all data for optimization
+            OptimizationContext ctx = buildOptimizationContext(creditId, cuotas, recaudos);
+
             long cuotasPagadas    = cuotas.stream().filter(c -> "S".equals(c.getPaidFull())).count();
             long cuotasPendientes = cuotas.stream().filter(c -> "N".equals(c.getPaidFull())).count();
 
@@ -86,7 +82,7 @@ public class NewRecaudoAdapter {
             // totalPending() incluye mora causada − mora pagada
             BigDecimal totalPendiente = cuotas.stream()
                     .filter(c -> "N".equals(c.getPaidFull()))
-                    .map(cuota -> resolveQuotaComponents(cuota).totalPending())
+                    .map(cuota -> resolveQuotaComponents(cuota, ctx).totalPending())
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal totalCredito = Optional.ofNullable(credit.getTotalIntentionValue())
@@ -94,7 +90,7 @@ public class NewRecaudoAdapter {
 
             BigDecimal porcentajePagado = BigDecimal.ZERO;
             if (totalCredito.compareTo(BigDecimal.ZERO) > 0) {
-                porcentajePagado = totalPagado  // ya es positivo con el fix anterior
+                porcentajePagado = totalPagado
                         .multiply(BigDecimal.valueOf(100))
                         .divide(totalCredito, 2, RoundingMode.HALF_UP);
             }
@@ -105,11 +101,11 @@ public class NewRecaudoAdapter {
             LocalDate today = LocalDate.now();
 
             List<QuotaDetailDto> cuotasDetail = cuotas.stream()
-                    .map(cuota -> buildQuotaDetail(cuota, tasaCredito, today))
+                    .map(cuota -> buildQuotaDetail(cuota, tasaCredito, today, ctx))
                     .collect(Collectors.toList());
 
             List<RecaudoDetailDto> recaudosDetail = recaudos.stream()
-                    .map(r -> buildRecaudoDetail(r, cuotas))
+                    .map(r -> buildRecaudoDetail(r, ctx))
                     .collect(Collectors.toList());
 
             log.info("Estado de pago obtenido: creditId={}, cuotasPagadas={}, cuotasPendientes={}, porcentaje={}%",
@@ -142,12 +138,70 @@ public class NewRecaudoAdapter {
         }
     }
 
+    private OptimizationContext buildOptimizationContext(
+            Long creditId,
+            List<CreditAmortizationNEntity> cuotas,
+            List<NewRecaudoEntity> recaudos) {
+
+        List<Long> quotaIds = cuotas.stream().map(CreditAmortizationNEntity::getId).collect(Collectors.toList());
+        List<Long> recaudoIds = recaudos.stream().map(NewRecaudoEntity::getId).collect(Collectors.toList());
+
+        Map<String, Long> glotypes = glotypesRepository.findByKey(KEY_TIPCON).stream()
+                .collect(Collectors.toMap(GlotypesEntity::getCode, GlotypesEntity::getId, (a, b) -> a));
+
+        Map<Long, List<CreditAmortizationDetailEntity>> amorDetailsByQuota =
+                amortizationDetailRepository.findByAmortizationIdIn(quotaIds).stream()
+                        .collect(Collectors.groupingBy(CreditAmortizationDetailEntity::getAmortizationId));
+
+        Map<Long, List<RecaudoDetailEntity>> recDetailsByRecaudo =
+                recaudoDetailRepository.findByRecaudoIdIn(recaudoIds).stream()
+                        .collect(Collectors.groupingBy(RecaudoDetailEntity::getRecaudoId));
+
+        Map<Long, Long> recToQuotaMap = recaudos.stream()
+                .filter(r -> r.getQuotaId() != null)
+                .collect(Collectors.toMap(NewRecaudoEntity::getId, NewRecaudoEntity::getQuotaId, (a, b) -> a));
+
+        Map<Long, List<RecaudoDetailEntity>> recDetailsByQuota = recDetailsByRecaudo.entrySet().stream()
+                .filter(e -> recToQuotaMap.containsKey(e.getKey()))
+                .collect(Collectors.toMap(
+                        e -> recToQuotaMap.get(e.getKey()),
+                        java.util.Map.Entry::getValue,
+                        (list1, list2) -> {
+                            java.util.List<RecaudoDetailEntity> combined = new java.util.ArrayList<>(list1);
+                            combined.addAll(list2);
+                            return combined;
+                        }
+                ));
+
+        List<CreditOtherConceptsEntity> otherConcepts = otherConceptsRepository.findByCreditId(creditId);
+        Map<Long, Integer> otherIdToQuotaNumber = otherConcepts.stream()
+                .collect(Collectors.toMap(CreditOtherConceptsEntity::getId, CreditOtherConceptsEntity::getQuotaNumber, (a, b) -> a));
+
+        Map<Integer, List<CreditOtherConceptDetailEntity>> otherDetailsByQuotaNumber =
+                otherConceptDetailRepository.findAllByCreditId(creditId).stream()
+                        .filter(d -> otherIdToQuotaNumber.containsKey(d.getCreditOtherConceptId()))
+                        .collect(Collectors.groupingBy(d -> otherIdToQuotaNumber.get(d.getCreditOtherConceptId())));
+
+        Map<Long, Integer> quotaNumberByQuotaId = cuotas.stream()
+                .collect(Collectors.toMap(CreditAmortizationNEntity::getId, CreditAmortizationNEntity::getQuotaNumber, (a, b) -> a));
+
+        return OptimizationContext.builder()
+                .glotypes(glotypes)
+                .amorDetailsByQuota(amorDetailsByQuota)
+                .recDetailsByRecaudo(recDetailsByRecaudo)
+                .recDetailsByQuota(recDetailsByQuota)
+                .otherDetailsByQuotaNumber(otherDetailsByQuotaNumber)
+                .quotaNumberByQuotaId(quotaNumberByQuotaId)
+                .build();
+    }
+
     private QuotaDetailDto buildQuotaDetail(
             CreditAmortizationNEntity cuota,
             BigDecimal tasaCredito,
-            LocalDate today) {
+            LocalDate today,
+            OptimizationContext ctx) {
 
-        QuotaComponentsDto comp = resolveQuotaComponents(cuota);
+        QuotaComponentsDto comp = resolveQuotaComponents(cuota, ctx);
         BigDecimal saldoPendiente = comp.totalPending();
 
         boolean overdue = cuota.getExpirationDate().isBefore(today)
@@ -158,13 +212,19 @@ public class NewRecaudoAdapter {
             daysOverdue = (int) ChronoUnit.DAYS.between(cuota.getExpirationDate(), today);
         }
 
-        Long glotypeIdMora = resolveGlotypeId(GLO_MORA);
+        Long glotypeIdMora = ctx.glotypes.get(GLO_MORA);
 
-        BigDecimal moraAcumulada = otherConceptDetailRepository
-                .sumByCreditAndQuotaAndConcept(cuota.getCreditId(), cuota.getQuotaNumber(), glotypeIdMora);
+        List<CreditOtherConceptDetailEntity> otherDetails = ctx.otherDetailsByQuotaNumber
+                .getOrDefault(cuota.getQuotaNumber(), java.util.Collections.emptyList());
 
-        long diasMoraRegistrados = otherConceptDetailRepository
-                .countByCreditAndQuotaAndConcept(cuota.getCreditId(), cuota.getQuotaNumber(), glotypeIdMora);
+        BigDecimal moraAcumulada = otherDetails.stream()
+                .filter(d -> Objects.equals(d.getConceptId(), glotypeIdMora))
+                .map(CreditOtherConceptDetailEntity::getValue)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        long diasMoraRegistrados = otherDetails.stream()
+                .filter(d -> Objects.equals(d.getConceptId(), glotypeIdMora))
+                .count();
 
         boolean moraSaldada = diasMoraRegistrados > 0
                 && moraAcumulada.compareTo(BigDecimal.ZERO) == 0;
@@ -194,25 +254,20 @@ public class NewRecaudoAdapter {
                 .build();
     }
 
-    private RecaudoDetailDto buildRecaudoDetail(NewRecaudoEntity recaudo,
-                                                List<CreditAmortizationNEntity> cuotas) {
+    private RecaudoDetailDto buildRecaudoDetail(NewRecaudoEntity recaudo, OptimizationContext ctx) {
         Integer quotaNumber = null;
         if (recaudo.getQuotaId() != null) {
-            quotaNumber = amortizationRepository
-                    .findById(recaudo.getQuotaId().longValue())
-                    .map(CreditAmortizationNEntity::getQuotaNumber)
-                    .orElse(null);
+            quotaNumber = ctx.quotaNumberByQuotaId.get(recaudo.getQuotaId().longValue());
         }
 
-        // Leer detalles de new_recaudo_detail
-        List<RecaudoDetailEntity> detalles =
-                recaudoDetailRepository.findByRecaudoId(recaudo.getId());
+        List<RecaudoDetailEntity> detalles = ctx.recDetailsByRecaudo
+                .getOrDefault(recaudo.getId(), java.util.Collections.emptyList());
 
-        Long idCapital = resolveGlotypeId(GLO_CAPITAL);
-        Long idInteres = resolveGlotypeId(GLO_INTERES);
-        Long idSegVida = resolveGlotypeId(GLO_SEG_VIDA);
-        Long idSegCart = resolveGlotypeId(GLO_SEG_CARTERA);
-        Long idMora    = resolveGlotypeId(GLO_MORA);
+        Long idCapital = ctx.glotypes.get(GLO_CAPITAL);
+        Long idInteres = ctx.glotypes.get(GLO_INTERES);
+        Long idSegVida = ctx.glotypes.get(GLO_SEG_VIDA);
+        Long idSegCart = ctx.glotypes.get(GLO_SEG_CARTERA);
+        Long idMora    = ctx.glotypes.get(GLO_MORA);
 
         BigDecimal investmentValue    = sumDetailByConcept(detalles, idCapital);
         BigDecimal interestValue      = sumDetailByConcept(detalles, idInteres);
@@ -652,37 +707,58 @@ public class NewRecaudoAdapter {
         return dist;
     }
 
-    //  RESOLUCIÓN DE COMPONENTES DE CUOTA
     private QuotaComponentsDto resolveQuotaComponents(CreditAmortizationNEntity cuota) {
+        return resolveQuotaComponents(cuota, null);
+    }
 
-        Long idCapital = resolveGlotypeId(GLO_CAPITAL);
-        Long idInteres = resolveGlotypeId(GLO_INTERES);
-        Long idSegVida = resolveGlotypeId(GLO_SEG_VIDA);
-        Long idSegCart = resolveGlotypeId(GLO_SEG_CARTERA);
-        Long idMora    = resolveGlotypeId(GLO_MORA);
+    private QuotaComponentsDto resolveQuotaComponents(CreditAmortizationNEntity cuota, OptimizationContext ctx) {
 
-        List<CreditAmortizationDetailEntity> amorDetails =
-                amortizationDetailRepository.findByAmortizationId(cuota.getId());
+        Long idCapital = ctx != null ? ctx.glotypes.get(GLO_CAPITAL) : resolveGlotypeId(GLO_CAPITAL);
+        Long idInteres = ctx != null ? ctx.glotypes.get(GLO_INTERES) : resolveGlotypeId(GLO_INTERES);
+        Long idSegVida = ctx != null ? ctx.glotypes.get(GLO_SEG_VIDA) : resolveGlotypeId(GLO_SEG_VIDA);
+        Long idSegCart = ctx != null ? ctx.glotypes.get(GLO_SEG_CARTERA) : resolveGlotypeId(GLO_SEG_CARTERA);
+        Long idMora    = ctx != null ? ctx.glotypes.get(GLO_MORA) : resolveGlotypeId(GLO_MORA);
+
+        List<CreditAmortizationDetailEntity> amorDetails;
+        if (ctx != null) {
+            amorDetails = ctx.amorDetailsByQuota.getOrDefault(cuota.getId(), java.util.Collections.emptyList());
+        } else {
+            amorDetails = amortizationDetailRepository.findByAmortizationId(cuota.getId());
+        }
 
         BigDecimal capital = sumAmortDetailByConcept(amorDetails, idCapital);
         BigDecimal interes = sumAmortDetailByConcept(amorDetails, idInteres);
         BigDecimal segVida = sumAmortDetailByConcept(amorDetails, idSegVida);
         BigDecimal segCart = sumAmortDetailByConcept(amorDetails, idSegCart);
 
-        BigDecimal moraCausada = otherConceptDetailRepository
-                .sumByCreditAndQuotaAndConcept(cuota.getCreditId(), cuota.getQuotaNumber(), idMora);
+        BigDecimal moraCausada;
+        if (ctx != null) {
+            moraCausada = ctx.otherDetailsByQuotaNumber
+                    .getOrDefault(cuota.getQuotaNumber(), java.util.Collections.emptyList()).stream()
+                    .filter(d -> Objects.equals(d.getConceptId(), idMora))
+                    .map(CreditOtherConceptDetailEntity::getValue)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        } else {
+            moraCausada = otherConceptDetailRepository
+                    .sumByCreditAndQuotaAndConcept(cuota.getCreditId(), cuota.getQuotaNumber(), idMora);
+        }
 
-        BigDecimal capitalPaid = recaudoDetailRepository
-                .sumByQuotaIdAndConceptId(cuota.getId(), idCapital).abs();
-        BigDecimal interesPaid = recaudoDetailRepository
-                .sumByQuotaIdAndConceptId(cuota.getId(), idInteres).abs();
-        BigDecimal segVidaPaid = recaudoDetailRepository
-                .sumByQuotaIdAndConceptId(cuota.getId(), idSegVida).abs();
-        BigDecimal segCartPaid = recaudoDetailRepository
-                .sumByQuotaIdAndConceptId(cuota.getId(), idSegCart).abs();
-        // Mora ya pagada por el cliente (recaudo_detail con glotype IMT)
-        BigDecimal moraPaid = recaudoDetailRepository
-                .sumByQuotaIdAndConceptId(cuota.getId(), idMora).abs();
+        BigDecimal capitalPaid, interesPaid, segVidaPaid, segCartPaid, moraPaid;
+        if (ctx != null) {
+            List<RecaudoDetailEntity> recDetails = ctx.recDetailsByQuota
+                    .getOrDefault(cuota.getId(), java.util.Collections.emptyList());
+            capitalPaid = sumDetailByConcept(recDetails, idCapital).abs();
+            interesPaid = sumDetailByConcept(recDetails, idInteres).abs();
+            segVidaPaid = sumDetailByConcept(recDetails, idSegVida).abs();
+            segCartPaid = sumDetailByConcept(recDetails, idSegCart).abs();
+            moraPaid    = sumDetailByConcept(recDetails, idMora).abs();
+        } else {
+            capitalPaid = recaudoDetailRepository.sumByQuotaIdAndConceptId(cuota.getId(), idCapital).abs();
+            interesPaid = recaudoDetailRepository.sumByQuotaIdAndConceptId(cuota.getId(), idInteres).abs();
+            segVidaPaid = recaudoDetailRepository.sumByQuotaIdAndConceptId(cuota.getId(), idSegVida).abs();
+            segCartPaid = recaudoDetailRepository.sumByQuotaIdAndConceptId(cuota.getId(), idSegCart).abs();
+            moraPaid    = recaudoDetailRepository.sumByQuotaIdAndConceptId(cuota.getId(), idMora).abs();
+        }
 
         return QuotaComponentsDto.builder()
                 .capital(capital)              .capitalPaid(capitalPaid)
@@ -812,5 +888,15 @@ public class NewRecaudoAdapter {
         private BigDecimal investmentApplied         = BigDecimal.ZERO;
         private BigDecimal moraApplied               = BigDecimal.ZERO;
         private BigDecimal totalApplied              = BigDecimal.ZERO;
+    }
+
+    @lombok.Builder
+    private static class OptimizationContext {
+        Map<String, Long> glotypes;
+        Map<Long, List<CreditAmortizationDetailEntity>> amorDetailsByQuota;
+        Map<Long, List<RecaudoDetailEntity>> recDetailsByQuota;
+        Map<Long, List<RecaudoDetailEntity>> recDetailsByRecaudo;
+        Map<Integer, List<CreditOtherConceptDetailEntity>> otherDetailsByQuotaNumber;
+        Map<Long, Integer> quotaNumberByQuotaId;
     }
 }

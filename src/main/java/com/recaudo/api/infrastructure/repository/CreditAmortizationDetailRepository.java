@@ -8,4 +8,6 @@ import java.util.List;
 public interface CreditAmortizationDetailRepository extends JpaRepository<CreditAmortizationDetailEntity, Long> {
     List<CreditAmortizationDetailEntity> findByAmortizationId(Long amortizationId);
 
+    List<CreditAmortizationDetailEntity> findByAmortizationIdIn(List<Long> amortizationIds);
+
 }

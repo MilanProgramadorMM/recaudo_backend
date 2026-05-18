@@ -32,6 +32,14 @@ public interface CreditOtherConceptDetailRepository
     );
 
     @Query("""
+        SELECT d
+        FROM CreditOtherConceptDetailEntity d
+        JOIN CreditOtherConceptsEntity c ON c.id = d.creditOtherConceptId
+        WHERE c.creditId    = :creditId
+    """)
+    List<CreditOtherConceptDetailEntity> findAllByCreditId(@Param("creditId") Long creditId);
+
+    @Query("""
         SELECT COALESCE(SUM(d.value), 0)
         FROM CreditOtherConceptDetailEntity d
         JOIN CreditOtherConceptsEntity c ON c.id = d.creditOtherConceptId
