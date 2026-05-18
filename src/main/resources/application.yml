@@ -16,7 +16,7 @@ spring:
     #username: recaudoapp
     #password: R3c4uD0-DB
     #prod
-    url: jdbc:mysql://159.203.163.185:3306/recaudo_dev?serverTimezone=America/Bogota
+    url: jdbc:mysql://159.203.163.185:3306/recaudo?serverTimezone=America/Bogota
     username: recaudoapp
     password: R3c4uD0-DB
     #url: jdbc:mysql://localhost:3306/credimax?serverTimezone=UTC
@@ -48,6 +48,9 @@ app:
   jwt-secret: dDBsbC1wNHktanMwbi13M2ItNzBrM24tczNjcjM3LWszeQ==
   jwt-expiration-milliseconds: 60000
   jwt-token-type: Bearer
+
+  scheduler:
+    cron: "0 0 0 31 2 ?"
 
   frontend:
     url: https://www.businesssam.com/app

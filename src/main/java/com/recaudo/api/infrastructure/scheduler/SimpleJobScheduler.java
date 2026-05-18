@@ -16,20 +16,16 @@ import java.time.format.DateTimeFormatter;
 @RequiredArgsConstructor
 public class SimpleJobScheduler {
 
-    //private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-
 
     private final OtherConceptsOrchestrator orchestrator;
 
 
     /**
      * Cálculo diario de conceptos adicionales (mora, GMF, seguros, etc.).
-     * Cron: todos los días a las 23:00:00
-
-    @Scheduled(cron = "0 0 23 * * *")
+     * Cron: se configura en application.yml (app.scheduler.cron)
+     */
+    @Scheduled(cron = "${app.scheduler.cron}")
     public void otherConceptsDailyJob() {
         log.info("[Job] Iniciando cálculo de conceptos adicionales — {}",
                 LocalDateTime.now().format(FORMATTER));
@@ -41,26 +37,4 @@ public class SimpleJobScheduler {
             log.error("[Job] Error durante la ejecución: {}", e.getMessage(), e);
         }
     }
-     */
-
-    //@Scheduled(cron = "0 */5 * * * *")
-    /*public void otherConceptsDailyJob() {
-
-        log.info("[Job] Iniciando cálculo de conceptos adicionales — {}",
-                LocalDateTime.now().format(FORMATTER));
-
-        try {
-
-            orchestrator.runAll(LocalDate.now());
-
-            log.info("[Job] Finalizado exitosamente — {}",
-                    LocalDateTime.now().format(FORMATTER));
-
-        } catch (Exception e) {
-
-            log.error("[Job] Error durante la ejecución: {}", e.getMessage(), e);
-        }
-    }
-
-     */
 }
