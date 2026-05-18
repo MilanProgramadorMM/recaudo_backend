@@ -7,6 +7,7 @@ import com.recaudo.api.domain.model.dto.response.RecaudoResultDto;
 import com.recaudo.api.domain.model.dto.rest_api.RecaudoRequestDto;
 import com.recaudo.api.domain.model.dto.rest_api.ReverseCapitalInterestRequestDto;
 import com.recaudo.api.domain.model.dto.rest_api.ReverseRecaudoRequestDto;
+import com.recaudo.api.infrastructure.adapter.NewRecaudoAdapter;
 import com.recaudo.api.infrastructure.adapter.RecaudoAdapter;
 import com.recaudo.api.infrastructure.helper.security.jwt.JwtUtil;
 import jakarta.validation.Valid;
@@ -30,7 +31,7 @@ import java.util.Map;
 public class RecaudoController {
 
     @Autowired
-    private RecaudoAdapter recaudoAdapter;
+    private NewRecaudoAdapter recaudoAdapter;
 
     @Autowired
     private JwtUtil jwtService;

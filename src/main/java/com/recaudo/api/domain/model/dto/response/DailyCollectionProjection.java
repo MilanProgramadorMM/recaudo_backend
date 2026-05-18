@@ -7,9 +7,12 @@ import java.time.LocalDate;
 public interface DailyCollectionProjection {
     Long getCreditId();
     LocalDate getFechaCredito();
+    String getLineaName();
+    BigDecimal getTotalCapitalValue();
     Long getCuotaId();
     Integer getQuotaNumber();
     LocalDate getExpirationDate();
+    LocalDate getFechaVence();
     String getClientName();
     Integer getClientOrden();
     BigDecimal getClientCuota();
@@ -32,4 +35,7 @@ public interface DailyCollectionProjection {
     String getBarrio();
     String getMunicipio();
     String getNombreDia();
+    BigDecimal getInterestMora();
+    BigDecimal getSaldoPendienteCuota();
+    Integer getDiasMora();
 }
