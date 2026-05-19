@@ -17,7 +17,7 @@ public interface DailyCollectionRepository
 
 
     @Query(value = """
-    SELECT
+    SELECT DISTINCT
          c.id                                                        AS creditId,
          c.created_at                                                AS fechaCredito,
          cl.name                                                   AS lineaname,

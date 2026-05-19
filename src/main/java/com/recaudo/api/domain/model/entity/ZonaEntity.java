@@ -46,4 +46,7 @@ public class ZonaEntity {
 
         @Column(name = "edited_at")
         private LocalDateTime editedAt;
+
+        @Column(name = "order_zona")
+        private Integer orderZona;
 }

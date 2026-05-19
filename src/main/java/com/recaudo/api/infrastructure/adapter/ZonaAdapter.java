@@ -113,7 +113,7 @@ public class ZonaAdapter implements ZonaGateway {
 
     @Override
     public List<ZonaResponseDto> getStatusTrue() {
-        return zonaRepository.findAllByStatusTrue(Sort.by(Sort.Direction.DESC, "id"))
+        return zonaRepository.findByStatusTrueOrderByOrderZonaAsc()
                 .stream()
                 .map(z -> ZonaResponseDto.builder()
                         .id(z.getId())

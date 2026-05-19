@@ -54,6 +54,7 @@ public class MoraConceptCalculator implements OtherConceptCalculator {
     private final CreditOtherConceptDetailRepository otherConceptDetailRepository;
     private final CreditRepository                   creditRepository;
     private final GlotypesRepository                 glotypesRepository;
+    private final HolidaysRepository holidaysRepository;
 
     // ── Contrato ──────────────────────────────────────────────────────────────
 
@@ -77,6 +78,9 @@ public class MoraConceptCalculator implements OtherConceptCalculator {
     @Override
     public Optional<BigDecimal> compute(CreditAmortizationNEntity cuota, LocalDate today) {
         try {
+            /*if (esNoHabil(today)) {
+                return Optional.empty();
+            }*/
             long diasTotalesVencidos = ChronoUnit.DAYS.between(cuota.getExpirationDate(), today);
 
             // diasTotalesVencidos == 0 → vence hoy   → registrar 1 día
@@ -98,9 +102,18 @@ public class MoraConceptCalculator implements OtherConceptCalculator {
             if (diasTotalesVencidos == 0) {
                 // Vence hoy: siempre 1 día, independiente del historial
                 diasAUsar = 1L;
-            } else {
-                // Vencida en días anteriores: catch-up si es primera vez, o 1 día diario
-                diasAUsar = tieneMoraPrevia(cuota) ? 1L : diasTotalesVencidos;
+            } else if(tieneMoraPrevia(cuota)){
+                diasAUsar = 1L;
+            }else{
+                diasAUsar = contarDiasHabiles(cuota.getExpirationDate(), today);
+                log.debug("[{}] cuotaId={} | catch-up: {} días hábiles de {} días calendario",
+                        getLabel(), cuota.getId(), diasAUsar, diasTotalesVencidos);
+            }
+
+            if (diasAUsar <= 0) {
+                log.debug("[{}] cuotaId={} | sin días hábiles que calcular, se omite.",
+                        getLabel(), cuota.getId());
+                return Optional.empty();
             }
 
             BigDecimal mora = computeMora(saldoPendiente, tasaNominal, diasAUsar);
@@ -217,5 +230,53 @@ public class MoraConceptCalculator implements OtherConceptCalculator {
                 .filter(d -> Objects.equals(d.getConceptId().longValue(), conceptId))
                 .map(CreditAmortizationDetailEntity::getValue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private boolean esNoHabil(LocalDate fecha) {
+        if (fecha.getDayOfWeek() == java.time.DayOfWeek.SUNDAY) {
+            log.debug("[{}] Fecha {} es domingo, se omite cálculo de mora.", getLabel(), fecha);
+            return true;
+        }
+        if (holidaysRepository.existsByHoliDateAndActive(fecha)) {
+            log.debug("[{}] Fecha {} es festivo, se omite cálculo de mora.", getLabel(), fecha);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Cuenta los días hábiles entre dos fechas (exclusivo en startDate, inclusivo en endDate).
+     * Excluye domingos y festivos activos.
+     */
+    private long contarDiasHabiles(LocalDate desde, LocalDate hasta) {
+        List<java.sql.Date> festivosRaw = holidaysRepository.findActiveBetween(desde, hasta);
+
+        // Conversión java.sql.Date → LocalDate
+        java.util.Set<LocalDate> festivosSet = festivosRaw.stream()
+                .map(java.sql.Date::toLocalDate)
+                .collect(java.util.stream.Collectors.toSet());
+
+        long diasHabiles = 0;
+        long diasOmitidos = 0;
+        LocalDate fecha = desde.plusDays(1);
+
+        while (!fecha.isAfter(hasta)) {
+            boolean esDomingo = fecha.getDayOfWeek() == java.time.DayOfWeek.SUNDAY;
+            boolean esFestivo = festivosSet.contains(fecha);
+
+            if (esDomingo || esFestivo) {
+                log.debug("[MoraCatchUp] Omitiendo {} — {}",
+                        fecha, esDomingo ? "DOMINGO" : "FESTIVO");
+                diasOmitidos++;
+            } else {
+                diasHabiles++;
+            }
+            fecha = fecha.plusDays(1);
+        }
+
+        log.info("[MoraCatchUp] Rango {}/{} → {} días hábiles | {} días omitidos",
+                desde, hasta, diasHabiles, diasOmitidos);
+
+        return diasHabiles;
     }
 }

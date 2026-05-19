@@ -17,7 +17,7 @@ public interface ZonaRepository extends JpaRepository<ZonaEntity, Long> {
 
     ZonaEntity findByValue(String value);
     boolean existsByValueIgnoreCaseAndIdNot(String value, Long id);
-    List<ZonaEntity> findAllByStatusTrue(Sort sort);
+    List<ZonaEntity> findByStatusTrueOrderByOrderZonaAsc();
     /**
      * Obtiene el resumen diario por zona
      */
