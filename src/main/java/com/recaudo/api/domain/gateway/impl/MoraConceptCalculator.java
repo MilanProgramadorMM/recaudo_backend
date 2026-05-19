@@ -78,9 +78,9 @@ public class MoraConceptCalculator implements OtherConceptCalculator {
     @Override
     public Optional<BigDecimal> compute(CreditAmortizationNEntity cuota, LocalDate today) {
         try {
-            /*if (esNoHabil(today)) {
+            if (esNoHabil(today)) {
                 return Optional.empty();
-            }*/
+            }
             long diasTotalesVencidos = ChronoUnit.DAYS.between(cuota.getExpirationDate(), today);
 
             // diasTotalesVencidos == 0 → vence hoy   → registrar 1 día
