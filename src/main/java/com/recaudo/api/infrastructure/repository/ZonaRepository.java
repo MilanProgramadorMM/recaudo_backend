@@ -151,11 +151,75 @@ public interface ZonaRepository extends JpaRepository<ZonaEntity, Long> {
               AND ci.deleted_at IS NULL
               AND (:zonaId IS NULL OR z.id = :zonaId)
             GROUP BY z.id, z.value, z.description
-            ORDER BY z.value;                    
+            ORDER BY z.value
+        """, nativeQuery = true)
+    List<DashboardSummaryProjection> getDashboardSummaryOld(
+            @Param("fechaInicio") LocalDate fechaInicio,
+            @Param("fechaFin") LocalDate fechaFin,
+            @Param("zonaId") Long zonaId
+    );
+
+    @Query(value = """
+            SELECT
+                                    z.id AS zona_id,
+                                    z.value AS zona_nombre,
+                                    -- Total debido cobrar: cuotas + mora (concept_id = 52)
+                                    COALESCE(SUM(ca.total_quota_value), 0)
+                                    + COALESCE((
+                                        SELECT SUM(cocd.value)
+                                        FROM credit_other_concepts coc
+                                        INNER JOIN credit_other_concepts_detail cocd ON cocd.credit_other_concepts_id = coc.id
+                                        INNER JOIN credit c3 ON c3.id = coc.credit_id AND c3.deleted_at IS NULL
+                                        INNER JOIN credit_intention ci3 ON ci3.id = c3.credit_intention_id
+                                        WHERE ci3.zone_id = z.id
+                                          AND cocd.concept_id = 52
+                                          AND cocd.deleted_at IS NULL
+                                          AND coc.expiration_date >= :fechaInicio
+                                          AND coc.expiration_date < :fechaFin
+                                    ), 0) AS total_debido_cobrar,
+                                    -- Total recaudado: new_recaudo tiene credit_id directo
+                                    COALESCE((
+                                        SELECT SUM(nr2.value_paid)
+                                        FROM new_recaudo nr2
+                                        INNER JOIN credit c2 ON c2.id = nr2.credit_id AND c2.deleted_at IS NULL
+                                        INNER JOIN credit_intention ci2 ON ci2.id = c2.credit_intention_id
+                                        WHERE ci2.zone_id = z.id
+                                          AND nr2.created_at >= :fechaInicio
+                                          AND nr2.created_at < :fechaFin
+                                    ), 0) AS total_recaudado,
+                                    -- Total no pagado: cuotas con visita marcada como no_pago
+                                    COALESCE(SUM(
+                                        CASE
+                                            WHEN cv.no_pago_count > 0 THEN ca.total_quota_value
+                                            ELSE 0
+                                        END
+                                    ), 0) AS total_no_pagado
+                                FROM zona z
+                                INNER JOIN credit_intention ci ON z.id = ci.zone_id
+                                INNER JOIN credit c ON ci.id = c.credit_intention_id AND c.deleted_at IS NULL
+                                INNER JOIN credit_amortization ca ON c.id = ca.credit_id
+                                LEFT JOIN (
+                                    SELECT
+                                        cuota_id,
+                                        SUM(CASE WHEN payment_promise_date IS NOT NULL THEN 1 ELSE 0 END) AS no_pago_count
+                                    FROM collection_visit
+                                    WHERE visit_date >= :fechaInicio
+                                      AND visit_date < :fechaFin
+                                    GROUP BY cuota_id
+                                ) cv ON ca.id = cv.cuota_id
+                                WHERE ca.expiration_date >= :fechaInicio
+                                  AND ca.expiration_date < :fechaFin
+                                  AND z.status = 1
+                                  AND ci.deleted_at IS NULL
+                                  AND (:zonaId IS NULL OR z.id = :zonaId)
+                                GROUP BY z.id, z.value, z.description
+                                ORDER BY z.value
         """, nativeQuery = true)
     List<DashboardSummaryProjection> getDashboardSummary(
             @Param("fechaInicio") LocalDate fechaInicio,
             @Param("fechaFin") LocalDate fechaFin,
             @Param("zonaId") Long zonaId
     );
+
+
 }

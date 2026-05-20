@@ -81,12 +81,10 @@ public class MoraConceptCalculator implements OtherConceptCalculator {
             if (esNoHabil(today)) {
                 return Optional.empty();
             }
+
             long diasTotalesVencidos = ChronoUnit.DAYS.between(cuota.getExpirationDate(), today);
 
-            // diasTotalesVencidos == 0 → vence hoy   → registrar 1 día
-            // diasTotalesVencidos >  0 → vencida      → catch-up o diario
-            // diasTotalesVencidos <  0 → cuota futura → no aplica
-            if (diasTotalesVencidos < 0) return Optional.empty();
+            if (diasTotalesVencidos < 0) return Optional.empty(); // cuota futura, no aplica
 
             BigDecimal saldoPendiente = resolverSaldoPendiente(cuota);
             if (saldoPendiente.compareTo(BigDecimal.ZERO) <= 0) return Optional.empty();
@@ -99,15 +97,10 @@ public class MoraConceptCalculator implements OtherConceptCalculator {
                     .divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP);
 
             long diasAUsar;
-            if (diasTotalesVencidos == 0) {
-                // Vence hoy: siempre 1 día, independiente del historial
+            if (tieneMoraPrevia(cuota)) {
                 diasAUsar = 1L;
-            } else if(tieneMoraPrevia(cuota)){
-                diasAUsar = 1L;
-            }else{
+            } else {
                 diasAUsar = contarDiasHabiles(cuota.getExpirationDate(), today);
-                log.debug("[{}] cuotaId={} | catch-up: {} días hábiles de {} días calendario",
-                        getLabel(), cuota.getId(), diasAUsar, diasTotalesVencidos);
             }
 
             if (diasAUsar <= 0) {
@@ -132,7 +125,6 @@ public class MoraConceptCalculator implements OtherConceptCalculator {
             return Optional.empty();
         }
     }
-
     // ══════════════════════════════════════════════════════════════════════════
     //  CÁLCULO PURO DE MORA
     // ══════════════════════════════════════════════════════════════════════════
