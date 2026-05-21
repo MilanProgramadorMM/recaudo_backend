@@ -36,6 +36,7 @@ public interface DailyCollectionProjection {
     String getMunicipio();
     String getNombreDia();
     BigDecimal getInterestMora();
+    BigDecimal getTotalMoraCredito();
     BigDecimal getSaldoPendienteCuota();
     Integer getDiasMora();
 }
