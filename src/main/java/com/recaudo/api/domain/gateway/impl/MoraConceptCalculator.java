@@ -229,7 +229,7 @@ public class MoraConceptCalculator implements OtherConceptCalculator {
             log.debug("[{}] Fecha {} es domingo, se omite cálculo de mora.", getLabel(), fecha);
             return true;
         }
-        if (holidaysRepository.existsByHoliDateAndActive(fecha)) {
+        if (holidaysRepository.existsByHoliDateAndHoliStatus(fecha, "A")) {
             log.debug("[{}] Fecha {} es festivo, se omite cálculo de mora.", getLabel(), fecha);
             return true;
         }

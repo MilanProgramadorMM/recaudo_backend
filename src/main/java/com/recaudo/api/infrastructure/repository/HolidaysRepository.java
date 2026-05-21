@@ -12,9 +12,7 @@ import java.util.List;
 @Repository
 public interface HolidaysRepository extends JpaRepository<HolidayEntity, LocalDate> {
 
-    @Query(value = "SELECT COUNT(*) > 0 FROM holidays WHERE holi_date = :fecha AND holi_status = 'A'",
-            nativeQuery = true)
-    boolean existsByHoliDateAndActive(@Param("fecha") LocalDate fecha);
+    boolean existsByHoliDateAndHoliStatus(LocalDate holiDate, String holiStatus);
 
     @Query(value = "SELECT holi_date FROM holidays " +
             "WHERE holi_date > :desde AND holi_date <= :hasta " +
