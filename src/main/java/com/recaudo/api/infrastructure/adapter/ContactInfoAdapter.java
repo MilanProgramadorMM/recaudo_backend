@@ -3,6 +3,7 @@ package com.recaudo.api.infrastructure.adapter;
 import com.recaudo.api.domain.gateway.ContactInfoGateway;
 import com.recaudo.api.domain.mapper.ContactInfoMapper;
 import com.recaudo.api.domain.model.dto.response.ContactInfoListDto;
+import com.recaudo.api.domain.model.dto.rest_api.ClientDataCreditIntentionUpdateDto;
 import com.recaudo.api.domain.model.dto.rest_api.ContactInfoRegisterDto;
 import com.recaudo.api.domain.model.dto.rest_api.PersonRegisterDto;
 import com.recaudo.api.domain.model.entity.*;
@@ -262,6 +263,66 @@ public class ContactInfoAdapter implements ContactInfoGateway {
         entity.setValue(dto.getValue());
 
         return entity;
+    }
+
+    @Override
+    public void saveOrUpdateContactInfoFromIntention(Long personId, ClientDataCreditIntentionUpdateDto dto) {
+        // 1. Dirección Principal (DIRPRIN)
+        if (dto.getHomeAddress() != null && !dto.getHomeAddress().isBlank()) {
+            upsertContact(personId, "DIRPRIN", dto.getHomeAddress(), dto, true);
+        }
+
+        // 2. Teléfono Principal (TELPRIN) - Usando el número de teléfono del DTO
+        if (dto.getPhoneNumber() != null && !dto.getPhoneNumber().isBlank()) {
+            upsertContact(personId, "TELPRIN", dto.getPhoneNumber(), dto, false);
+        }
+
+        // 3. Celular / Whatsapp Principal (CEPRIN o WHA dependiendo de tus códigos de glotypes)
+        // Asumiendo que guardas el whatsapp como celular principal o si tienes un código 'WHA'
+        if (dto.getWhatsappNumber() != null && !dto.getWhatsappNumber().isBlank()) {
+            upsertContact(personId, "CEPRIN", dto.getWhatsappNumber(), dto, false);
+        }
+
+        // 4. Correo Principal (COPRIN)
+        if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
+            upsertContact(personId, "COPRIN", dto.getEmail(), dto, false);
+        }
+    }
+
+    private void upsertContact(Long personId, String code, String value, ClientDataCreditIntentionUpdateDto dto, boolean isAddress) {
+        GlotypesEntity tipo = glotypesRepository.findByKeyAndCode("TIPUBI", code)
+                .orElseThrow(() -> new BadRequestException("No existe el código de tipo ubicación: " + code));
+
+        // Buscar si ya existe para actualizar, o crear uno nuevo
+        ContactInfoEntity entity = contactInfoRepository.findByPersonAndType(personId, tipo.getId())
+                .orElse(new ContactInfoEntity());
+
+        String username = getUsernameToken();
+
+        if (entity.getId() == null) {
+            // Es nuevo registro
+            entity.setPerson(personId);
+            entity.setType(tipo.getId());
+            entity.setCreatedAt(LocalDateTime.now());
+            entity.setUserCreate(username);
+        } else {
+            // Es una actualización
+            entity.setEditedAt(LocalDateTime.now());
+            entity.setUserEdit(username);
+        }
+
+        entity.setValue(value.trim());
+
+        // Si es dirección, mapeamos los IDs geográficos correspondientes
+        if (isAddress) {
+            entity.setCountry(dto.getCountryId());
+            entity.setDepartment(dto.getDepartmentId());
+            entity.setCity(dto.getMunicipalityId()); // Mapea tu municipalityId al campo city de la entidad
+            entity.setNeighborhood(dto.getNeighborhoodId());
+            entity.setDescription(dto.getDescription());
+        }
+
+        contactInfoRepository.save(entity);
     }
 
 

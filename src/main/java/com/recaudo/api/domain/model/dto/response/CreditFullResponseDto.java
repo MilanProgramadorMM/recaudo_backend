@@ -3,17 +3,19 @@ package com.recaudo.api.domain.model.dto.response;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
+@NoArgsConstructor   // ← esto faltaba
 @AllArgsConstructor
 public class CreditFullResponseDto {
 
     private Long id;
     private Long creditIntentionId;
+    private String creditStatus;
     private BigDecimal quotaValue;
     private Integer periodQuantity;
     private BigDecimal totalIntentionValue;

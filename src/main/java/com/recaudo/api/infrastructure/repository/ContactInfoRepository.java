@@ -21,6 +21,6 @@ public interface ContactInfoRepository extends JpaRepository<ContactInfoEntity, 
 
     boolean existsByPersonAndType(Long personId, Long typeId);
 
-
+    Optional<ContactInfoEntity> findByPersonAndType(Long personId, Long typeId);
 
 }

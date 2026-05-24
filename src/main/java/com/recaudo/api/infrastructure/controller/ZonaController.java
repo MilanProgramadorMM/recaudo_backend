@@ -1,6 +1,7 @@
 package com.recaudo.api.infrastructure.controller;
 
 import com.recaudo.api.domain.model.dto.response.*;
+import com.recaudo.api.domain.model.dto.response.consultas.DashboardSummaryDto;
 import com.recaudo.api.domain.model.dto.rest_api.ZonaCreateDto;
 import com.recaudo.api.domain.usecase.ZonaUseCase;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,24 +42,26 @@ public class ZonaController {
         );
     }
 
-    @GetMapping("/dashboard")
-    public ResponseEntity<DefaultResponseDto<List<DashboardSummaryProjection>>> getByStatus(
+    /*@GetMapping("/dashboard")
+    public ResponseEntity<DefaultResponseDto<DashboardSummaryDto>> getByStatus(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
             @RequestParam(required = false) Long zonaId
     ) {
 
-        List<DashboardSummaryProjection> data = zonaUseCase.getDashboardSummary(fechaInicio, fechaFin, zonaId);
+        DashboardSummaryDto data = zonaUseCase.getDashboardSummary(fechaInicio, fechaFin, zonaId);
 
         return ResponseEntity.ok(
-                DefaultResponseDto.<List<DashboardSummaryProjection>>builder()
-                        .message("Información de zonas")
+                DefaultResponseDto
+                        .<DashboardSummaryDto>builder()
+                        .message("Dashboard consultado")
                         .status(HttpStatus.OK)
-                        .details("Se listó la información de zonas")
+                        .details("Resumen generado correctamente")
                         .data(data)
                         .build()
         );
     }
+     */
 
     @GetMapping("")
     public ResponseEntity<DefaultResponseDto<List<ZonaResponseDto>>> getAll(

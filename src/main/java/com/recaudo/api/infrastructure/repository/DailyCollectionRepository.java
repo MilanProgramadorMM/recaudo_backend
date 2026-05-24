@@ -108,7 +108,6 @@ public interface DailyCollectionRepository
                WHERE a5.credit_id = c.id
                  AND a5.paid_full = 'N'
            )                                                           AS saldoPendiente,
-     \s
            -- ── Saldo pendiente SOLO de la cuota actual ────────────────────────
            COALESCE(
                -- VIV: Capital esperado menos lo pagado
@@ -180,7 +179,6 @@ public interface DailyCollectionRepository
                    JOIN glotypes g ON g.id = nrd.concept_id AND g.code = 'IMT'
                ), 0)
            , 0)                                                        AS saldoPendienteCuota,
-     \s
            (SELECT COUNT(1)
             FROM credit_amortization a6
             WHERE a6.credit_id = c.id)                                 AS totalCuotas,

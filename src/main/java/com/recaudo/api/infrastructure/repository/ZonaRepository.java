@@ -3,21 +3,38 @@ package com.recaudo.api.infrastructure.repository;
 import com.recaudo.api.domain.model.dto.response.DailyReportDetailDto;
 import com.recaudo.api.domain.model.dto.response.DailyReportSummaryDto;
 import com.recaudo.api.domain.model.dto.response.DashboardSummaryProjection;
+import com.recaudo.api.domain.model.dto.response.consultas.ZonaProjection;
 import com.recaudo.api.domain.model.entity.ZonaEntity;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+@Repository
 public interface ZonaRepository extends JpaRepository<ZonaEntity, Long> {
 
     ZonaEntity findByValue(String value);
     boolean existsByValueIgnoreCaseAndIdNot(String value, Long id);
     List<ZonaEntity> findByStatusTrueOrderByOrderZonaAsc();
+
+    @Query(value = """
+    SELECT
+        z.id AS id,
+        z.value AS code
+    FROM credit c
+    INNER JOIN credit_intention ci
+        ON ci.id = c.credit_intention_id
+    INNER JOIN zona z
+        ON z.id = ci.zone_id
+    WHERE c.id = :creditId
+    """, nativeQuery = true)
+    Optional<ZonaProjection> findZonaByCreditId(@Param("creditId") Long creditId);
+
     /**
      * Obtiene el resumen diario por zona
      */

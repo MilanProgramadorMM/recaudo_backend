@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -122,29 +123,39 @@ public class OtherConceptsOrchestrator {
             BigDecimal value,
             Long glotypeId) {
 
-        // Cabecera: snapshot del estado de la cuota en el momento del cálculo
-        CreditOtherConceptsEntity cabecera = CreditOtherConceptsEntity.builder()
-                .creditId(cuota.getCreditId())
-                .quotaNumber(cuota.getQuotaNumber())
-                .expirationDate(cuota.getExpirationDate())
-                .totalQuotaValue(cuota.getTotalQuotaValue())
-                .liquidated(cuota.getLiquidated())
-                .paidFull(cuota.getPaidFull())
-                .build();
+        // ── 1. Find-Or-Create del maestro ──────────────────────────────────────
+        CreditOtherConceptsEntity cabecera = otherConceptsRepository
+                .findByCreditIdAndQuotaNumber(cuota.getCreditId(), cuota.getQuotaNumber())
+                .orElseGet(() -> {
+                    // Solo se crea la primera vez (catch-up)
+                    CreditOtherConceptsEntity nueva = CreditOtherConceptsEntity.builder()
+                            .creditId(cuota.getCreditId())
+                            .quotaNumber(cuota.getQuotaNumber())
+                            .expirationDate(cuota.getExpirationDate())
+                            .totalQuotaValue(cuota.getTotalQuotaValue())
+                            .liquidated(cuota.getLiquidated())
+                            .paidFull(cuota.getPaidFull())
+                            .build();
 
-        cabecera = otherConceptsRepository.save(cabecera);
+                    log.debug("[OtherConcepts] Creando maestro nuevo: creditId={} quotaNumber={}",
+                            cuota.getCreditId(), cuota.getQuotaNumber());
 
-        // Detalle: FK → credit_other_concepts.id (no a credit_amortization)
+                    return otherConceptsRepository.save(nueva);
+                });
+
+        // ── 2. Siempre inserta un detalle nuevo (acumula por día) ──────────────
         CreditOtherConceptDetailEntity detalle = CreditOtherConceptDetailEntity.builder()
-                .creditOtherConceptId(cabecera.getId())  // FK real de la tabla
-                .conceptId(glotypeId)                    // glotype (IMT, GMF, etc.)
+                .creditOtherConceptId(cabecera.getId())
+                .conceptId(glotypeId)
                 .value(value)
+                .createdAt(LocalDateTime.now())
+                .userCreate("SYSTEM")
                 .build();
 
         otherConceptDetailRepository.save(detalle);
 
-        log.debug("[OtherConcepts] Persistido: creditId={} quotaNumber={} valor={}",
-                cuota.getCreditId(), cuota.getQuotaNumber(), value);
+        log.debug("[OtherConcepts] Detalle persistido: maestroId={} creditId={} quotaNumber={} valor={}",
+                cabecera.getId(), cuota.getCreditId(), cuota.getQuotaNumber(), value);
     }
 
     // ══════════════════════════════════════════════════════════════════════════

@@ -1,9 +1,6 @@
 package com.recaudo.api.infrastructure.repository;
 
-import com.recaudo.api.domain.model.dto.response.CreditCausadoProjection;
-import com.recaudo.api.domain.model.dto.response.CreditFullResponseDto;
-import com.recaudo.api.domain.model.dto.response.CreditProjection;
-import com.recaudo.api.domain.model.dto.response.CreditResponseDto;
+import com.recaudo.api.domain.model.dto.response.*;
 import com.recaudo.api.domain.model.entity.CreditEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -17,89 +14,91 @@ import java.util.Optional;
 @Repository
 public interface CreditRepository extends JpaRepository<CreditEntity, Long> {
 
-    @Query("""
-        SELECT new com.recaudo.api.domain.model.dto.response.CreditFullResponseDto(
-            c.id,
-            c.creditIntentionId,
-            c.quotaValue,
-            c.periodQuantity,
-            c.totalIntentionValue,
-            c.totalInterestValue,
-            c.totalCapitalValue,
-            c.totalFinancedValue,
-            ci.zoneId,
-            z.value,
-            ci.document,
-            ci.fullname,
-            ci.phoneNumber,
-            ci.creditLineId,
-            cl.name,
-            c.createdAt
-        )
-        FROM CreditEntity c
-        JOIN CreditIntentionEntity ci ON ci.id = c.creditIntentionId
-        LEFT JOIN ZonaEntity z ON z.id = ci.zoneId
-        LEFT JOIN CreditLineEntity cl ON cl.id = ci.creditLineId
-        WHERE c.deletedAt IS NULL
-        ORDER BY c.id DESC
-    """)
-    List<CreditFullResponseDto> findAllCreditsFull();
+    @Query(value = """
+    SELECT
+        c.id                   AS id,
+        c.credit_intention_id  AS creditIntentionId,
+        c.credit_status        AS creditStatus,
+        c.quota_value          AS quotaValue,
+        c.period_quantity      AS periodQuantity,
+        c.total_intention_value AS totalIntentionValue,
+        c.total_interest_value  AS totalInterestValue,
+        c.total_capital_value   AS totalCapitalValue,
+        c.total_financed_value  AS totalFinancedValue,
+        ci.zone_id             AS zoneId,
+        z.value                AS zoneName,
+        ci.document            AS document,
+        ci.fullname            AS fullname,
+        ci.phone_number        AS phoneNumber,
+        ci.credit_line_id      AS creditLineId,
+        cl.name                AS creditLineName,
+        c.created_at           AS createdAt
+    FROM credit c
+    JOIN credit_intention ci ON ci.id = c.credit_intention_id
+    LEFT JOIN zona z          ON z.id  = ci.zone_id
+    LEFT JOIN credit_line cl  ON cl.id = ci.credit_line_id
+    WHERE c.deleted_at IS NULL
+    ORDER BY c.id DESC
+""", nativeQuery = true)
+    List<CreditFullView> findAllCreditsFull();
 
-    @Query("""
-    SELECT new com.recaudo.api.domain.model.dto.response.CreditFullResponseDto(
-        c.id,
-        c.creditIntentionId,
-        c.quotaValue,
-        c.periodQuantity,
-        c.totalIntentionValue,
-        c.totalInterestValue,
-        c.totalCapitalValue,
-        c.totalFinancedValue,
-        ci.zoneId,
-        z.value,
-        ci.document,
-        ci.fullname,
-        ci.phoneNumber,
-        ci.creditLineId,
-        cl.name,
-        c.createdAt
-    )
-    FROM CreditEntity c
-    JOIN CreditIntentionEntity ci ON ci.id = c.creditIntentionId
-    LEFT JOIN ZonaEntity z ON z.id = ci.zoneId
-    LEFT JOIN CreditLineEntity cl ON cl.id = ci.creditLineId
-    WHERE c.deletedAt IS NULL AND ci.userCreate = :username
-    ORDER BY c.createdAt DESC
-""")
-    List<CreditFullResponseDto> findCreditsByUsername(@Param("username") String username);
+    @Query(value = """
+    SELECT
+        c.id                    AS id,
+        c.credit_intention_id   AS creditIntentionId,
+        c.credit_status         AS creditStatus,
+        c.quota_value           AS quotaValue,
+        c.period_quantity       AS periodQuantity,
+        c.total_intention_value AS totalIntentionValue,
+        c.total_interest_value  AS totalInterestValue,
+        c.total_capital_value   AS totalCapitalValue,
+        c.total_financed_value  AS totalFinancedValue,
+        ci.zone_id              AS zoneId,
+        z.value                 AS zoneName,
+        ci.document             AS document,
+        ci.fullname             AS fullname,
+        ci.phone_number         AS phoneNumber,
+        ci.credit_line_id       AS creditLineId,
+        cl.name                 AS creditLineName,
+        c.created_at            AS createdAt
+    FROM credit c
+    JOIN credit_intention ci ON ci.id = c.credit_intention_id
+    LEFT JOIN zona z          ON z.id  = ci.zone_id
+    LEFT JOIN credit_line cl  ON cl.id = ci.credit_line_id
+    WHERE c.deleted_at IS NULL
+      AND ci.user_create = :username
+    ORDER BY c.id DESC
+""", nativeQuery = true)
+    List<CreditFullView> findCreditsByUsername(@Param("username") String username);
 
-    @Query("""
-    SELECT new com.recaudo.api.domain.model.dto.response.CreditFullResponseDto(
-        c.id,
-        c.creditIntentionId,
-        c.quotaValue,
-        c.periodQuantity,
-        c.totalIntentionValue,
-        c.totalInterestValue,
-        c.totalCapitalValue,
-        c.totalFinancedValue,
-        ci.zoneId,
-        z.value,
-        ci.document,
-        ci.fullname,
-        ci.phoneNumber,
-        ci.creditLineId,
-        cl.name,
-        c.createdAt
-    )
-    FROM CreditEntity c
-    JOIN CreditIntentionEntity ci ON ci.id = c.creditIntentionId
-    LEFT JOIN ZonaEntity z ON z.id = ci.zoneId
-    LEFT JOIN CreditLineEntity cl ON cl.id = ci.creditLineId
-    WHERE c.deletedAt IS NULL AND z.id = :zona
-    ORDER BY c.createdAt DESC
-""")
-    List<CreditFullResponseDto> findCreditsByZona(@Param("zona") Long zona);
+    @Query(value = """
+    SELECT
+        c.id                    AS id,
+        c.credit_intention_id   AS creditIntentionId,
+        c.credit_status         AS creditStatus,
+        c.quota_value           AS quotaValue,
+        c.period_quantity       AS periodQuantity,
+        c.total_intention_value AS totalIntentionValue,
+        c.total_interest_value  AS totalInterestValue,
+        c.total_capital_value   AS totalCapitalValue,
+        c.total_financed_value  AS totalFinancedValue,
+        ci.zone_id              AS zoneId,
+        z.value                 AS zoneName,
+        ci.document             AS document,
+        ci.fullname             AS fullname,
+        ci.phone_number         AS phoneNumber,
+        ci.credit_line_id       AS creditLineId,
+        cl.name                 AS creditLineName,
+        c.created_at            AS createdAt
+    FROM credit c
+    JOIN credit_intention ci ON ci.id = c.credit_intention_id
+    LEFT JOIN zona z          ON z.id  = ci.zone_id
+    LEFT JOIN credit_line cl  ON cl.id = ci.credit_line_id
+    WHERE c.deleted_at IS NULL
+      AND z.id = :zona
+    ORDER BY c.id DESC
+""", nativeQuery = true)
+    List<CreditFullView> findCreditsByZona(@Param("zona") Long zona);
 
     @Query("""
         SELECT new com.recaudo.api.domain.model.dto.response.CreditResponseDto(

@@ -3,11 +3,8 @@ package com.recaudo.api.infrastructure.adapter;
 import com.recaudo.api.domain.gateway.CreditIGateway;
 import com.recaudo.api.domain.gateway.CreditIntentionStatusGateway;
 import com.recaudo.api.domain.mapper.CreditMapper;
-import com.recaudo.api.domain.model.dto.response.CreditCausadoProjection;
-import com.recaudo.api.domain.model.dto.response.CreditFullResponseDto;
-import com.recaudo.api.domain.model.dto.response.CreditIntentionStatusResponseDto;
-import com.recaudo.api.domain.model.dto.response.CreditProjection;
-import com.recaudo.api.domain.model.dto.response.CreditResponseDto;
+import com.recaudo.api.domain.model.constant.CreditStatus;
+import com.recaudo.api.domain.model.dto.response.*;
 import com.recaudo.api.domain.model.dto.rest_api.ChangeCreditStatusDto;
 import com.recaudo.api.domain.model.dto.rest_api.CreditRegisterDto;
 import com.recaudo.api.domain.model.entity.*;
@@ -75,7 +72,9 @@ public class CreditAdapter implements CreditIGateway {
     @Override
     public List<CreditFullResponseDto> getAll() {
         try {
-            return creditRepository.findAllCreditsFull();
+            return creditRepository.findAllCreditsFull().stream()
+                    .map(this::mapView)
+                    .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Error al obtener los créditos", e);
             throw new RuntimeException("Error al obtener los créditos", e);
@@ -85,7 +84,9 @@ public class CreditAdapter implements CreditIGateway {
     @Override
     public List<CreditFullResponseDto> getByUsername(String username) {
         try {
-            return creditRepository.findCreditsByUsername(username);
+            return creditRepository.findCreditsByUsername(username).stream()
+                    .map(this::mapView)
+                    .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Error al obtener los créditos", e);
             throw new RuntimeException("Error al obtener los créditos", e);
@@ -148,6 +149,7 @@ public class CreditAdapter implements CreditIGateway {
                     .stationery(dto.getStationery())
                     .userCreate(getUsernameToken())
                     .createdAt(LocalDateTime.now())
+                    .creditStatus(CreditStatus.ACTIVE)
                     .build();
 
             // Guardar el crédito
@@ -187,7 +189,6 @@ public class CreditAdapter implements CreditIGateway {
     private CreditIntentionStatusResponseDto updateStatusCreditIntention(ChangeCreditStatusDto dto) {
         return creditIntentionStatusGateway.updateStatus(dto);
     }
-
 
     @Transactional()
     private void insertToCreditAmortization(Long creditIntentionId, Long creditId) {
@@ -263,7 +264,9 @@ public class CreditAdapter implements CreditIGateway {
     @Override
     public List<CreditFullResponseDto> getByAsesorUsername(String username) {
         try {
-            return creditRepository.findCreditsByUsername(username);
+            return creditRepository.findCreditsByUsername(username).stream()
+                    .map(this::mapView)
+                    .collect(Collectors.toList());
         } catch (Exception e) {
             log.error("Error al obtener créditos del asesor: {}", username, e);
             throw new RuntimeException("Error al obtener créditos del asesor", e);
@@ -273,15 +276,15 @@ public class CreditAdapter implements CreditIGateway {
     @Override
     public List<CreditFullResponseDto> getByAsesorZone(Long personId) {
         Long zona = personRepository.getZonasIdByAsesor(personId).stream().findFirst().orElse(null);
-        if (zona != null) {
-            try {
-                return creditRepository.findCreditsByZona(zona);
-            } catch (Exception e) {
-                log.error("Error al obtener créditos de la zona ID: {}", zona, e);
-                throw new RuntimeException("Error al obtener créditos del asesor", e);
-            }
+        if (zona == null) return List.of();
+        try {
+            return creditRepository.findCreditsByZona(zona).stream()
+                    .map(this::mapView)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error al obtener créditos de la zona ID: {}", zona, e);
+            throw new RuntimeException("Error al obtener créditos del asesor", e);
         }
-        return List.of();
     }
 
     //SERVICIO PARA OBTENER CREDITOS CAUSADOS EL DIA DE HOY ASOCIADOS A UN ASESOR
@@ -306,4 +309,28 @@ public class CreditAdapter implements CreditIGateway {
                 ids
         );
     }
+
+    // ── helper privado (agrégalo una sola vez en la clase) ──────────────────────
+    private CreditFullResponseDto mapView(CreditFullView v) {
+        CreditFullResponseDto dto = new CreditFullResponseDto();
+        dto.setId(v.getId());
+        dto.setCreditIntentionId(v.getCreditIntentionId());
+        dto.setCreditStatus(v.getCreditStatus());
+        dto.setQuotaValue(v.getQuotaValue());
+        dto.setPeriodQuantity(v.getPeriodQuantity());
+        dto.setTotalIntentionValue(v.getTotalIntentionValue());
+        dto.setTotalInterestValue(v.getTotalInterestValue());
+        dto.setTotalCapitalValue(v.getTotalCapitalValue());
+        dto.setTotalFinancedValue(v.getTotalFinancedValue());
+        dto.setZoneId(v.getZoneId());
+        dto.setZoneName(v.getZoneName());
+        dto.setDocument(v.getDocument());
+        dto.setFullname(v.getFullname());
+        dto.setPhoneNumber(v.getPhoneNumber());
+        dto.setCreditLineId(v.getCreditLineId());
+        dto.setCreditLineName(v.getCreditLineName());
+        dto.setCreatedAt(v.getCreatedAt());
+        return dto;
+    }
+
 }

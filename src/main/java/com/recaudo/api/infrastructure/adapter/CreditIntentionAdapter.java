@@ -2,6 +2,7 @@
 
     import com.fasterxml.jackson.databind.node.JsonNodeFactory;
     import com.fasterxml.jackson.databind.node.ObjectNode;
+    import com.recaudo.api.domain.gateway.ContactInfoGateway;
     import com.recaudo.api.domain.gateway.CreditIntentionGateway;
     import com.recaudo.api.domain.gateway.CreditIntentionStatusGateway;
     import com.recaudo.api.domain.gateway.PersonGateway;
@@ -103,6 +104,9 @@
 
         @Autowired
         private GlotypesRepository glotypesRepository;
+
+        @Autowired
+        private ContactInfoGateway contactInfoGateway;
 
         @Autowired(required = false)
         CreditIntentionMapper creditIntentionMapper = Mappers.getMapper(CreditIntentionMapper.class);
@@ -520,16 +524,21 @@
 
 
         //ACTUALIZAR DATOS DEL CLIENTE EN UNA INTENCION DE CREDITO EXISTENTE
+        @Transactional
         @Override
         public CreditIntentionResponseDto updateDataClient(Long id, ClientDataCreditIntentionUpdateDto dto) {
 
             CreditIntentionEntity intention = creditIntentionRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Intención de crédito no encontrada"));
 
-            // ===============================
-            // SOLO DATOS DEL CLIENTE
-            // ===============================
+            Optional<PersonEntity> personOpt = personRepository.findByDocument(dto.getDocument());
 
+            String currentUser = getUsernameToken();
+            LocalDateTime now = LocalDateTime.now();
+
+            // ==========================================
+            // SOLO DATOS DEL CLIENTE EN LA INTENCION
+            // ==========================================
             intention.setZoneId(dto.getZoneId());
             intention.setDocumentType(dto.getDocumentType());
             intention.setDocument(dto.getDocument());
@@ -557,9 +566,39 @@
             intention.setReferido(dto.getReferido());
             intention.setCallSuccess(dto.getCallSuccess());
 
-            // Auditoría básica
-            intention.setEditedAt(LocalDateTime.now());
-            intention.setUserEdit(getUsernameToken());
+            // Auditoría Intención
+            intention.setEditedAt(now);
+            intention.setUserEdit(currentUser);
+
+            // ==========================================
+            // SI LA PERSONA EXISTE
+            // ==========================================
+            if (personOpt.isPresent()) {
+                PersonEntity person = personOpt.get();
+
+                person.setDocumentType(dto.getDocumentType());
+                // person.setDocument(dto.getDocument());
+
+                person.setFirstName(dto.getFirstname());
+                person.setMiddleName(dto.getMiddlename());
+                person.setLastName(dto.getLastname());
+                person.setMaternalLastname(dto.getMaternalLastname());
+                person.setFullName(dto.getFullname());
+
+                person.setGender(dto.getGender());
+                person.setOccupation(dto.getOccupation());
+                person.setDescription(dto.getDescription());
+
+                // Auditoría Persona
+                person.setEditedAt(now);
+                person.setUserEdit(currentUser);
+
+                // Guardar cambios de la persona
+                personRepository.save(person);
+
+                // Sincronizar las tablas de información de contacto asociadas a esta persona
+                contactInfoGateway.saveOrUpdateContactInfoFromIntention(person.getId(), dto);
+            }
 
             CreditIntentionEntity updated = creditIntentionRepository.save(intention);
 

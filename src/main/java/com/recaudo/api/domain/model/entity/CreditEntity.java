@@ -1,7 +1,10 @@
 package com.recaudo.api.domain.model.entity;
 
+import com.recaudo.api.domain.model.constant.CreditStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -89,4 +92,8 @@ public class CreditEntity implements Serializable {
 
     @Column(name = "stationery", precision = 10, scale = 2)
     private BigDecimal stationery;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "credit_status", length = 20)
+    private CreditStatus creditStatus = CreditStatus.ACTIVE;
 }

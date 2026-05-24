@@ -17,6 +17,7 @@ public class CreditRecaudoStatusDto {
     // Información del crédito
     private Long creditId;
     private Long personId;
+    private String personName;
     private BigDecimal quotaValue;
     private Integer periodQuantity;
     private String periodName;
