@@ -27,7 +27,7 @@ public class SimpleJobScheduler {
      * Cálculo diario de conceptos adicionales (mora, GMF, seguros, etc.).
      * Cron: se configura en application.yml (app.scheduler.cron)
      */
-    @Scheduled(cron = "${app.scheduler.cron}")
+    @Scheduled(cron = "${app.scheduler.cron.interes-mora}")
     public void otherConceptsDailyJob() {
         log.info("[Job] Iniciando cálculo de conceptos adicionales — {}",
                 LocalDateTime.now().format(FORMATTER));
@@ -41,7 +41,7 @@ public class SimpleJobScheduler {
     }
 
 
-    @Scheduled(cron = "${app.scheduler.debido-cobrar.cron}")
+//    @Scheduled(cron = "${app.scheduler.cron.debido-cobrar}")
     public void debidoCobrarDailyJob() {
         log.info("[Job][DebidoCobrar] Iniciando — {}",
                 LocalDateTime.now().format(FORMATTER));
