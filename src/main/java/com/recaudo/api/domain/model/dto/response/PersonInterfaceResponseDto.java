@@ -31,4 +31,6 @@ public interface PersonInterfaceResponseDto {
     String getCelular();
     String getTelefono();
     String getDescriptionD();
+    Integer getDiasMora();
+    String getRatingCredit();
 }

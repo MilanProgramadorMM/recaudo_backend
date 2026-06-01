@@ -146,7 +146,40 @@ public interface PersonRepository extends JpaRepository<PersonEntity, Long> {
                                         b.value  AS neighborhood,
                                         ci_dir.description AS description,
                                         GROUP_CONCAT(DISTINCT z.id ORDER BY z.id SEPARATOR '-') AS zid,
-                                	                GROUP_CONCAT(DISTINCT z.value ORDER BY z.value SEPARATOR ', ') AS zona
+                                	                GROUP_CONCAT(DISTINCT z.value ORDER BY z.value SEPARATOR ', ') AS zona,
+ COALESCE((
+        SELECT MAX(DATEDIFF(CURDATE(), a.expiration_date))
+        FROM credit c
+        JOIN credit_amortization a ON a.credit_id = c.id
+        WHERE c.person_id = p.id
+          AND c.deleted_at IS NULL
+          AND a.paid_full = 'N'
+          AND a.expiration_date < CURDATE()
+    ), 0) AS diasMora,
+    -- Calificación directa desde la tabla parametrizable
+    COALESCE((
+        SELECT crr.value
+        FROM credit_rating_range crr
+        WHERE crr.start <= COALESCE((
+                SELECT MAX(DATEDIFF(CURDATE(), a.expiration_date))
+                FROM credit c
+                JOIN credit_amortization a ON a.credit_id = c.id
+                WHERE c.person_id = p.id
+                  AND c.deleted_at IS NULL
+                  AND a.paid_full = 'N'
+                  AND a.expiration_date < CURDATE()
+            ), 0)
+          AND (crr.end IS NULL OR crr.end >= COALESCE((
+                SELECT MAX(DATEDIFF(CURDATE(), a.expiration_date))
+                FROM credit c
+                JOIN credit_amortization a ON a.credit_id = c.id
+                WHERE c.person_id = p.id
+                  AND c.deleted_at IS NULL
+                  AND a.paid_full = 'N'
+                  AND a.expiration_date < CURDATE()
+            ), 0))
+        LIMIT 1
+    ), 'N/A') AS ratingCredit
                                     FROM person p
                                     INNER JOIN type_person tp
                                         ON p.type_person_id = tp.id AND p.document = :document

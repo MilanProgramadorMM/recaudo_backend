@@ -244,7 +244,85 @@ public interface CreditIntentionRepository extends JpaRepository<CreditIntention
                 	        )
                 	        THEN 1
                 	        ELSE 0
-                	    END AS client_exists
+                	    END AS client_exists,
+                	-- Calificación del cliente basada en su peor crédito
+                         COALESCE((
+                             SELECT crr.value
+                             FROM credit_rating_range crr
+                             WHERE crr.start <= COALESCE((
+                                     SELECT MAX(DATEDIFF(CURDATE(), a.expiration_date))
+                                     FROM credit cr
+                                     JOIN credit_amortization a ON a.credit_id = cr.id
+                                     JOIN person per ON per.id = cr.person_id
+                                     WHERE per.document = ci.document
+                                       AND cr.deleted_at IS NULL
+                                       AND a.paid_full = 'N'
+                                       AND a.expiration_date < CURDATE()
+                                 ), 0)
+                               AND (crr.end IS NULL OR crr.end >= COALESCE((
+                                     SELECT MAX(DATEDIFF(CURDATE(), a.expiration_date))
+                                     FROM credit cr
+                                     JOIN credit_amortization a ON a.credit_id = cr.id
+                                     JOIN person per ON per.id = cr.person_id
+                                     WHERE per.document = ci.document
+                                       AND cr.deleted_at IS NULL
+                                       AND a.paid_full = 'N'
+                                       AND a.expiration_date < CURDATE()
+                                 ), 0))
+                             LIMIT 1
+                         ), 'A') AS ratingCredit,
+                         COALESCE((
+                                     SELECT crr.start
+                                     FROM credit_rating_range crr
+                                     WHERE crr.start <= COALESCE((
+                                             SELECT MAX(DATEDIFF(CURDATE(), a.expiration_date))
+                                             FROM credit cr
+                                             JOIN credit_amortization a ON a.credit_id = cr.id
+                                             JOIN person per ON per.id = cr.person_id
+                                             WHERE per.document = ci.document
+                                               AND cr.deleted_at IS NULL
+                                               AND a.paid_full = 'N'
+                                               AND a.expiration_date < CURDATE()
+                                         ), 0)
+                                       AND (crr.end IS NULL OR crr.end >= COALESCE((
+                                             SELECT MAX(DATEDIFF(CURDATE(), a.expiration_date))
+                                             FROM credit cr
+                                             JOIN credit_amortization a ON a.credit_id = cr.id
+                                             JOIN person per ON per.id = cr.person_id
+                                             WHERE per.document = ci.document
+                                               AND cr.deleted_at IS NULL
+                                               AND a.paid_full = 'N'
+                                               AND a.expiration_date < CURDATE()
+                                         ), 0))
+                                     LIMIT 1
+                                 ), 0) AS ratingStart,
+                                 
+                                 -- End del rango
+                                 (
+                                     SELECT crr.end
+                                     FROM credit_rating_range crr
+                                     WHERE crr.start <= COALESCE((
+                                             SELECT MAX(DATEDIFF(CURDATE(), a.expiration_date))
+                                             FROM credit cr
+                                             JOIN credit_amortization a ON a.credit_id = cr.id
+                                             JOIN person per ON per.id = cr.person_id
+                                             WHERE per.document = ci.document
+                                               AND cr.deleted_at IS NULL
+                                               AND a.paid_full = 'N'
+                                               AND a.expiration_date < CURDATE()
+                                         ), 0)
+                                       AND (crr.end IS NULL OR crr.end >= COALESCE((
+                                             SELECT MAX(DATEDIFF(CURDATE(), a.expiration_date))
+                                             FROM credit cr
+                                             JOIN credit_amortization a ON a.credit_id = cr.id
+                                             JOIN person per ON per.id = cr.person_id
+                                             WHERE per.document = ci.document
+                                               AND cr.deleted_at IS NULL
+                                               AND a.paid_full = 'N'
+                                               AND a.expiration_date < CURDATE()
+                                         ), 0))
+                                     LIMIT 1
+                                 ) AS ratingEnd
               FROM credit_intention ci
               LEFT JOIN credit_intention_status cis
               ON cis.credit_intention_id = ci.id

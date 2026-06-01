@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
-@NoArgsConstructor   // ← esto faltaba
+@NoArgsConstructor
 @AllArgsConstructor
 public class CreditFullResponseDto {
 
@@ -23,6 +23,7 @@ public class CreditFullResponseDto {
     private BigDecimal totalCapitalValue;
     private BigDecimal totalFinancedValue;
 
+
     private Long zoneId;
     private String zoneName;
     private String document;
@@ -34,5 +35,6 @@ public class CreditFullResponseDto {
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
+    private CreditRatingDTO ratingCredit;
 
 }

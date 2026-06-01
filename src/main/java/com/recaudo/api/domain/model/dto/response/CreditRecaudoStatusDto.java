@@ -36,6 +36,8 @@ public class CreditRecaudoStatusDto {
     private BigDecimal totalPagado;
     private BigDecimal totalPendiente;
     private BigDecimal porcentajePagado;
+    private Long zoneId;
+    private String zoneName;
     
     // Detalle de cuotas
     private List<QuotaDetailDto> cuotas;

@@ -54,9 +54,12 @@ public class NewRecaudoAdapter {
     private final DashboardRecaudoRepository dashboardRecaudoRepository;
     private final ZonaRepository zonaRepository;
     private final PersonRepository personRepository;
+    private final CreditIntentionRepository creditIntentionRepository;
 
     @Transactional
     public CreditRecaudoStatusDto getCreditPaymentStatus(Long creditId) {
+        String zoneName = "N/A";
+        Long zoneId = null;
         try {
             CreditEntity credit = creditRepository.findById(creditId)
                     .orElseThrow(() -> new RuntimeException("Crédito no encontrado: " + creditId));
@@ -64,6 +67,14 @@ public class NewRecaudoAdapter {
             String periodName = periodRepository.findById(credit.getPeriodId())
                     .map(PeriodEntity::getName)
                     .orElse("N/A");
+
+            Optional<CreditIntentionEntity> intention = creditIntentionRepository.findById(credit.getCreditIntentionId());
+            if (intention.isPresent() && intention.get().getZoneId() != null) {
+                zoneId = intention.get().getZoneId();
+                zoneName = zonaRepository.findById(zoneId)
+                        .map(z -> z.getValue())
+                        .orElse("N/A");
+            }
 
             Optional<PersonEntity> person = personRepository.findById(credit.getPersonId());
             List<CreditAmortizationNEntity> cuotas =
@@ -98,7 +109,8 @@ public class NewRecaudoAdapter {
             if (totalCredito.compareTo(BigDecimal.ZERO) > 0) {
                 porcentajePagado = totalPagado
                         .multiply(BigDecimal.valueOf(100))
-                        .divide(totalCredito, 2, RoundingMode.HALF_UP);
+                        .divide(totalCredito, 2, RoundingMode.HALF_UP)
+                        .abs();
             }
 
             BigDecimal tasaCredito = credit.getTaxValue()
@@ -137,6 +149,8 @@ public class NewRecaudoAdapter {
                     .porcentajePagado(porcentajePagado)
                     .cuotas(cuotasDetail)
                     .recaudos(recaudosDetail)
+                    .zoneId(zoneId)
+                    .zoneName(zoneName)
                     .build();
 
         } catch (Exception e) {

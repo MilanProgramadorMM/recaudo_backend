@@ -82,4 +82,8 @@ public interface IntentionCreditResponseAllDto {
     String getTokenExpiresAt();
     String getFechaInicio();
 
+    String getRatingCredit();
+    Integer getRatingStart();
+    Integer getRatingEnd();
+
 }

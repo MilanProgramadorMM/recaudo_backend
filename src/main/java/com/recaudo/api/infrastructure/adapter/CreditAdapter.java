@@ -64,6 +64,9 @@ public class CreditAdapter implements CreditIGateway {
     @Autowired
     private CreditAmortizationDetailRepository creditAmortizationDetailRepository;
 
+    @Autowired
+    private CreditRatingRangeRepository creditRatingRangeRepository;
+
 
     @Autowired(required = false)
     CreditMapper creditMapper = Mappers.getMapper(CreditMapper.class);
@@ -79,6 +82,14 @@ public class CreditAdapter implements CreditIGateway {
             log.error("Error al obtener los créditos", e);
             throw new RuntimeException("Error al obtener los créditos", e);
         }
+    }
+
+    private CreditRatingDTO calcularCalificacion(Integer diasMora) {
+        if (diasMora == null || diasMora < 0) diasMora = 0;
+
+        return creditRatingRangeRepository.findByDiasMora(diasMora)
+                .map(r -> new CreditRatingDTO(r.getRatingValue(), r.getStart(), r.getEnd()))
+                .orElse(new CreditRatingDTO("N/A", null, null));
     }
 
     @Override
@@ -330,6 +341,7 @@ public class CreditAdapter implements CreditIGateway {
         dto.setCreditLineId(v.getCreditLineId());
         dto.setCreditLineName(v.getCreditLineName());
         dto.setCreatedAt(v.getCreatedAt());
+        dto.setRatingCredit(calcularCalificacion(v.getDiasMora()));
         return dto;
     }
 

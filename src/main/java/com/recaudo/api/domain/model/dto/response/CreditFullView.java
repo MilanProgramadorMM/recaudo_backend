@@ -1,4 +1,3 @@
-// CreditFullView.java
 package com.recaudo.api.domain.model.dto.response;
 
 import java.math.BigDecimal;
@@ -7,7 +6,7 @@ import java.time.LocalDateTime;
 public interface CreditFullView {
     Long getId();
     Long getCreditIntentionId();
-    String getCreditStatus();        // String, no enum — native query lo devuelve así
+    String getCreditStatus();
     BigDecimal getQuotaValue();
     Integer getPeriodQuantity();
     BigDecimal getTotalIntentionValue();
@@ -22,4 +21,5 @@ public interface CreditFullView {
     Long getCreditLineId();
     String getCreditLineName();
     LocalDateTime getCreatedAt();
+    Integer getDiasMora();
 }

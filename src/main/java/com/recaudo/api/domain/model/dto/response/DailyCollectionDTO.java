@@ -16,6 +16,8 @@ public class DailyCollectionDTO {
 
     private DailyCollectionProjection data;
     private List<DailyCollectionRespaldoProjection> recaudos;
+    private CreditRatingDTO ratingCredit; // ← NUEVO
+
 
     public boolean tieneInterestMora() {
         return data.getInterestMora() != null

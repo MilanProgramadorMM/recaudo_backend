@@ -101,7 +101,7 @@ public class RecaudoAdapter {
 
             // Calcular totales financieros usando BigDecimal
             BigDecimal totalPagado = recaudos.stream()
-                    .filter(r -> r.getValuePaid().compareTo(BigDecimal.ZERO) < 0) //AJUSTAR
+                    .filter(r -> r.getValuePaid().compareTo(BigDecimal.ZERO) < 0)
                     .map(r -> r.getValuePaid().abs())
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -122,6 +122,7 @@ public class RecaudoAdapter {
                         .multiply(BigDecimal.valueOf(100))
                         .divide(totalCredito, 2, RoundingMode.HALF_UP);
             }
+            //porcentajePagado = porcentajePagado.negate();
 
             // Obtener tasa de interés del crédito
             BigDecimal tasaCredito = credit.getTaxValue()
