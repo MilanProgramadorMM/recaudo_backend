@@ -53,7 +53,7 @@ public class DailyCollectionService {
                 .map(b -> DailyCollectionDTO.builder()
                         .data(b)
                         .recaudos(mapa.getOrDefault(b.getCreditId(), List.of()))
-                        .ratingCredit(calcularCalificacion(b.getDiasMora()))
+                        .ratingCredit(calcularCalificacion(b.getPeriodosVencidos()))
                         .build()
                 )
                 .toList();

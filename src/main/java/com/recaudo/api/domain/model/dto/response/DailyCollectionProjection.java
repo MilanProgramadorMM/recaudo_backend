@@ -38,5 +38,7 @@ public interface DailyCollectionProjection {
     BigDecimal getInterestMora();
     BigDecimal getTotalMoraCredito();
     BigDecimal getSaldoPendienteCuota();
-    Integer getDiasMora();
+    //Integer getDiasMora();
+    Integer getPeriodosVencidos();
+
 }

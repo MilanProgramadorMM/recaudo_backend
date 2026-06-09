@@ -1,6 +1,7 @@
 package com.recaudo.api.infrastructure.adapter;
 
 import com.recaudo.api.domain.gateway.DashboardCardGateway;
+import com.recaudo.api.domain.model.dto.response.DashboardNoPagoSummaryDto;
 import com.recaudo.api.infrastructure.repository.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,8 +47,8 @@ public class DashboardCardAdapter implements DashboardCardGateway {
     }
 
     @Override
-    public BigDecimal getTotalNoPago(LocalDateTime fechaInicio, LocalDateTime fechaFin, Long zonaId) {
-        return repository.getTotalNoPago(fechaInicio,fechaFin,zonaId);
+    public DashboardNoPagoSummaryDto getTotalNoPago(LocalDateTime fechaInicio, LocalDateTime fechaFin, Long zonaId) {
+        return repository.getTotalNoPago(fechaInicio, fechaFin, zonaId);
     }
 
     @Override

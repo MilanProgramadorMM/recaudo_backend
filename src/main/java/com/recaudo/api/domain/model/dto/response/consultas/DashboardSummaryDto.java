@@ -20,4 +20,5 @@ public class DashboardSummaryDto {
     private BigDecimal totalNoPagado;
 
     private BigDecimal totalCartera;
+    private Long totalNoPagoCantidad;
 }

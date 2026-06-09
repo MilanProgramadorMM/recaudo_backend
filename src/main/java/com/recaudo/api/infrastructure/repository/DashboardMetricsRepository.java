@@ -1,5 +1,6 @@
 package com.recaudo.api.infrastructure.repository;
 
+import com.recaudo.api.domain.model.dto.response.DashboardNoPagoSummaryDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Repository;
@@ -90,57 +91,33 @@ public class DashboardMetricsRepository {
         );
     }
 
-    public BigDecimal getTotalNoPago(
+    public DashboardNoPagoSummaryDto getTotalNoPago(
             LocalDateTime fechaInicio,
             LocalDateTime fechaFin,
             Long zonaId
     ) {
-
+        // 1. Consulta simplificada apuntando a la nueva tabla analítica
         String sql = """
-        SELECT COALESCE(SUM(
-            CASE
-                WHEN cv.no_pago_count > 0
-                THEN ca.total_quota_value
-                ELSE 0
-            END
-        ), 0)
-        FROM credit_amortization ca
-        INNER JOIN credit c
-            ON c.id = ca.credit_id
-            AND c.deleted_at IS NULL
-        INNER JOIN credit_intention ci
-            ON ci.id = c.credit_intention_id
-        LEFT JOIN (
-            SELECT
-                cuota_id,
-                SUM(
-                    CASE
-                        WHEN payment_promise_date IS NOT NULL
-                        THEN 1
-                        ELSE 0
-                    END
-                ) AS no_pago_count
-            FROM collection_visit
-            WHERE visit_date >= :fechaInicio
-              AND visit_date < :fechaFin
-            GROUP BY cuota_id
-        ) cv
-            ON ca.id = cv.cuota_id
-        WHERE ci.zone_id = :zonaId
-          AND ca.expiration_date >= :fechaInicio
-          AND ca.expiration_date < :fechaFin
+    SELECT 
+        COALESCE(SUM(value), 0) AS total_value,
+        COALESCE(SUM(cant), 0)  AS total_cantidad
+    FROM dashboard_nopago
+    WHERE zona_id = :zonaId
+      AND created_at >= :fechaInicio
+      AND created_at < :fechaFin
     """;
 
-        MapSqlParameterSource params =
-                new MapSqlParameterSource()
-                        .addValue("zonaId", zonaId)
-                        .addValue("fechaInicio", fechaInicio)
-                        .addValue("fechaFin", fechaFin);
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("zonaId", zonaId)
+                .addValue("fechaInicio", fechaInicio)
+                .addValue("fechaFin", fechaFin);
 
-        return jdbcTemplate.queryForObject(
-                sql,
-                params,
-                BigDecimal.class
+        // 2. Ejecutamos mapeando el resultado directo al DTO
+        return jdbcTemplate.queryForObject(sql, params, (rs, rowNum) ->
+                new DashboardNoPagoSummaryDto(
+                        rs.getBigDecimal("total_value"),
+                        rs.getLong("total_cantidad")
+                )
         );
     }
 

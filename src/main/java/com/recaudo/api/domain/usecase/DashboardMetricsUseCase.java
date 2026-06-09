@@ -2,10 +2,7 @@ package com.recaudo.api.domain.usecase;
 
 import com.recaudo.api.config.UseCase;
 import com.recaudo.api.domain.gateway.DashboardCardGateway;
-import com.recaudo.api.domain.model.dto.response.DailyReportDetailDto;
-import com.recaudo.api.domain.model.dto.response.DailyReportSummaryDto;
-import com.recaudo.api.domain.model.dto.response.DashboardSummaryProjection;
-import com.recaudo.api.domain.model.dto.response.ZonaResponseDto;
+import com.recaudo.api.domain.model.dto.response.*;
 import com.recaudo.api.domain.model.dto.response.consultas.DashboardSummaryDto;
 import com.recaudo.api.domain.model.dto.rest_api.ZonaCreateDto;
 import com.recaudo.api.domain.model.entity.ZonaEntity;
@@ -53,7 +50,7 @@ public class DashboardMetricsUseCase {
                         zonaId
                 ).abs();
 
-        BigDecimal noPagado =
+        DashboardNoPagoSummaryDto noPagadoSummary =
                 gateway.getTotalNoPago(
                         inicio,
                         fin,
@@ -66,7 +63,8 @@ public class DashboardMetricsUseCase {
         return DashboardSummaryDto.builder()
                 .totalDebidoCobrar(debidoCobrar)
                 .totalRecaudado(recaudado)
-                .totalNoPagado(noPagado)
+                .totalNoPagado(noPagadoSummary.totalValue())
+                .totalNoPagoCantidad(noPagadoSummary.totalCantidad())
                 .totalCartera(cartera)
                 .build();
     }

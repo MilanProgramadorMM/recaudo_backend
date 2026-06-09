@@ -207,28 +207,49 @@ public class NewRecaudoAdapter {
                 .collect(Collectors.toMap(CreditAmortizationNEntity::getId, CreditAmortizationNEntity::getQuotaNumber, (a, b) -> a));
 
         Long conceptoMoraId = glotypes.get(GLO_MORA);
+        Long conceptoRecaMoraId = resolveGlotypeId(GLO_RECAMORA);
 
         Map<Long, BigDecimal> moraPagadaByQuotaId = cuotas.stream()
-                .filter(cuota -> {
-                    List<CreditOtherConceptDetailEntity> details =
-                            otherDetailsByQuotaNumber.getOrDefault(cuota.getQuotaNumber(), Collections.emptyList());
-                    return details.stream()
-                            .anyMatch(d -> conceptoMoraId.equals(d.getConceptId())
-                                    && d.getValue() != null
-                                    && d.getValue().compareTo(BigDecimal.ZERO) < 0);
-                })
+                .filter(cuota -> otherDetailsByQuotaNumber
+                        .getOrDefault(cuota.getQuotaNumber(), Collections.emptyList())
+                        .stream()
+                        .anyMatch(d -> conceptoRecaMoraId.equals(d.getConceptId())
+                                && d.getValue() != null
+                                && d.getValue().compareTo(BigDecimal.ZERO) < 0))
                 .collect(Collectors.toMap(
                         CreditAmortizationNEntity::getId,
-                        cuota -> otherDetailsByQuotaNumber
-                                .getOrDefault(cuota.getQuotaNumber(), Collections.emptyList())
-                                .stream()
-                                .filter(d -> conceptoMoraId.equals(d.getConceptId())
-                                        && d.getValue() != null
-                                        && d.getValue().compareTo(BigDecimal.ZERO) < 0)
-                                .map(CreditOtherConceptDetailEntity::getValue)
-                                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                                .abs()
+                        cuota -> {
+                            List<CreditOtherConceptDetailEntity> details =
+                                    otherDetailsByQuotaNumber.getOrDefault(
+                                            cuota.getQuotaNumber(), Collections.emptyList());
+
+                            // Suma mora causada (positivos con IMT)
+                            BigDecimal moraCausada = details.stream()
+                                    .filter(d -> conceptoMoraId.equals(d.getConceptId())
+                                            && d.getValue() != null
+                                            && d.getValue().compareTo(BigDecimal.ZERO) > 0)
+                                    .map(CreditOtherConceptDetailEntity::getValue)
+                                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                            // Suma mora pagada (negativos con RECAMORA)
+                            BigDecimal moraPagada = details.stream()
+                                    .filter(d -> conceptoRecaMoraId.equals(d.getConceptId())
+                                            && d.getValue() != null
+                                            && d.getValue().compareTo(BigDecimal.ZERO) < 0)
+                                    .map(CreditOtherConceptDetailEntity::getValue)
+                                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                                    .abs();
+
+                            // Lo pagado en mora = mínimo entre causada y pagada (no puede exceder la mora real)
+                            return moraPagada.min(moraCausada);
+                        }
                 ));
+
+        otherDetailsByQuotaNumber.forEach((qNum, detalles) ->
+                detalles.forEach(d ->
+                        log.info("  quotaNum={} conceptId={} value={}", qNum, d.getConceptId(), d.getValue())
+                )
+        );
         return OptimizationContext.builder()
                 .glotypes(glotypes)
                 .amorDetailsByQuota(amorDetailsByQuota)
@@ -309,12 +330,10 @@ public class NewRecaudoAdapter {
                 .getOrDefault(recaudo.getId(), java.util.Collections.emptyList());
 
         String conceptName = null;
-
         if (!detalles.isEmpty()) {
             ConceptEntity conceptEntity = conceptRepository.getById(
                     detalles.get(0).getTypeRecaudoId()
             );
-
             conceptName = conceptEntity.getName();
         }
 
@@ -322,15 +341,27 @@ public class NewRecaudoAdapter {
         Long idInteres = ctx.glotypes.get(GLO_INTERES);
         Long idSegVida = ctx.glotypes.get(GLO_SEG_VIDA);
         Long idSegCart = ctx.glotypes.get(GLO_SEG_CARTERA);
-        Long idMora    = ctx.glotypes.get(GLO_MORA);
 
         BigDecimal investmentValue    = sumDetailByConcept(detalles, idCapital);
         BigDecimal interestValue      = sumDetailByConcept(detalles, idInteres);
         BigDecimal lifeInsurance      = sumDetailByConcept(detalles, idSegVida);
         BigDecimal portfolioInsurance = sumDetailByConcept(detalles, idSegCart);
-        BigDecimal delayPenalty = (recaudo.getQuotaId() != null)
-                ? ctx.moraPagadaByQuotaId.getOrDefault(recaudo.getQuotaId().longValue(), BigDecimal.ZERO)
-                : BigDecimal.ZERO;
+
+        // ── Variable explícita para poder loguear ──────────────────────────────
+        BigDecimal delayPenalty = BigDecimal.ZERO;
+        if (recaudo.getQuotaId() != null) {
+            // remove() garantiza que solo el PRIMER recaudo de cada cuota recibe el valor
+            BigDecimal mora = ctx.moraPagadaByQuotaId.remove(recaudo.getQuotaId().longValue());
+            delayPenalty = mora != null ? mora : BigDecimal.ZERO;
+        }
+
+        // DEBUG TEMPORAL — eliminar después de confirmar
+        log.info("=== RECAUDO {} | quotaId={} | moraPagadaByQuotaId keys={} | delayPenalty={}",
+                recaudo.getId(),
+                recaudo.getQuotaId(),
+                ctx.moraPagadaByQuotaId.keySet(),
+                delayPenalty);
+
         return RecaudoDetailDto.builder()
                 .recaudoId(recaudo.getId().longValue())
                 .quotaNumber(quotaNumber)
@@ -347,7 +378,6 @@ public class NewRecaudoAdapter {
                         : null)
                 .build();
     }
-
     private BigDecimal sumDetailByConcept(List<RecaudoDetailEntity> detalles, Long conceptId) {
         if (detalles == null || conceptId == null) return BigDecimal.ZERO;
         return detalles.stream()

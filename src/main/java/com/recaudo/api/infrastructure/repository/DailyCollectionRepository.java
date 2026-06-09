@@ -2,6 +2,7 @@ package com.recaudo.api.infrastructure.repository;
 
 import com.recaudo.api.domain.model.dto.response.DailyCollectionProjection;
 import com.recaudo.api.domain.model.dto.response.DailyCollectionRespaldoProjection;
+import com.recaudo.api.domain.model.dto.response.QuotaPendingValueProjection;
 import com.recaudo.api.domain.model.entity.AmortizationEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface DailyCollectionRepository
@@ -164,20 +166,15 @@ public interface DailyCollectionRepository
                ), 0)
                -- IMT: Mora causada menos mora pagada
                + COALESCE((
-                   SELECT SUM(cod.value)
-                   FROM credit_other_concepts_detail cod
-                   JOIN credit_other_concepts coc ON coc.id = cod.credit_other_concepts_id
-                   JOIN glotypes g ON g.id = cod.concept_id AND g.code = 'IMT'
-                   WHERE coc.credit_id    = a.credit_id
-                     AND coc.quota_number = a.quota_number
-                     AND cod.deleted_at IS NULL
-               ), 0)
-               - COALESCE((
-                   SELECT ABS(SUM(nrd.value))
-                   FROM new_recaudo_detail nrd
-                   JOIN new_recaudo nr ON nr.id = nrd.recaudo_id AND nr.quota_id = a.id
-                   JOIN glotypes g ON g.id = nrd.concept_id AND g.code = 'IMT'
-               ), 0)
+                    SELECT SUM(cod.value)
+                    FROM credit_other_concepts_detail cod
+                    JOIN credit_other_concepts coc ON coc.id = cod.credit_other_concepts_id
+                    JOIN glotypes g ON g.id = cod.concept_id
+                    WHERE coc.credit_id    = a.credit_id
+                      AND coc.quota_number = a.quota_number
+                      AND g.code IN ('IMT', 'RECAMORA')
+                      AND cod.deleted_at IS NULL
+                ), 0)
            , 0)                                                        AS saldoPendienteCuota,
            (SELECT COUNT(1)
             FROM credit_amortization a6
@@ -206,7 +203,7 @@ public interface DailyCollectionRepository
                INNER JOIN glotypes g ON g.id = cod.concept_id
                WHERE coc.credit_id    = a.credit_id
                  AND coc.quota_number = a.quota_number
-                 AND g.code = 'IMT'
+                 AND g.code IN('IMT', 'RECAMORA')
                  AND cod.deleted_at IS NULL
            ), 0)                                                       AS interestMora,
            COALESCE((
@@ -215,15 +212,16 @@ public interface DailyCollectionRepository
                            INNER JOIN credit_other_concepts coc ON coc.id = cod.credit_other_concepts_id
                            INNER JOIN glotypes g ON g.id = cod.concept_id
                            WHERE coc.credit_id = c.id
-                             AND g.code = 'IMT'
+                             AND g.code IN('IMT', 'RECAMORA')
                              AND cod.deleted_at IS NULL
                        ), 0)                                                       AS totalMoraCredito,
-           CASE
-                           WHEN a.paid_full = 'N'
-                            AND a.expiration_date < CURDATE()
-                           THEN DATEDIFF(CURDATE(), a.expiration_date)
-                           ELSE 0
-                       END AS diasMora
+                           (
+                          SELECT COUNT(1)
+                          FROM credit_amortization a_venc
+                          WHERE a_venc.credit_id = c.id
+                            AND a_venc.paid_full = 'N'
+                            AND a_venc.expiration_date < CURDATE()
+                      ) AS periodosVencidos
        FROM credit_amortization a
        JOIN credit c               ON c.id  = a.credit_id
        JOIN credit_intention ci    ON ci.id = c.credit_intention_id
@@ -287,5 +285,28 @@ public interface DailyCollectionRepository
     List<DailyCollectionRespaldoProjection> finDailyCollectionRespaldo(
             @Param("creditIds") List<Long> creditIds
     );
+
+    @Query(value = """
+    SELECT
+        -- Reutilizamos tu lógica exacta de cálculo para la cuota específica
+        COALESCE(
+            COALESCE((SELECT SUM(cad.value) FROM credit_amortization_detail cad JOIN glotypes g ON g.id = cad.concept_id AND g.code = 'VIV' WHERE cad.amortization_id = a.id), 0)
+            - COALESCE((SELECT ABS(SUM(nrd.value)) FROM new_recaudo_detail nrd JOIN new_recaudo nr ON nr.id = nrd.recaudo_id AND nr.quota_id = a.id JOIN glotypes g ON g.id = nrd.concept_id AND g.code = 'VIV'), 0)
+            + COALESCE((SELECT SUM(cad.value) FROM credit_amortization_detail cad JOIN glotypes g ON g.id = cad.concept_id AND g.code = 'VIT' WHERE cad.amortization_id = a.id), 0)
+            - COALESCE((SELECT ABS(SUM(nrd.value)) FROM new_recaudo_detail nrd JOIN new_recaudo nr ON nr.id = nrd.recaudo_id AND nr.quota_id = a.id JOIN glotypes g ON g.id = nrd.concept_id AND g.code = 'VIT'), 0)
+            + COALESCE((SELECT SUM(cad.value) FROM credit_amortization_detail cad JOIN glotypes g ON g.id = cad.concept_id AND g.code = 'SV' WHERE cad.amortization_id = a.id), 0)
+            - COALESCE((SELECT ABS(SUM(nrd.value)) FROM new_recaudo_detail nrd JOIN new_recaudo nr ON nr.id = nrd.recaudo_id AND nr.quota_id = a.id JOIN glotypes g ON g.id = nrd.concept_id AND g.code = 'SV'), 0)
+            + COALESCE((SELECT SUM(cad.value) FROM credit_amortization_detail cad JOIN glotypes g ON g.id = cad.concept_id AND g.code = 'SC' WHERE cad.amortization_id = a.id), 0)
+            - COALESCE((SELECT ABS(SUM(nrd.value)) FROM new_recaudo_detail nrd JOIN new_recaudo nr ON nr.id = nrd.recaudo_id AND nr.quota_id = a.id JOIN glotypes g ON g.id = nrd.concept_id AND g.code = 'SC'), 0)
+            + COALESCE((SELECT SUM(cod.value) FROM credit_other_concepts_detail cod JOIN credit_other_concepts coc ON coc.id = cod.credit_other_concepts_id JOIN glotypes g ON g.id = cod.concept_id WHERE coc.credit_id = a.credit_id AND coc.quota_number = a.quota_number AND g.code IN ('IMT', 'RECAMORA') AND cod.deleted_at IS NULL), 0)
+        , 0) AS saldoPendienteCuota,
+        ci.zone_id AS zonaId
+    FROM credit_amortization a
+    JOIN credit c ON c.id = a.credit_id
+    JOIN credit_intention ci ON ci.id = c.credit_intention_id
+    WHERE a.id = :cuotaId
+    LIMIT 1
+""", nativeQuery = true)
+    Optional<QuotaPendingValueProjection> findPendingValueAndZoneByCuotaId(@Param("cuotaId") Long cuotaId);
 
 }

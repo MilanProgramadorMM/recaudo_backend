@@ -1,11 +1,18 @@
 package com.recaudo.api.infrastructure.adapter;
 
+import com.recaudo.api.domain.model.dto.response.QuotaPendingValueProjection;
 import com.recaudo.api.domain.model.entity.CollectionVisitEntity;
+import com.recaudo.api.domain.model.entity.DashboardNoPagoEntity;
 import com.recaudo.api.infrastructure.repository.CollectionVisitRepository;
+import com.recaudo.api.infrastructure.repository.DailyCollectionRepository;
+import com.recaudo.api.infrastructure.repository.DashboardNoPagoRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -16,6 +23,12 @@ public class CollectionVisitAdapter {
 
     @Autowired
     private CollectionVisitRepository collectionVisitRepository;
+
+    @Autowired
+    private DashboardNoPagoRepository dashboardNoPagoRepository;
+
+    @Autowired
+    private DailyCollectionRepository dailyCollectionRepository;
 
     @Transactional
     public void registerDailyVisitIfNotExists(
@@ -97,8 +110,24 @@ public class CollectionVisitAdapter {
         visit.setPaymentPromiseDate(promiseDate);
         visit.setObservation(observation);
         visit.setNoPago(false);
-
         collectionVisitRepository.save(visit);
+
+        QuotaPendingValueProjection quotaData = dailyCollectionRepository
+                .findPendingValueAndZoneByCuotaId(cuotaId)
+                .orElseThrow(() -> new EntityNotFoundException("No se encontró la información financiera para la cuota: " + cuotaId));
+
+        BigDecimal saldoPendiente = quotaData.getSaldoPendienteCuota();
+        Long zonaId = quotaData.getZonaId();
+
+        DashboardNoPagoEntity dashboardNoPagoEntity = DashboardNoPagoEntity.builder()
+                .value(saldoPendiente)
+                .zonaId(zonaId)
+                .userCreate(advisorUsername)
+                .createdAt(LocalDateTime.now())
+                .cant(1)
+                .build();
+
+        dashboardNoPagoRepository.save(dashboardNoPagoEntity);
 
         log.info("Promesa registrada para cuota {} para el día {}", cuotaId, promiseDate);
     }
