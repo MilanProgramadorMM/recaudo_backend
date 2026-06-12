@@ -25,71 +25,130 @@ public class ConsultasRepository {
 
     private NamedParameterJdbcTemplate jdbcTemplate;
 
-    public List<MovimientoPorZonaDTO> getMovimientosPorZona(Long concept, Long paymentType, LocalDateTime startDate, LocalDateTime endDate) {
+    public List<MovimientoPorZonaDTO> getMovimientosPorZona(
+            Long concept,
+            Long paymentType,
+            LocalDateTime startDate,
+            LocalDateTime endDate
+    ) {
+
         String baseSql = """
+        SELECT
+            z.id AS zone_id,
+            z.value AS zone_name,
+
+            SUM(r.value_paid) * -1 AS total_recaudado,
+
+            SUM(COALESCE(d.total_capital, 0)) * -1 AS total_capital,
+            SUM(COALESCE(d.total_interes, 0)) * -1 AS total_interes,
+            SUM(COALESCE(d.total_seguro_vida, 0)) * -1 AS total_seguro_vida,
+            SUM(COALESCE(d.total_seguro_cartera, 0)) * -1 AS total_seguro_cartera
+
+        FROM new_recaudo r
+
+        INNER JOIN credit c
+            ON c.id = r.credit_id
+
+        INNER JOIN credit_intention ci
+            ON ci.id = c.credit_intention_id
+
+        INNER JOIN zona z
+            ON z.id = ci.zone_id
+
+        LEFT JOIN (
             SELECT
-                z.id AS zone_id,
-                z.value AS zone_name,
-                SUM(r.value_paid) * -1 AS total_recaudado,
-                SUM(r.investment_value) * -1 AS total_capital,
-                SUM(r.interest_value) * -1 AS total_interes,
-                SUM(r.life_insurance) * -1 AS total_seguro_vida,
-                SUM(r.portfolio_insurance) * -1 AS total_seguro_cartera
-            FROM recaudo AS r
-            INNER JOIN credit AS c ON r.credit_id = c.id
-            INNER JOIN credit_intention AS ci ON c.credit_intention_id = ci.id
-            INNER JOIN zona AS z ON ci.zone_id = z.id
-            INNER JOIN concept AS c2 ON r.concept_id = c2.id
-            INNER JOIN glotypes AS g ON r.payment_type_id = g.id
+                recaudo_id,
+
+                SUM(CASE WHEN concept_id = 48 THEN value ELSE 0 END) AS total_capital,
+                SUM(CASE WHEN concept_id = 49 THEN value ELSE 0 END) AS total_interes,
+                SUM(CASE WHEN concept_id = 50 THEN value ELSE 0 END) AS total_seguro_vida,
+                SUM(CASE WHEN concept_id = 51 THEN value ELSE 0 END) AS total_seguro_cartera
+
+            FROM new_recaudo_detail
+            GROUP BY recaudo_id
+        ) d
+            ON d.recaudo_id = r.id
         """;
 
         QueryBuilder qb = new QueryBuilder(baseSql)
-            .addFilter("r.created_at >= :startDate", "startDate", startDate)
-            .addFilter("r.created_at < :endDate", "endDate", endDate)
-            .buildWhere()
-            .append("GROUP BY z.id, z.value")
-            .append("ORDER BY z.value");
+                .addFilter("r.created_at >= :startDate", "startDate", startDate)
+                .addFilter("r.created_at < :endDate", "endDate", endDate)
+                .buildWhere()
+                .append(" GROUP BY z.id, z.value ")
+                .append(" ORDER BY z.value ");
 
         return jdbcTemplate.query(
                 qb.getSql(),
                 qb.getParams(),
                 (rs, rowNum) -> new MovimientoPorZonaDTO(
-                    rs.getLong("zone_id"),
-                    rs.getString("zone_name"),
-                    rs.getBigDecimal("total_recaudado"),
-                    rs.getBigDecimal("total_capital"),
-                    rs.getBigDecimal("total_interes"),
-                    rs.getBigDecimal("total_seguro_vida"),
-                    rs.getBigDecimal("total_seguro_cartera")
+                        rs.getLong("zone_id"),
+                        rs.getString("zone_name"),
+                        rs.getBigDecimal("total_recaudado"),
+                        rs.getBigDecimal("total_capital"),
+                        rs.getBigDecimal("total_interes"),
+                        rs.getBigDecimal("total_seguro_vida"),
+                        rs.getBigDecimal("total_seguro_cartera")
                 )
         );
     }
 
     public List<DetalleMovimientoPorZonaDTO> getDetalleMovimientosPorZona(Long concept, Long paymentType, LocalDateTime startDate, LocalDateTime endDate, Long zona) {
         String baseSql = """
-            SELECT
-                z.value AS zona,
-                c2.concept_key,
-                c2.name AS concept,
-                g.name AS payment_type,
-                r.value_paid,
-                r.investment_value,
-                r.interest_value,
-                r.life_insurance,
-                r.portfolio_insurance,
-                r.created_at,
-                r.user_create
-            FROM recaudo AS r
-            INNER JOIN credit AS c ON r.credit_id = c.id
-            INNER JOIN credit_intention AS ci ON c.credit_intention_id = ci.id
-            INNER JOIN zona AS z ON ci.zone_id = z.id
-            INNER JOIN concept AS c2 ON r.concept_id = c2.id
-            INNER JOIN glotypes AS g ON r.payment_type_id = g.id
-        """;
+    SELECT
+        z.value AS zona,
+
+        tr.concept_key,
+        tr.name AS concept,
+
+        g.name AS payment_type,
+
+        r.value_paid,
+
+        COALESCE(d.investment_value,0) AS investment_value,
+        COALESCE(d.interest_value,0) AS interest_value,
+        COALESCE(d.life_insurance,0) AS life_insurance,
+        COALESCE(d.portfolio_insurance,0) AS portfolio_insurance,
+
+        r.created_at,
+        r.user_create
+
+    FROM new_recaudo r
+
+    INNER JOIN credit c
+        ON c.id = r.credit_id
+
+    INNER JOIN credit_intention ci
+        ON ci.id = c.credit_intention_id
+
+    INNER JOIN zona z
+        ON z.id = ci.zone_id
+
+    LEFT JOIN glotypes g
+        ON g.id = r.payment_type_id
+
+    LEFT JOIN (
+        SELECT
+            nd.recaudo_id,
+
+            MAX(nd.type_recaudo_id) AS type_recaudo_id,
+
+            SUM(CASE WHEN nd.concept_id = 48 THEN nd.value ELSE 0 END) AS investment_value,
+            SUM(CASE WHEN nd.concept_id = 49 THEN nd.value ELSE 0 END) AS interest_value,
+            SUM(CASE WHEN nd.concept_id = 50 THEN nd.value ELSE 0 END) AS life_insurance,
+            SUM(CASE WHEN nd.concept_id = 51 THEN nd.value ELSE 0 END) AS portfolio_insurance
+
+        FROM new_recaudo_detail nd
+        GROUP BY nd.recaudo_id
+    ) d
+        ON d.recaudo_id = r.id
+
+    LEFT JOIN concept tr
+        ON tr.id = d.type_recaudo_id
+    """;
 
         QueryBuilder qb = new QueryBuilder(baseSql)
                 .addFilter("ci.zone_id = :zona", "zona", zona)
-                .addFilter("r.concept_id = :concept", "concept", concept)
+                .addFilter("d.type_recaudo_id = :concept", "concept", concept)
                 .addFilter("r.payment_type_id = :paymentType", "paymentType", paymentType)
                 .addFilter("r.created_at >= :startDate", "startDate", startDate)
                 .addFilter("r.created_at < :endDate", "endDate", endDate)
@@ -153,46 +212,105 @@ public class ConsultasRepository {
         );
     }
 
-    public List<DetalleSaldoVencidoDTO> getDetalleSaldoVencidoPorZona(LocalDateTime startDate, LocalDateTime endDate, Long zona) {
+    public List<DetalleSaldoVencidoDTO> getDetalleSaldoVencidoPorZona(
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            Long zona) {
+
         String baseSql = """
-            WITH recaudos_agrupados AS (
-                SELECT
-                    cuota_id,
-                    SUM(value_paid) AS total_paid
-                FROM recaudo
-                WHERE value_paid < 0
-                GROUP BY cuota_id
-            )
-            SELECT
-                c.id AS credit_id,
-                ci.id AS credit_intention_id,
-                z.value AS zona,
-                p.fullname AS person_name,
-                COALESCE(SUM(a.quota_value), 0) + COALESCE(SUM(r.total_paid), 0) AS value,
-                MAX(DATEDIFF(CURDATE(), a.expiration_date)) AS dias_mora,
-                MAX(DATEDIFF(CURDATE(), a.expiration_date)) / 30 AS periodos_vencidos,
-                (COALESCE(SUM(a.quota_value), 0) + COALESCE(SUM(r.total_paid), 0)) * (c.tax_value / 100) * (MAX(DATEDIFF(CURDATE(), a.expiration_date)) / 30) AS interes_moratorio,
-                MAX(DATEDIFF(CURDATE(), a.expiration_date)) > 0 AS is_overdue
-            FROM zona z
-            LEFT JOIN credit_intention ci ON ci.zone_id = z.id
-            LEFT JOIN credit c ON c.credit_intention_id = ci.id
-            LEFT JOIN person p ON c.person_id = p.id
-            LEFT JOIN amortization a
-                ON a.credit_id = c.id
-                AND a.expiration_date < :endDate
-                AND a.paid_full = 'N'
-            LEFT JOIN recaudos_agrupados r
-                ON r.cuota_id = a.id
-        """;
+    WITH recaudos_agrupados AS (
+        SELECT
+            quota_id,
+            SUM(value_paid) AS total_paid
+        FROM new_recaudo
+        WHERE value_paid < 0
+        GROUP BY quota_id
+    ),
+    mora_agrupada AS (
+        SELECT
+            coc.credit_id,
+            coc.quota_number,
+            SUM(cocd.value) AS mora_real
+        FROM credit_other_concepts coc
+        INNER JOIN credit_other_concepts_detail cocd
+            ON cocd.credit_other_concepts_id = coc.id
+        GROUP BY
+            coc.credit_id,
+            coc.quota_number
+    )
+    SELECT
+        c.id AS credit_id,
+        ci.id AS credit_intention_id,
+        z.value AS zona,
+        p.fullname AS person_name,
+
+        COALESCE(SUM(a.total_quota_value), 0)
+            + COALESCE(SUM(r.total_paid), 0) AS value,
+
+        MAX(
+            DATEDIFF(CURDATE(), a.expiration_date)
+        ) AS dias_mora,
+
+        MAX(
+            DATEDIFF(CURDATE(), a.expiration_date)
+        ) / 30 AS periodos_vencidos,
+
+        COALESCE(
+            SUM(m.mora_real),
+            0
+        ) AS interes_moratorio,
+
+        MAX(
+            DATEDIFF(CURDATE(), a.expiration_date)
+        ) > 0 AS is_overdue
+
+    FROM zona z
+
+    LEFT JOIN credit_intention ci
+        ON ci.zone_id = z.id
+
+    LEFT JOIN credit c
+        ON c.credit_intention_id = ci.id
+
+    LEFT JOIN person p
+        ON c.person_id = p.id
+
+    LEFT JOIN credit_amortization a
+        ON a.credit_id = c.id
+        AND a.expiration_date < :endDate
+        AND a.paid_full = 'N'
+
+    LEFT JOIN recaudos_agrupados r
+        ON r.quota_id = a.id
+
+    LEFT JOIN mora_agrupada m
+        ON m.credit_id = a.credit_id
+        AND m.quota_number = a.quota_number
+    """;
 
         QueryBuilder qb = new QueryBuilder(baseSql)
                 .addFilter("", "startDate", startDate)
                 .addFilter("", "endDate", endDate)
                 .addFilter("z.id = :zone", "zone", zona)
                 .buildWhere()
-                .append("GROUP BY z.id, z.value, p.id, p.fullname")
-                .append("HAVING COALESCE(SUM(a.quota_value), 0) + COALESCE(SUM(r.total_paid), 0) > 0")
-                .append("ORDER BY MAX(DATEDIFF(CURDATE(), a.expiration_date)) DESC");
+                .append("""
+            GROUP BY
+                z.id,
+                z.value,
+                p.id,
+                p.fullname,
+                c.id,
+                ci.id
+            """)
+                .append("""
+            HAVING
+                COALESCE(SUM(a.total_quota_value), 0)
+                + COALESCE(SUM(r.total_paid), 0) > 0
+            """)
+                .append("""
+            ORDER BY
+                MAX(DATEDIFF(CURDATE(), a.expiration_date)) DESC
+            """);
 
         return jdbcTemplate.query(
                 qb.getSql(),
@@ -297,23 +415,67 @@ public class ConsultasRepository {
         );
     }
 
-    public List<DebidoCobrarDTO> getDebidoCobrarPorZona(LocalDateTime startDate, LocalDateTime endDate) {
+    public List<DebidoCobrarDTO> getDebidoCobrarPorZona(
+            LocalDateTime startDate,
+            LocalDateTime endDate) {
+
         String baseSql = """
-            SELECT  z.id, z.value AS zona,
-                    SUM(a.quota_value) AS quota_value,
-                    SUM(a.interest_value) AS interest_value,
-                    SUM(a.investment_value) AS investment_value
-            FROM amortization AS a
-            INNER JOIN credit AS c ON a.credit_id = c.id
-            INNER JOIN credit_intention AS ci ON c.credit_intention_id = ci.id
-            INNER JOIN zona AS z ON ci.zone_id = z.id
-        """;
+    SELECT
+        z.id,
+        z.value AS zona,
+
+        SUM(a.total_quota_value) AS quota_value,
+
+        SUM(
+            COALESCE(ad.interest_value, 0)
+        ) AS interest_value,
+
+        SUM(
+            COALESCE(ad.investment_value, 0)
+        ) AS investment_value
+
+    FROM credit_amortization a
+
+    LEFT JOIN (
+        SELECT
+            amortization_id,
+
+            SUM(
+                CASE
+                    WHEN concept_id = 48
+                    THEN value
+                    ELSE 0
+                END
+            ) AS investment_value,
+
+            SUM(
+                CASE
+                    WHEN concept_id = 49
+                    THEN value
+                    ELSE 0
+                END
+            ) AS interest_value
+
+        FROM credit_amortization_detail
+        GROUP BY amortization_id
+    ) ad
+        ON ad.amortization_id = a.id
+
+    INNER JOIN credit c
+        ON a.credit_id = c.id
+
+    INNER JOIN credit_intention ci
+        ON c.credit_intention_id = ci.id
+
+    INNER JOIN zona z
+        ON ci.zone_id = z.id
+    """;
 
         QueryBuilder qb = new QueryBuilder(baseSql)
                 .addFilter("a.expiration_date >= :startDate", "startDate", startDate)
                 .addFilter("a.expiration_date < :endDate", "endDate", endDate)
                 .buildWhere()
-                .append("GROUP BY z.id")
+                .append("GROUP BY z.id, z.value")
                 .append("ORDER BY z.value");
 
         return jdbcTemplate.query(
@@ -328,6 +490,7 @@ public class ConsultasRepository {
                 )
         );
     }
+
 
     public List<DebidoCobrarDTO> getDebidoCobrarPorZona(LocalDateTime startDate, LocalDateTime endDate, Long zona) {
         String baseSql = """
