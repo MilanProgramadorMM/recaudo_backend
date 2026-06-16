@@ -37,7 +37,7 @@ public interface DailyCollectionRepository
            cv.payment_promise_date                                     AS paymentPromiseDate,
            COALESCE(cv.no_pago, 0)                                     AS noPago,
            cv.no_pago_reason                                           AS noPagoReason,
-           p.cod                                                       AS periodo,
+           p.name                                                      AS periodo,
            c.period_quantity                                           AS plazoCredito,
            a.total_quota_value                                         AS valorCuota,
            (SELECT expiration_date
@@ -164,17 +164,6 @@ public interface DailyCollectionRepository
                    JOIN new_recaudo nr ON nr.id = nrd.recaudo_id AND nr.quota_id = a.id
                    JOIN glotypes g ON g.id = nrd.concept_id AND g.code = 'SC'
                ), 0)
-               -- IMT: Mora causada menos mora pagada
-               + COALESCE((
-                    SELECT SUM(cod.value)
-                    FROM credit_other_concepts_detail cod
-                    JOIN credit_other_concepts coc ON coc.id = cod.credit_other_concepts_id
-                    JOIN glotypes g ON g.id = cod.concept_id
-                    WHERE coc.credit_id    = a.credit_id
-                      AND coc.quota_number = a.quota_number
-                      AND g.code IN ('IMT', 'RECAMORA')
-                      AND cod.deleted_at IS NULL
-                ), 0)
            , 0)                                                        AS saldoPendienteCuota,
            (SELECT COUNT(1)
             FROM credit_amortization a6

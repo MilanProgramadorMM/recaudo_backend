@@ -29,7 +29,7 @@ public interface PersonInterfaceResponseDto {
     String getAdress();
     String getCorreo();
     String getCelular();
-    String getTelefono();
+    String getWhatsApp();
     String getDescriptionD();
     Integer getDiasMora();
     String getRatingCredit();

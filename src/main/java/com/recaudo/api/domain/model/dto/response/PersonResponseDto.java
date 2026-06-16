@@ -49,7 +49,7 @@ public class PersonResponseDto {
     private String details;
     private String correo;
     private String celular;
-    private String telefono;
+    private String whatsApp;
 
     // Información de crédito
     private Long creditId;

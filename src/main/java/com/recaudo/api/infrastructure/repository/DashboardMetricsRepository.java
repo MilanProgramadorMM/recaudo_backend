@@ -1,12 +1,15 @@
 package com.recaudo.api.infrastructure.repository;
 
+import com.recaudo.api.domain.model.dto.response.DashboardHistorialDto;
 import com.recaudo.api.domain.model.dto.response.DashboardNoPagoSummaryDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Repository;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Repository
 @RequiredArgsConstructor
@@ -122,4 +125,80 @@ public class DashboardMetricsRepository {
     }
 
 
+    // GRAFICOS /////////////////////////////////////////////////////////////////////////////////////////////////
+
+    public List<DashboardHistorialDto> getHistorialDebidoCobrar(
+            LocalDate fechaInicio, LocalDate fechaFin, Long zonaId) {
+
+        String sql = """
+        SELECT DATE(created_at) AS fecha, SUM(value) AS valor
+        FROM dashboard_debido_cobrar
+        WHERE zona_id = :zonaId
+          AND created_at >= :inicio
+          AND created_at < :fin
+        GROUP BY DATE(created_at)
+        ORDER BY fecha
+    """;
+
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("zonaId", zonaId)
+                .addValue("inicio", fechaInicio.atStartOfDay())
+                .addValue("fin", fechaFin.plusDays(1).atStartOfDay());
+
+        return jdbcTemplate.query(sql, params, (rs, row) ->
+                DashboardHistorialDto.builder()
+                        .fecha(rs.getDate("fecha").toLocalDate())
+                        .valor(rs.getBigDecimal("valor"))
+                        .build());
+    }
+
+    public List<DashboardHistorialDto> getHistorialRecaudado(
+            LocalDate fechaInicio, LocalDate fechaFin, Long zonaId) {
+
+        String sql = """
+        SELECT DATE(created_at) AS fecha, SUM(value) AS valor
+        FROM dashboard_recaudo
+        WHERE zona_id = :zonaId
+          AND created_at >= :inicio
+          AND created_at < :fin
+        GROUP BY DATE(created_at)
+        ORDER BY fecha
+    """;
+
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("zonaId", zonaId)
+                .addValue("inicio", fechaInicio.atStartOfDay())
+                .addValue("fin", fechaFin.plusDays(1).atStartOfDay());
+
+        return jdbcTemplate.query(sql, params, (rs, row) ->
+                DashboardHistorialDto.builder()
+                        .fecha(rs.getDate("fecha").toLocalDate())
+                        .valor(rs.getBigDecimal("valor"))
+                        .build());
+    }
+
+    public List<DashboardHistorialDto> getHistorialNoPago(
+            LocalDate fechaInicio, LocalDate fechaFin, Long zonaId) {
+
+        String sql = """
+        SELECT DATE(created_at) AS fecha, SUM(value) AS valor
+        FROM dashboard_nopago
+        WHERE zona_id = :zonaId
+          AND created_at >= :inicio
+          AND created_at < :fin
+        GROUP BY DATE(created_at)
+        ORDER BY fecha
+    """;
+
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("zonaId", zonaId)
+                .addValue("inicio", fechaInicio.atStartOfDay())
+                .addValue("fin", fechaFin.plusDays(1).atStartOfDay());
+
+        return jdbcTemplate.query(sql, params, (rs, row) ->
+                DashboardHistorialDto.builder()
+                        .fecha(rs.getDate("fecha").toLocalDate())
+                        .valor(rs.getBigDecimal("valor"))
+                        .build());
+    }
 }

@@ -99,7 +99,13 @@ public class NewRecaudoAdapter {
             // totalPending() incluye mora causada − mora pagada
             BigDecimal totalPendiente = cuotas.stream()
                     .filter(c -> "N".equals(c.getPaidFull()))
-                    .map(cuota -> resolveQuotaComponents(cuota, ctx).totalPending())
+                    .map(cuota -> {
+                        if (cuota.getQuotaNumber() == 8) {
+                            System.out.println("");
+                        }
+                        QuotaComponentsDto data = resolveQuotaComponents(cuota, ctx);
+                        return data.totalPending();
+                    })
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal totalCredito = Optional.ofNullable(credit.getTotalIntentionValue())
@@ -856,12 +862,12 @@ public class NewRecaudoAdapter {
     }
 
     private QuotaComponentsDto resolveQuotaComponents(CreditAmortizationNEntity cuota, OptimizationContext ctx) {
-
         Long idCapital = ctx != null ? ctx.glotypes.get(GLO_CAPITAL) : resolveGlotypeId(GLO_CAPITAL);
         Long idInteres = ctx != null ? ctx.glotypes.get(GLO_INTERES) : resolveGlotypeId(GLO_INTERES);
         Long idSegVida = ctx != null ? ctx.glotypes.get(GLO_SEG_VIDA) : resolveGlotypeId(GLO_SEG_VIDA);
         Long idSegCart = ctx != null ? ctx.glotypes.get(GLO_SEG_CARTERA) : resolveGlotypeId(GLO_SEG_CARTERA);
-        Long idMora    = ctx != null ? ctx.glotypes.get(GLO_MORA) : resolveGlotypeId(GLO_MORA);
+        Long idMora    = ctx != null ? ctx.glotypes.get(GLO_RECAMORA) : resolveGlotypeId(GLO_RECAMORA);
+        Long idMoraCausada    = ctx != null ? ctx.glotypes.get(GLO_MORA) : resolveGlotypeId(GLO_MORA);
 
         List<CreditAmortizationDetailEntity> amorDetails;
         if (ctx != null) {
@@ -879,12 +885,12 @@ public class NewRecaudoAdapter {
         if (ctx != null) {
             moraCausada = ctx.otherDetailsByQuotaNumber
                     .getOrDefault(cuota.getQuotaNumber(), java.util.Collections.emptyList()).stream()
-                    .filter(d -> Objects.equals(d.getConceptId(), idMora))
+                    .filter(d -> Objects.equals(d.getConceptId(), idMoraCausada))
                     .map(CreditOtherConceptDetailEntity::getValue)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
         } else {
             moraCausada = otherConceptDetailRepository
-                    .sumByCreditAndQuotaAndConcept(cuota.getCreditId(), cuota.getQuotaNumber(), idMora);
+                    .sumByCreditAndQuotaAndConcept(cuota.getCreditId(), cuota.getQuotaNumber(), idMoraCausada);
         }
 
         BigDecimal capitalPaid, interesPaid, segVidaPaid, segCartPaid, moraPaid;
@@ -895,12 +901,13 @@ public class NewRecaudoAdapter {
             interesPaid = sumDetailByConcept(recDetails, idInteres).abs();
             segVidaPaid = sumDetailByConcept(recDetails, idSegVida).abs();
             segCartPaid = sumDetailByConcept(recDetails, idSegCart).abs();
-            moraPaid    = sumDetailByConcept(recDetails, idMora).abs();
+            moraPaid    = ctx.moraPagadaByQuotaId.getOrDefault(cuota.getId(), BigDecimal.ZERO);
         } else {
             capitalPaid = recaudoDetailRepository.sumByQuotaIdAndConceptId(cuota.getId(), idCapital).abs();
             interesPaid = recaudoDetailRepository.sumByQuotaIdAndConceptId(cuota.getId(), idInteres).abs();
             segVidaPaid = recaudoDetailRepository.sumByQuotaIdAndConceptId(cuota.getId(), idSegVida).abs();
             segCartPaid = recaudoDetailRepository.sumByQuotaIdAndConceptId(cuota.getId(), idSegCart).abs();
+            // TODO debe obtenerse de credit_other_concepts/detail
             moraPaid    = recaudoDetailRepository.sumByQuotaIdAndConceptId(cuota.getId(), idMora).abs();
         }
 

@@ -105,4 +105,18 @@ public class DashboardMetricsUseCase {
         }
     }
 
+    ////////////////////GRAFICOS/////////////////
+    public List<DashboardHistorialDto> getHistorial(
+            String tipo, LocalDate fechaInicio, LocalDate fechaFin, Long zonaId) {
+
+        validateDates(fechaInicio, fechaFin);
+
+        return switch (tipo.toLowerCase()) {
+            case "recaudado"     -> gateway.getHistorialRecaudado(fechaInicio, fechaFin, zonaId);
+            case "nopago"        -> gateway.getHistorialNoPago(fechaInicio, fechaFin, zonaId);
+            case "debidocobrar"  -> gateway.getHistorialDebidoCobrar(fechaInicio, fechaFin, zonaId);
+            default -> throw new IllegalArgumentException("Tipo no válido: " + tipo);
+        };
+    }
+
 }

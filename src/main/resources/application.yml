@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8081
   address: 0.0.0.0
   servlet:
     context-path: /api
@@ -45,6 +45,9 @@ spring:
 
 #t0ll-p4y-js0n-w3b-70k3n-s3cr37-k3y
 app:
+  version: 1.0.0
+
+
   jwt-secret: dDBsbC1wNHktanMwbi13M2ItNzBrM24tczNjcjM3LWszeQ==
   jwt-expiration-milliseconds: 60000
   jwt-token-type: Bearer

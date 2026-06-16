@@ -52,8 +52,7 @@ public class QuotaComponentsDto {
         return safe(capitalPaid)
                 .add(safe(interestPaid))
                 .add(safe(lifeInsurancePaid))
-                .add(safe(portfolioInsurancePaid))
-                .add(safe(moraPaid));
+                .add(safe(portfolioInsurancePaid));
     }
 
     /**
@@ -69,7 +68,7 @@ public class QuotaComponentsDto {
      * Nunca negativo.
      */
     public BigDecimal totalPending() {
-        BigDecimal pending = totalDebt().subtract(totalPaid());
+        BigDecimal pending = totalQuotaValue.subtract(totalPaid());
         return pending.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : pending;
     }
 

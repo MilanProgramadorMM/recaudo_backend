@@ -40,7 +40,7 @@ public interface PersonRepository extends JpaRepository<PersonEntity, Long> {
                 	                pz.orden AS orden,
                 	                ci_cel.value AS celular,
                 	                ci_cor.value AS correo,
-                	                ci_tel.value AS telefono,
+                	                ci_tel.value AS whatsApp,
                 	                ci_dir.value AS adress,
                 	                pai.id   AS countryId,
                 	                pai.value AS country,
@@ -74,7 +74,7 @@ public interface PersonRepository extends JpaRepository<PersonEntity, Long> {
                 	               AND ci_cor.`type` = (SELECT id FROM glotypes WHERE code = 'COPRIN')
                 	            LEFT JOIN contact_info ci_tel
                 	                ON ci_tel.person = p.id
-                	               AND ci_tel.`type` = (SELECT id FROM glotypes WHERE code = 'TELPRIN')
+                	               AND ci_tel.`type` = (SELECT id FROM glotypes WHERE code = 'WHA')
                 	            LEFT JOIN contact_info ci_dir
                 	                ON ci_dir.person = p.id
                 	               AND ci_dir.`type` = (SELECT id FROM glotypes WHERE code = 'DIRPRIN')
@@ -134,7 +134,7 @@ public interface PersonRepository extends JpaRepository<PersonEntity, Long> {
                                         pz.orden AS orden,
                                         ci_cel.value AS celular,
                                         ci_cor.value AS correo,
-                                        ci_tel.value AS telefono,
+                                        ci_tel.value AS whatsApp,
                                         ci_dir.value AS adress,
                                         pai.id   AS countryId,
                                         pai.value AS country,
@@ -313,7 +313,7 @@ public interface PersonRepository extends JpaRepository<PersonEntity, Long> {
             z.value AS zona,
             ci_cel.value AS celular,
             ci_cor.value AS correo,
-            ci_tel.value AS telefono,
+            ci_tel.value AS whatsApp,
             ci_dir.value AS adress,
             pai.value AS countryId,
             d.value AS departentId,

@@ -121,8 +121,8 @@ public class ContactInfoAdapter implements ContactInfoGateway {
             saveContact(personId, "DIRPRIN", dto.getAdress(), dto);
         }
         // Teléfono principal
-        if (dto.getTelefono() != null && !dto.getTelefono().isBlank()) {
-            saveContact(personId, "TELPRIN", dto.getTelefono(), dto);
+        if (dto.getWhatsApp() != null && !dto.getWhatsApp().isBlank()) {
+            saveContact(personId, "WHA", dto.getWhatsApp(), dto);
         }
         // Celular principal
         if (dto.getCelular() != null && !dto.getCelular().isBlank()) {
@@ -274,13 +274,13 @@ public class ContactInfoAdapter implements ContactInfoGateway {
 
         // 2. Teléfono Principal (TELPRIN) - Usando el número de teléfono del DTO
         if (dto.getPhoneNumber() != null && !dto.getPhoneNumber().isBlank()) {
-            upsertContact(personId, "TELPRIN", dto.getPhoneNumber(), dto, false);
+            upsertContact(personId, "CEPRIN", dto.getPhoneNumber(), dto, false);
         }
 
         // 3. Celular / Whatsapp Principal (CEPRIN o WHA dependiendo de tus códigos de glotypes)
         // Asumiendo que guardas el whatsapp como celular principal o si tienes un código 'WHA'
         if (dto.getWhatsappNumber() != null && !dto.getWhatsappNumber().isBlank()) {
-            upsertContact(personId, "CEPRIN", dto.getWhatsappNumber(), dto, false);
+            upsertContact(personId, "WHA", dto.getWhatsappNumber(), dto, false);
         }
 
         // 4. Correo Principal (COPRIN)
@@ -317,7 +317,7 @@ public class ContactInfoAdapter implements ContactInfoGateway {
         if (isAddress) {
             entity.setCountry(dto.getCountryId());
             entity.setDepartment(dto.getDepartmentId());
-            entity.setCity(dto.getMunicipalityId()); // Mapea tu municipalityId al campo city de la entidad
+            entity.setCity(dto.getMunicipalityId());
             entity.setNeighborhood(dto.getNeighborhoodId());
             entity.setDescription(dto.getDescription());
         }

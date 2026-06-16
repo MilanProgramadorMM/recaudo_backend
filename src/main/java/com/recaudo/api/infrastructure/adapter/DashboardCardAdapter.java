@@ -1,6 +1,7 @@
 package com.recaudo.api.infrastructure.adapter;
 
 import com.recaudo.api.domain.gateway.DashboardCardGateway;
+import com.recaudo.api.domain.model.dto.response.DashboardHistorialDto;
 import com.recaudo.api.domain.model.dto.response.DashboardNoPagoSummaryDto;
 import com.recaudo.api.infrastructure.repository.*;
 import lombok.extern.slf4j.Slf4j;
@@ -8,7 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -54,5 +57,24 @@ public class DashboardCardAdapter implements DashboardCardGateway {
     @Override
     public BigDecimal getTotalRecaudadoZona(LocalDateTime fechaInicio, LocalDateTime fechaFin, Long zonaId) {
         return repository.getTotalRecaudado(fechaInicio,fechaFin,zonaId);
+    }
+
+    ////////////////////GRAFICOS/////////////////
+    @Override
+    public List<DashboardHistorialDto> getHistorialDebidoCobrar(
+            LocalDate inicio, LocalDate fin, Long zonaId) {
+        return repository.getHistorialDebidoCobrar(inicio, fin, zonaId);
+    }
+
+    @Override
+    public List<DashboardHistorialDto> getHistorialRecaudado(
+            LocalDate inicio, LocalDate fin, Long zonaId) {
+        return repository.getHistorialRecaudado(inicio, fin, zonaId);
+    }
+
+    @Override
+    public List<DashboardHistorialDto> getHistorialNoPago(
+            LocalDate inicio, LocalDate fin, Long zonaId) {
+        return repository.getHistorialNoPago(inicio, fin, zonaId);
     }
 }

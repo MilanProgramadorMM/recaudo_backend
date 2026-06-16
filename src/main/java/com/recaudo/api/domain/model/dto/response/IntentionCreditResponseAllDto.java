@@ -13,6 +13,7 @@ public interface IntentionCreditResponseAllDto {
 
     String getDocumentType();
     String getDocument();
+    String getDocumentName();
 
     String getFirstname();
     String getMiddlename();

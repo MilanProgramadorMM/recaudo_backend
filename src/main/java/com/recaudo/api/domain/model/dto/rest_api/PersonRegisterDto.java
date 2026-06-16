@@ -74,7 +74,7 @@ public class PersonRegisterDto {
     private String details;
     private String correo;
     private String celular;
-    private String telefono;
+    private String whatsApp;
 
     private String user_create;
 }

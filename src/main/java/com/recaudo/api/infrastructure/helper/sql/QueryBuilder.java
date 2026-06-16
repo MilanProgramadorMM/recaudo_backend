@@ -5,7 +5,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import java.util.ArrayList;
 import java.util.List;
 
-public class QueryBuilder {
+    public class QueryBuilder {
 
     private final StringBuilder sql;
     private final MapSqlParameterSource params;

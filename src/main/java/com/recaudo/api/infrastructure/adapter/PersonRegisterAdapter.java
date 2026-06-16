@@ -371,7 +371,7 @@ public class PersonRegisterAdapter implements PersonGateway {
 
         if (dto.getCorreo() != null) dto.setCorreo(dto.getCorreo().trim().toLowerCase());
         if (dto.getCelular() != null) dto.setCelular(dto.getCelular().trim());
-        if (dto.getTelefono() != null) dto.setTelefono(dto.getTelefono().trim());
+        if (dto.getWhatsApp() != null) dto.setWhatsApp(dto.getWhatsApp().trim());
     }
 
 

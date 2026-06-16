@@ -41,7 +41,7 @@ public class SimpleJobScheduler {
     }
 
 
-//    @Scheduled(cron = "${app.scheduler.cron.debido-cobrar}")
+    @Scheduled(cron = "${app.scheduler.cron.debido-cobrar}")
     public void debidoCobrarDailyJob() {
         log.info("[Job][DebidoCobrar] Iniciando — {}",
                 LocalDateTime.now().format(FORMATTER));
