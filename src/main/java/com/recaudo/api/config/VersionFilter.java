@@ -49,7 +49,7 @@ public class VersionFilter extends OncePerRequestFilter {
 
             response.getWriter().write("""
             {
-              "message":"Versión no enviada"
+              "message":"Debe actualizar la aplicacion"
             }
             """);
 

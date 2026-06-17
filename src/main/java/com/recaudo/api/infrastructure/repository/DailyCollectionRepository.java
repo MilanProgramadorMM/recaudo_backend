@@ -173,11 +173,16 @@ public interface DailyCollectionRepository
             WHERE ci2.person = c.person_id
               AND ci2.type = 10
               AND ci2.deleted_at IS NULL LIMIT 1)                      AS direccion,
-           (SELECT ci3.value
-            FROM contact_info ci3
-            WHERE ci3.person = c.person_id
-              AND ci3.type = 13
-              AND ci3.deleted_at IS NULL LIMIT 1)                      AS telefono,
+          (SELECT ci3.value
+           FROM contact_info ci3
+           WHERE ci3.person = c.person_id
+             AND ci3.type = 14
+             AND ci3.deleted_at IS NULL LIMIT 1)                      AS whatsapp,
+          (SELECT ci4.value
+           FROM contact_info ci4
+           WHERE ci4.person = c.person_id
+             AND ci4.type = 13
+             AND ci4.deleted_at IS NULL LIMIT 1)                      AS celular,
            (SELECT b.value
             FROM barrio b
             WHERE b.id = ci.neighborhood_id LIMIT 1)                  AS barrio,

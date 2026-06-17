@@ -31,7 +31,8 @@ public interface DailyCollectionProjection {
     BigDecimal getSaldoPendiente();
     Integer getTotalCuotas();
     String getDireccion();
-    String getTelefono();
+    String getWhatsapp();
+    String getCelular();
     String getBarrio();
     String getMunicipio();
     String getNombreDia();

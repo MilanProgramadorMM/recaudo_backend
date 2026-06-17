@@ -45,7 +45,7 @@ spring:
 
 #t0ll-p4y-js0n-w3b-70k3n-s3cr37-k3y
 app:
-  version: 1.0.0
+  version: 1.0.1
 
 
   jwt-secret: dDBsbC1wNHktanMwbi13M2ItNzBrM24tczNjcjM3LWszeQ==
