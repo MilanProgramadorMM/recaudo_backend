@@ -1,0 +1,91 @@
+name: Deploy Recaudo
+
+on:
+workflow_dispatch:
+inputs:
+backend_branch:
+description: "Rama Backend"
+required: true
+default: "main"
+
+```
+  frontend_branch:
+    description: "Rama Frontend"
+    required: true
+    default: "main"
+```
+
+jobs:
+deploy:
+runs-on: ubuntu-latest
+
+```
+steps:
+  - name: Ejecutar despliegue en Droplet
+    uses: appleboy/ssh-action@v1.2.0
+    with:
+      host: ${{ secrets.DROPLET_HOST }}
+      username: ${{ secrets.DROPLET_USER }}
+      key: ${{ secrets.DROPLET_SSH_KEY }}
+      script_stop: true
+      script: |
+
+        set -e
+
+        BACKEND_BRANCH="${{ github.event.inputs.backend_branch }}"
+        FRONTEND_BRANCH="${{ github.event.inputs.frontend_branch }}"
+
+        echo "========================================="
+        echo "DETENIENDO CONTENEDORES"
+        echo "========================================="
+
+        cd /home/recaudo_backend
+        docker compose down
+
+        echo "========================================="
+        echo "ACTUALIZANDO BACKEND"
+        echo "========================================="
+
+        cd /home/recaudo_backend
+
+        git fetch --all
+        git checkout "$BACKEND_BRANCH"
+        git reset --hard "origin/$BACKEND_BRANCH"
+        git clean -fd
+
+        echo "========================================="
+        echo "ACTUALIZANDO FRONTEND"
+        echo "========================================="
+
+        cd /home/recaudo_frontend
+
+        git fetch --all
+        git checkout "$FRONTEND_BRANCH"
+        git reset --hard "origin/$FRONTEND_BRANCH"
+        git clean -fd
+
+        echo "========================================="
+        echo "RECONSTRUYENDO IMÁGENES"
+        echo "========================================="
+
+        cd /home/recaudo_backend
+
+        docker compose build --no-cache
+
+        echo "========================================="
+        echo "INICIANDO CONTENEDORES"
+        echo "========================================="
+
+        docker compose up -d
+
+        echo "========================================="
+        echo "LIMPIANDO IMÁGENES ANTIGUAS"
+        echo "========================================="
+
+        docker image prune -af
+        docker builder prune -af
+
+        echo "========================================="
+        echo "DESPLIEGUE FINALIZADO"
+        echo "========================================="
+```
