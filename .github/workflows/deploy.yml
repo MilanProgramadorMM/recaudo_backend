@@ -1,14 +1,25 @@
-name: Test SSH Connection
+name: Deploy Recaudo
 
 on:
   workflow_dispatch:
+    inputs:
+      backend_branch:
+        description: "Backend branch"
+        required: true
+        default: "main"
+
+      frontend_branch:
+        description: "Frontend branch"
+        required: true
+        default: "main"
 
 jobs:
-  test-ssh:
+  deploy:
+    name: Deploy to Droplet
     runs-on: ubuntu-latest
 
     steps:
-      - name: Test SSH Connection
+      - name: ✅ Validate backend branch
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.DROPLET_HOST }}
@@ -16,30 +27,223 @@ jobs:
           key: ${{ secrets.DROPLET_SSH_KEY }}
           script_stop: true
           script: |
-            echo "=== SSH CONNECTION SUCCESSFUL ==="
+            set -e
 
-            echo "Hostname:"
-            hostname
+            cd /home/recaudo_backend
 
-            echo "Current user:"
-            whoami
+            git fetch --all --prune
 
-            echo "Current directory:"
-            pwd
+            git show-ref --verify --quiet \
+              "refs/remotes/origin/${{ github.event.inputs.backend_branch }}"
 
-            echo "Server date:"
-            date
+            echo "✅ Backend branch exists"
 
-            echo "Docker version:"
-            docker --version
+      - name: ✅ Validate frontend branch
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
 
-            echo "Docker Compose version:"
-            docker compose version
+            cd /home/recaudo_frontend
 
-            echo "Backend directory:"
-            ls -la /home/recaudo_backend
+            git fetch --all --prune
 
-            echo "Frontend directory:"
-            ls -la /home/recaudo_frontend
+            git show-ref --verify --quiet \
+              "refs/remotes/origin/${{ github.event.inputs.frontend_branch }}"
 
-            echo "=== TEST COMPLETED SUCCESSFULLY ==="
+            echo "✅ Frontend branch exists"
+
+      - name: 💾 Create rollback images
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+
+            echo "Creating rollback images..."
+
+            if docker image inspect recaudo-back >/dev/null 2>&1; then
+              docker tag recaudo-back recaudo-back:backup
+              echo "✅ Backend backup image created"
+            else
+              echo "⚠️ Backend image not found, skipping backup"
+            fi
+
+            if docker image inspect recaudo >/dev/null 2>&1; then
+              docker tag recaudo recaudo:backup
+              echo "✅ Frontend backup image created"
+            else
+              echo "⚠️ Frontend image not found, skipping backup"
+            fi
+
+      - name: 🛑 Stop containers
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+
+            cd /home/recaudo_backend
+
+            docker compose down
+
+            echo "✅ Containers stopped"
+
+      - name: 📥 Update backend repository
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+
+            cd /home/recaudo_backend
+
+            git fetch --all --prune
+            git checkout "${{ github.event.inputs.backend_branch }}"
+            git reset --hard "origin/${{ github.event.inputs.backend_branch }}"
+            git clean -fd
+
+            echo "✅ Backend updated"
+            git log -1 --oneline
+
+      - name: 📥 Update frontend repository
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+
+            cd /home/recaudo_frontend
+
+            git fetch --all --prune
+            git checkout "${{ github.event.inputs.frontend_branch }}"
+            git reset --hard "origin/${{ github.event.inputs.frontend_branch }}"
+            git clean -fd
+
+            echo "✅ Frontend updated"
+            git log -1 --oneline
+
+      - name: 🔍 Validate docker compose
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+
+            cd /home/recaudo_backend
+
+            docker compose config >/dev/null
+
+            echo "✅ Docker compose configuration valid"
+
+      - name: 🏗️ Build images
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script_stop: true
+          command_timeout: 45m
+          script: |
+            set -e
+
+            cd /home/recaudo_backend
+
+            docker compose build --no-cache
+
+            echo "✅ Images built successfully"
+
+      - name: 🚀 Start containers
+        id: deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script_stop: true
+          command_timeout: 15m
+          script: |
+            set -e
+
+            cd /home/recaudo_backend
+
+            docker compose up -d
+
+            sleep 15
+
+            docker compose ps
+
+            echo "✅ Containers started successfully"
+
+      - name: 🔍 Validate deployment
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+
+            docker ps --filter name=backend
+            docker ps --filter name=frontend
+
+            echo "✅ Deployment validation successful"
+
+      - name: 🧹 Cleanup builder cache
+        if: success()
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            docker builder prune -af
+
+            echo "✅ Builder cache cleaned"
+
+      - name: 🔄 Rollback deployment
+        if: failure()
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            set +e
+
+            echo "❌ Deployment failed"
+            echo "🔄 Starting rollback..."
+
+            docker tag recaudo-back:backup recaudo-back 2>/dev/null || true
+            docker tag recaudo:backup recaudo 2>/dev/null || true
+
+            cd /home/recaudo_backend
+
+            docker compose up -d
+
+            echo "✅ Rollback completed"
+
+      - name: 🎉 Deployment completed
+        if: success()
+        run: |
+          echo "✅ Deployment completed successfully"
