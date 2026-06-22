@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -36,5 +37,8 @@ public class DashboardNoPagoEntity {
 
         @Column(name = "cant")
         private Integer cant;
+
+        @Column(name = "create_nopago", updatable = false)
+        private LocalDate createNopago;
 
 }

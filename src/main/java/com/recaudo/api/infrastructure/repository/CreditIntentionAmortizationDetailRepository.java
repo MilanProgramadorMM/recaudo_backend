@@ -1,6 +1,7 @@
 package com.recaudo.api.infrastructure.repository;
 
 import com.recaudo.api.domain.model.entity.CreditIntentionAmortizationDetailEntity;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -36,4 +37,17 @@ public interface CreditIntentionAmortizationDetailRepository extends JpaReposito
     WHERE m.credit_intention_id = :creditIntentionId
 """, nativeQuery = true)
     void deleteByCreditIntentionId(@Param("creditIntentionId") Long creditIntentionId);
+
+    @Modifying
+    @Transactional
+    @Query(value = """
+        DELETE cad
+        FROM credit_intention_amortization_detail cad
+        INNER JOIN credit_intention_amortizationn ca
+            ON ca.id = cad.amortization_id
+        WHERE ca.credit_intention_id = :creditIntentionId
+        """, nativeQuery = true)
+    void deleteDetailsByCreditIntentionId(
+            @Param("creditIntentionId") Long creditIntentionId
+    );
 }

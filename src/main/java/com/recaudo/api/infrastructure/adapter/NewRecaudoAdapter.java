@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -285,6 +286,7 @@ public class NewRecaudoAdapter {
         }
 
         Long glotypeIdMora = ctx.glotypes.get(GLO_MORA);
+        Long glotypeIdRecamora = ctx.glotypes.get(GLO_RECAMORA);
 
         List<CreditOtherConceptDetailEntity> otherDetails = ctx.otherDetailsByQuotaNumber
                 .getOrDefault(cuota.getQuotaNumber(), java.util.Collections.emptyList());
@@ -298,8 +300,16 @@ public class NewRecaudoAdapter {
                 .filter(d -> Objects.equals(d.getConceptId(), glotypeIdMora))
                 .count();
 
+        BigDecimal moraPagadaTotal = otherDetails.stream()
+                .filter(d -> Objects.equals(d.getConceptId(), glotypeIdRecamora))
+                .map(CreditOtherConceptDetailEntity::getValue)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .abs();
+
         boolean moraSaldada = diasMoraRegistrados > 0
-                && moraAcumulada.compareTo(BigDecimal.ZERO) == 0;
+                && moraPagadaTotal.compareTo(moraAcumulada) >= 0;
+
+        BigDecimal moraPendiente = moraAcumulada.subtract(moraPagadaTotal).max(BigDecimal.ZERO);
 
         return QuotaDetailDto.builder()
                 .quotaId(cuota.getId())
@@ -321,6 +331,7 @@ public class NewRecaudoAdapter {
                 .hasInterestPayment("S".equals(cuota.getLiquidated()))
                 .isOverdue(overdue)
                 .moraAcumulada(moraAcumulada)
+                .moraPendiente(moraPendiente)
                 .moraSaldada(moraSaldada)
                 .diasMoraRegistrados(diasMoraRegistrados)
                 .build();
@@ -341,6 +352,9 @@ public class NewRecaudoAdapter {
                     detalles.get(0).getTypeRecaudoId()
             );
             conceptName = conceptEntity.getName();
+        }else {
+            // Sin detalles en new_recaudo_detail = pago exclusivo de mora
+            conceptName = "RECAUDO MORA";
         }
 
         Long idCapital = ctx.glotypes.get(GLO_CAPITAL);
@@ -359,6 +373,9 @@ public class NewRecaudoAdapter {
             // remove() garantiza que solo el PRIMER recaudo de cada cuota recibe el valor
             BigDecimal mora = ctx.moraPagadaByQuotaId.remove(recaudo.getQuotaId().longValue());
             delayPenalty = mora != null ? mora : BigDecimal.ZERO;
+        }else {
+            // Recaudo de mora pura: el valuePaid ES la mora
+            delayPenalty = recaudo.getValuePaid().abs();
         }
 
         // DEBUG TEMPORAL — eliminar después de confirmar
@@ -384,6 +401,7 @@ public class NewRecaudoAdapter {
                         : null)
                 .build();
     }
+
     private BigDecimal sumDetailByConcept(List<RecaudoDetailEntity> detalles, Long conceptId) {
         if (detalles == null || conceptId == null) return BigDecimal.ZERO;
         return detalles.stream()
@@ -430,7 +448,7 @@ public class NewRecaudoAdapter {
             throw new IllegalArgumentException("El valor pagado debe ser mayor a cero");
         }
 
-        validateClosingStatus(requestDto, personId, token);
+        //validateClosingStatus(requestDto, personId, token);
 
         String distributionType = Optional.ofNullable(requestDto.getDistributionType())
                 .orElse("NORMAL");
@@ -551,7 +569,7 @@ public class NewRecaudoAdapter {
             otherConceptsRepository.findByCreditIdAndQuotaNumber(
                     cuota.getCreditId(), cuota.getQuotaNumber()
             ).ifPresent(
-                    creditOtherConceptsEntity -> saveOtherConceptsDetail(
+                    creditOtherConceptsEntity -> saveOtherConceptsDetailIfNonZero(   // <-- cambia aquí
                             creditOtherConceptsEntity.getId(),
                             idMora,
                             dist.getMoraApplied().negate()
@@ -582,14 +600,8 @@ public class NewRecaudoAdapter {
                                 "No existe zona para el crédito: " + idcredit
                         ));
 
-        DashboardRecaudoEntity dashboardRecaudoEntity = DashboardRecaudoEntity.builder()
-                .value(requestDto.getValuePaid().negate())
-                .zonaId(dataZona.getId())
-                .userCreate(getUsernameToken())
-                .createdAt(LocalDateTime.now())
-                .build();
+        procesarRecaudo(dataZona.getId(), dataZona.getCode(), requestDto.getValuePaid());
 
-        dashboardRecaudoRepository.save(dashboardRecaudoEntity);
         log.info("Pago {} procesado. cuotasLiquidadas={}, saldoSobrante={}",
                 distributionType, cuotasLiquidadas, saldoRestante.max(BigDecimal.ZERO));
 
@@ -600,6 +612,37 @@ public class NewRecaudoAdapter {
                 .cuotasFaltantes(cuotasPendientes.size() - cuotasLiquidadas)
                 .saldoSobrante(saldoRestante.max(BigDecimal.ZERO))
                 .build();
+    }
+
+    //VALIDAR REGISTRO DIARIO DE RECAUDO PARA GUARDAR EN DASBOARD
+    public void procesarRecaudo(Long zonaId, String zonaCode, BigDecimal valorAbonado) {
+
+        LocalDate hoy = LocalDate.now();
+
+        DashboardRecaudoEntity record =
+                dashboardRecaudoRepository
+                        .findByZonaIdAndCreateRecaudo(zonaId, hoy)
+                        .orElse(null);
+
+        if (record == null) {
+
+            record = DashboardRecaudoEntity.builder()
+                    .zonaId(zonaId)
+                    .zonCode(zonaCode)
+                    .createRecaudo(hoy)
+                    .createdAt(LocalDateTime.now())
+                    .userCreate(getUsernameToken())
+                    .value(valorAbonado)
+                    //.cant(1L)
+                    .build();
+
+        } else {
+
+            record.setValue(record.getValue().add(valorAbonado));
+            //record.setCant(record.getCant() + 1L);
+        }
+
+        dashboardRecaudoRepository.save(record);
     }
 
     //  REVERSIONES
@@ -614,17 +657,14 @@ public class NewRecaudoAdapter {
                     .orElseThrow(() -> new RuntimeException("Concepto ND no encontrado"));
 
             ZonaProjection dataZona = zonaRepository.findZonaByCreditId(requestDto.getCreditId())
-                    .orElseThrow(() ->
-                            new ResourceNotFoundException(
-                                    "No existe zona para el crédito"
-                            ));
+                    .orElseThrow(() -> new ResourceNotFoundException("No existe zona para el crédito"));
 
             BigDecimal totalReversado = BigDecimal.ZERO;
             int recaudosReversados = 0;
             String username = getUsernameToken();
 
             Long conceptoMoraToSearchId = resolveGlotypeId(GLO_RECAMORA);
-            Long conceptoMoraId = resolveGlotypeId(GLO_REVEMORA);
+            Long conceptoMoraId         = resolveGlotypeId(GLO_REVEMORA);
 
             for (Long recaudoId : requestDto.getRecaudoIds()) {
 
@@ -639,6 +679,7 @@ public class NewRecaudoAdapter {
                 List<RecaudoDetailEntity> originalDetails =
                         recaudoDetailRepository.findByRecaudoId(recaudoId);
 
+                // ── Crear recaudo reversa ──────────────────────────────────────
                 NewRecaudoEntity reversa = NewRecaudoEntity.builder()
                         .creditId(original.getCreditId())
                         .quotaId(original.getQuotaId())
@@ -651,7 +692,7 @@ public class NewRecaudoAdapter {
                         .build();
                 reversa = recaudoRepository.save(reversa);
 
-                // Invierte todos los detalles del recaudo original,
+                // Invertir todos los detalles del recaudo original
                 for (RecaudoDetailEntity det : originalDetails) {
                     recaudoDetailRepository.save(RecaudoDetailEntity.builder()
                             .recaudoId(reversa.getId())
@@ -661,33 +702,51 @@ public class NewRecaudoAdapter {
                             .build());
                 }
 
+                // ── Manejo de mora ─────────────────────────────────────────────
                 if (original.getQuotaId() != null) {
 
-                    CreditAmortizationNEntity creditAmortizationNEntity = amortizationRepository.findById(original.getQuotaId())
-                            .orElseThrow(() -> new RuntimeException("No se encontró la cuota de amortización con ID: " + original.getQuotaId()));
+                    CreditAmortizationNEntity amortizacion = amortizationRepository
+                            .findById(original.getQuotaId())
+                            .orElseThrow(() -> new RuntimeException(
+                                    "No se encontró la cuota de amortización con ID: "
+                                            + original.getQuotaId()));
 
-                    CreditOtherConceptsEntity creditOtherConceptsEntity = otherConceptsRepository.findByCreditIdAndQuotaNumber(
-                            original.getCreditId(),
-                            creditAmortizationNEntity.getQuotaNumber()
-                    ).orElseThrow(() -> new RuntimeException("No se encontraron otros conceptos (mora) para el crédito "
-                            + original.getCreditId() + " y cuota número " + creditAmortizationNEntity.getQuotaNumber()));
+                    // FIX 1: mora es opcional — no lanzar excepción si no existe
+                    Optional<CreditOtherConceptsEntity> otherConceptOpt =
+                            otherConceptsRepository.findByCreditIdAndQuotaNumber(
+                                    original.getCreditId(),
+                                    amortizacion.getQuotaNumber()
+                            );
 
-                    List<CreditOtherConceptDetailEntity> creditOtherConceptDetailEntities = otherConceptDetailRepository
-                            .findByCreditOtherConceptId(creditOtherConceptsEntity.getId());
+                    otherConceptOpt.ifPresent(otherConcept -> {
 
-                    BigDecimal valorMoraPagadoEnRecaudo = creditOtherConceptDetailEntities.stream()
-                            .filter(d -> conceptoMoraToSearchId.equals(d.getConceptId()) && d.getValue() != null && d.getValue().compareTo(BigDecimal.ZERO) < 0)
-                            .map(CreditOtherConceptDetailEntity::getValue)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add);
-                    if (valorMoraPagadoEnRecaudo.compareTo(BigDecimal.ZERO) < 0) {
-                        otherConceptDetailRepository.save(CreditOtherConceptDetailEntity.builder()
-                                .creditOtherConceptId(creditOtherConceptsEntity.getId())
-                                .conceptId(conceptoMoraId)
-                                .value(valorMoraPagadoEnRecaudo.abs())
-                                .userCreate(username)
-                                .createdAt(LocalDateTime.now())
-                                .build());
-                    }
+                        // FIX 2: calcular mora a reversar desde los detalles
+                        //         del recaudo específico, no del histórico de la cuota
+                        BigDecimal moraAReversar = originalDetails.stream()
+                                .filter(d -> conceptoMoraToSearchId.equals(d.getConceptId())
+                                        && d.getValue() != null)
+                                .map(RecaudoDetailEntity::getValue)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                                .abs();
+
+                        if (moraAReversar.compareTo(BigDecimal.ZERO) > 0) {
+                            otherConceptDetailRepository.save(
+                                    CreditOtherConceptDetailEntity.builder()
+                                            .creditOtherConceptId(otherConcept.getId())
+                                            .conceptId(conceptoMoraId)
+                                            .value(moraAReversar)
+                                            .userCreate(username)
+                                            .createdAt(LocalDateTime.now())
+                                            .build()
+                            );
+
+                            log.info("Reversión de mora aplicada: recaudoId={}, cuota={}, mora={}",
+                                    recaudoId, amortizacion.getQuotaNumber(), moraAReversar);
+                        } else {
+                            log.info("Recaudo {} no tenía mora registrada, se omite reversión de mora",
+                                    recaudoId);
+                        }
+                    });
 
                     updateQuotaStatusAfterReversal(original.getQuotaId());
                 }
@@ -697,13 +756,7 @@ public class NewRecaudoAdapter {
             }
 
             if (totalReversado.compareTo(BigDecimal.ZERO) > 0) {
-                DashboardRecaudoEntity dashboardRecaudoEntity = DashboardRecaudoEntity.builder()
-                        .value(totalReversado)
-                        .zonaId(dataZona.getId())
-                        .userCreate(username)
-                        .createdAt(LocalDateTime.now())
-                        .build();
-                dashboardRecaudoRepository.save(dashboardRecaudoEntity);
+                procesarReversionRecaudo(dataZona.getId(), totalReversado);
             }
 
             log.info("Reversión completada: {} recaudos reversados, total={}",
@@ -719,6 +772,35 @@ public class NewRecaudoAdapter {
             log.error("Error al reversar recaudos: {}", e.getMessage(), e);
             throw new RuntimeException("Error al reversar recaudos: " + e.getMessage(), e);
         }
+    }
+    public void procesarReversionRecaudo(
+            Long zonaId,
+            BigDecimal valorReversado
+    ) {
+
+        LocalDate hoy = LocalDate.now();
+
+        DashboardRecaudoEntity record =
+                dashboardRecaudoRepository
+                        .findByZonaIdAndCreateRecaudo(zonaId, hoy)
+                        .orElse(null);
+
+        if (record == null) {
+
+            log.warn(
+                    "No existe dashboard de recaudo para zona {} y fecha {}",
+                    zonaId,
+                    hoy
+            );
+
+            return;
+        }
+
+        record.setValue(
+                record.getValue().subtract(valorReversado)
+        );
+
+        dashboardRecaudoRepository.save(record);
     }
 
     @Transactional
@@ -907,8 +989,11 @@ public class NewRecaudoAdapter {
             interesPaid = recaudoDetailRepository.sumByQuotaIdAndConceptId(cuota.getId(), idInteres).abs();
             segVidaPaid = recaudoDetailRepository.sumByQuotaIdAndConceptId(cuota.getId(), idSegVida).abs();
             segCartPaid = recaudoDetailRepository.sumByQuotaIdAndConceptId(cuota.getId(), idSegCart).abs();
-            // TODO debe obtenerse de credit_other_concepts/detail
-            moraPaid    = recaudoDetailRepository.sumByQuotaIdAndConceptId(cuota.getId(), idMora).abs();
+
+            BigDecimal moraPagadaAcumulada = otherConceptDetailRepository
+                    .sumByCreditAndQuotaAndConcept(cuota.getCreditId(), cuota.getQuotaNumber(), idMora)
+                    .abs();
+            moraPaid = moraPagadaAcumulada.min(moraCausada);
         }
 
         return QuotaComponentsDto.builder()
@@ -987,6 +1072,12 @@ public class NewRecaudoAdapter {
             Long recaudoId, Long typeRecaudoId, Long conceptId, BigDecimal value) {
         if (value != null && value.compareTo(BigDecimal.ZERO) != 0) {
             saveDetail(recaudoId, typeRecaudoId, conceptId, value);
+        }
+    }
+
+    private void saveOtherConceptsDetailIfNonZero(Long otherConceptId, Long conceptId, BigDecimal value) {
+        if (value != null && value.compareTo(BigDecimal.ZERO) != 0) {
+            saveOtherConceptsDetail(otherConceptId, conceptId, value);
         }
     }
 

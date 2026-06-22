@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -31,7 +32,12 @@ public class DashboardRecaudoEntity {
         @Column(name = "user_create", length = 255)
         private String userCreate;
 
+        @Column(name = "zona_code", length = 255)
+        private String zonCode;
+
         @Column(name = "created_at", updatable = false)
         private LocalDateTime createdAt;
 
+        @Column(name = "create_recaudo", updatable = false)
+        private LocalDate createRecaudo;
 }

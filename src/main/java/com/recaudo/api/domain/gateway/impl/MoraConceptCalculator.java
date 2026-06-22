@@ -90,8 +90,14 @@ public class MoraConceptCalculator implements OtherConceptCalculator {
             if (saldoPendiente.compareTo(BigDecimal.ZERO) <= 0) return Optional.empty();
 
             CreditEntity credit = creditRepository.findById(cuota.getCreditId())
-                    .orElseThrow(() -> new RuntimeException(
-                            "Crédito no encontrado: " + cuota.getCreditId()));
+                    .orElse(null);
+
+            if (credit != null) {
+                // Continuar con la lógica normal
+            } else {
+                // Manejar el caso donde no se encontró sin lanzar excepción
+                log.warn("Crédito no encontrado: {}", cuota.getCreditId());
+            }
 
             BigDecimal tasaNominal = credit.getTaxValue()
                     .divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP);

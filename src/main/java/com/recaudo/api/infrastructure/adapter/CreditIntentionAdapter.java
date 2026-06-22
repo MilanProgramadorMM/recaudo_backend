@@ -76,6 +76,9 @@
         private CreditIntentionAmortizationRepository creditIntentionAmortizationRepository;
 
         @Autowired
+        private CreditIntentionAmortizationNRepository creditIntentionAmortizationDetailRepository;
+
+        @Autowired
         CreditLineServiceQuotaRepository creditLineServiceQuotaRepository;
 
         @Autowired
@@ -83,9 +86,6 @@
 
         @Autowired
         CreditIntentionStatusGateway creditIntentionStatusGateway;
-
-        @Autowired
-        private  CreditIntentionStatusRepository creditIntentionStatusRepository;
 
         @Autowired
         private ClosingAdapter closingAdapter;
@@ -157,7 +157,7 @@
         @Override
         public CreditIntentionResponseDto create(CreditIntentionDto creditIntentionDto, String token, Long PersonId) {
 
-            this.validateClosingStatus(token,PersonId);
+            //this.validateClosingStatus(token,PersonId);
             validacionIntencionCredito(creditIntentionDto);
             CreditIntentionEntity entity = creditIntentionMapper.dtoToEntity(creditIntentionDto);
 
@@ -692,7 +692,7 @@
             }
 
             // Eliminar amortización vieja (detalle primero, luego maestro)
-            amortizationDetailRepository.deleteByCreditIntentionId(id);  // borra todos los detalles
+            amortizationDetailRepository.deleteDetailsByCreditIntentionId(id);  // borra todos los detalles
             creditIntentionamortizationRepository.deleteByCreditIntentionId(id); // borra maestros
 
             log.info("Amortización anterior eliminada para intención ID: {}", id);
@@ -782,6 +782,9 @@
 
             CalculateCreditIntentionDto calculateDto =
                     buildCalculateDtoForUpdate(intention, dto, period);
+
+            amortizationDetailRepository
+                    .deleteDetailsByCreditIntentionId(id);
 
             creditIntentionAmortizationRepository
                     .deleteByCreditIntentionId(id);

@@ -31,6 +31,7 @@ public class QuotaDetailDto {
     private BigDecimal moraAcumulada;
 
     private boolean moraSaldada;
+    private BigDecimal moraPendiente;
 
     private long diasMoraRegistrados;
     

@@ -20,7 +20,7 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "credit_intention_amortization")
+@Table(name = "credit_intention_amortizationn")
 public class CreditIntentionAmortizationEntity implements Serializable {
 
     @Id

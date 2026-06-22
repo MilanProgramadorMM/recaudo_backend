@@ -118,18 +118,49 @@ public class CollectionVisitAdapter {
 
         BigDecimal saldoPendiente = quotaData.getSaldoPendienteCuota();
         Long zonaId = quotaData.getZonaId();
-
-        DashboardNoPagoEntity dashboardNoPagoEntity = DashboardNoPagoEntity.builder()
-                .value(saldoPendiente)
-                .zonaId(zonaId)
-                .userCreate(advisorUsername)
-                .createdAt(LocalDateTime.now())
-                .cant(1)
-                .build();
-
-        dashboardNoPagoRepository.save(dashboardNoPagoEntity);
+        procesarNoPago(zonaId,saldoPendiente,advisorUsername
+        );
 
         log.info("Promesa registrada para cuota {} para el día {}", cuotaId, promiseDate);
+    }
+
+    private void procesarNoPago(
+            Long zonaId,
+            BigDecimal saldoPendiente,
+            String advisorUsername
+    ) {
+
+        LocalDate hoy = LocalDate.now();
+
+        DashboardNoPagoEntity record =
+                dashboardNoPagoRepository
+                        .findByZonaIdAndCreateNopago(zonaId, hoy)
+                        .orElse(null);
+
+        if (record == null) {
+
+            record = DashboardNoPagoEntity.builder()
+                    .zonaId(zonaId)
+                    .createNopago(hoy)
+                    .createdAt(LocalDateTime.now())
+                    .userCreate(advisorUsername)
+                    .createNopago(LocalDate.now())
+                    .value(saldoPendiente)
+                    .cant(1)
+                    .build();
+
+        } else {
+
+            record.setValue(
+                    record.getValue().add(saldoPendiente)
+            );
+
+            record.setCant(
+                    record.getCant() + 1
+            );
+        }
+
+        dashboardNoPagoRepository.save(record);
     }
 
 
