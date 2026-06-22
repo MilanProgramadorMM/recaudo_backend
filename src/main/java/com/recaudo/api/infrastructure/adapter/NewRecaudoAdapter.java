@@ -448,7 +448,7 @@ public class NewRecaudoAdapter {
             throw new IllegalArgumentException("El valor pagado debe ser mayor a cero");
         }
 
-        //validateClosingStatus(requestDto, personId, token);
+        validateClosingStatus(requestDto, personId, token);
 
         String distributionType = Optional.ofNullable(requestDto.getDistributionType())
                 .orElse("NORMAL");
