@@ -6,17 +6,21 @@ import com.recaudo.api.domain.model.entity.CreditAmortizationNEntity;
 import com.recaudo.api.domain.model.entity.CreditEntity;
 import com.recaudo.api.domain.model.entity.GlotypesEntity;
 import com.recaudo.api.infrastructure.repository.*;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Calculador de interés moratorio (IMT).
@@ -40,6 +44,14 @@ import java.util.Optional;
 @Component
 @RequiredArgsConstructor
 public class MoraConceptCalculator implements OtherConceptCalculator {
+
+    private Long cachedIdCapital;
+    private Long cachedIdInteres;
+    private Long cachedIdSegVida;
+    private Long cachedIdSegCart;
+    private Long cachedIdMora;
+    private Set<LocalDate> festivosCache;
+
 
     private static final String KEY_TIPCON      = "TIPCON";
     private static final String GLO_CAPITAL     = "VIV";
@@ -69,6 +81,46 @@ public class MoraConceptCalculator implements OtherConceptCalculator {
         return amortizationRepository.findOverdueQuotas(today);
     }
 
+    @Override
+    public List<CreditAmortizationNEntity> fetchEligibleQuotasByCreditId(LocalDate today, Long creditId) {
+        return amortizationRepository.findOverdueQuotasByCreditId(today, creditId);
+    }
+
+    @PostConstruct
+    void initCache() {
+        festivosCache = holidaysRepository.findAllActive().stream()
+                .map(java.sql.Date::toLocalDate)
+                .collect(Collectors.toSet());
+
+        log.info("[MoraConceptCalculator] Festivos cargados en cache: {} registros", festivosCache.size());
+    }
+
+    private Long getIdCapital() {
+        if (cachedIdCapital == null) cachedIdCapital = resolveGlotypeId(GLO_CAPITAL);
+        return cachedIdCapital;
+    }
+
+    private Long getIdInteres() {
+        if (cachedIdInteres == null) cachedIdInteres = resolveGlotypeId(GLO_INTERES);
+        return cachedIdInteres;
+    }
+
+    private Long getIdSegVida() {
+        if (cachedIdSegVida == null) cachedIdSegVida = resolveGlotypeId(GLO_SEG_VIDA);
+        return cachedIdSegVida;
+    }
+
+    private Long getIdSegCartera() {
+        if (cachedIdSegCart == null) cachedIdSegCart = resolveGlotypeId(GLO_SEG_CARTERA);
+        return cachedIdSegCart;
+    }
+
+    private Long getIdMora() {
+        if (cachedIdMora == null) cachedIdMora = resolveGlotypeId(GLO_SEG_VIDA);
+        return cachedIdMora;
+    }
+
+
     /**
      * Determina cuántos días usar y delega al método de cálculo puro.
      *
@@ -78,56 +130,37 @@ public class MoraConceptCalculator implements OtherConceptCalculator {
     @Override
     public Optional<BigDecimal> compute(CreditAmortizationNEntity cuota, LocalDate today) {
         try {
-            if (esNoHabil(today)) {
-                return Optional.empty();
-            }
+            if (esNoHabil(today)) return Optional.empty();
 
             long diasTotalesVencidos = ChronoUnit.DAYS.between(cuota.getExpirationDate(), today);
+            if (diasTotalesVencidos < 0) return Optional.empty();
 
-            if (diasTotalesVencidos < 0) return Optional.empty(); // cuota futura, no aplica
-
-            BigDecimal saldoPendiente = resolverSaldoPendiente(cuota);
-            if (saldoPendiente.compareTo(BigDecimal.ZERO) <= 0) return Optional.empty();
-
+            // ✅ FIX: lanzar excepción si no existe, no retornar null
             CreditEntity credit = creditRepository.findById(cuota.getCreditId())
-                    .orElse(null);
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Crédito no encontrado: " + cuota.getCreditId()));
 
-            if (credit != null) {
-                // Continuar con la lógica normal
-            } else {
-                // Manejar el caso donde no se encontró sin lanzar excepción
-                log.warn("Crédito no encontrado: {}", cuota.getCreditId());
+            if (credit.getTaxValue() == null) {
+                log.warn("[{}] cuotaId={} | taxValue es null, se omite.", getLabel(), cuota.getId());
+                return Optional.empty();
             }
 
             BigDecimal tasaNominal = credit.getTaxValue()
                     .divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP);
 
-            long diasAUsar;
-            if (tieneMoraPrevia(cuota)) {
-                diasAUsar = 1L;
-            } else {
-                diasAUsar = contarDiasHabiles(cuota.getExpirationDate(), today);
-            }
+            BigDecimal saldoPendiente = resolverSaldoPendiente(cuota);
+            if (saldoPendiente.compareTo(BigDecimal.ZERO) <= 0) return Optional.empty();
 
-            if (diasAUsar <= 0) {
-                log.debug("[{}] cuotaId={} | sin días hábiles que calcular, se omite.",
-                        getLabel(), cuota.getId());
-                return Optional.empty();
-            }
+            long diasAUsar = tieneMoraPrevia(cuota) ? 1L
+                    : contarDiasHabiles(cuota.getExpirationDate(), today);
+
+            if (diasAUsar <= 0) return Optional.empty();
 
             BigDecimal mora = computeMora(saldoPendiente, tasaNominal, diasAUsar);
-
-            log.debug("[{}] cuotaId={} | saldo={} | diasUsados={} (totalVencidos={}) | mora={}",
-                    getLabel(), cuota.getId(), saldoPendiente,
-                    diasAUsar, diasTotalesVencidos, mora);
-
-            return mora.compareTo(BigDecimal.ZERO) > 0
-                    ? Optional.of(mora)
-                    : Optional.empty();
+            return mora.compareTo(BigDecimal.ZERO) > 0 ? Optional.of(mora) : Optional.empty();
 
         } catch (Exception e) {
-            log.error("[{}] Error calculando cuota={}: {}",
-                    getLabel(), cuota.getId(), e.getMessage(), e);
+            log.error("[{}] Error calculando cuota={}: {}", getLabel(), cuota.getId(), e.getMessage(), e);
             return Optional.empty();
         }
     }
@@ -180,7 +213,8 @@ public class MoraConceptCalculator implements OtherConceptCalculator {
      * ya que el detalle no referencia directamente a credit_amortization.
      */
     private boolean tieneMoraPrevia(CreditAmortizationNEntity cuota) {
-        Long idMora = resolveGlotypeId(GLO_MORA);
+        //Long idMora = resolveGlotypeId(GLO_MORA);
+        Long idMora = getIdMora();
         return otherConceptDetailRepository.existsByCreditAndQuotaAndConcept(
                 cuota.getCreditId(), cuota.getQuotaNumber(), idMora);
     }
@@ -193,10 +227,15 @@ public class MoraConceptCalculator implements OtherConceptCalculator {
      * el saldo sobre el que se calcula mora es 25.000.
      */
     private BigDecimal resolverSaldoPendiente(CreditAmortizationNEntity cuota) {
-        Long idCapital = resolveGlotypeId(GLO_CAPITAL);
-        Long idInteres = resolveGlotypeId(GLO_INTERES);
-        Long idSegVida = resolveGlotypeId(GLO_SEG_VIDA);
-        Long idSegCart = resolveGlotypeId(GLO_SEG_CARTERA);
+        //Long idCapital = resolveGlotypeId(GLO_CAPITAL);
+        //Long idInteres = resolveGlotypeId(GLO_INTERES);
+        //Long idSegVida = resolveGlotypeId(GLO_SEG_VIDA);
+        //Long idSegCart = resolveGlotypeId(GLO_SEG_CARTERA);
+
+        Long idCapital = getIdCapital();
+        Long idInteres = getIdInteres();
+        Long idSegVida = getIdSegVida();
+        Long idSegCart = getIdSegCartera();
 
         List<CreditAmortizationDetailEntity> amorDetails =
                 amortizationDetailRepository.findByAmortizationId(cuota.getId());
@@ -231,11 +270,11 @@ public class MoraConceptCalculator implements OtherConceptCalculator {
     }
 
     private boolean esNoHabil(LocalDate fecha) {
-        if (fecha.getDayOfWeek() == java.time.DayOfWeek.SUNDAY) {
+        if (fecha.getDayOfWeek() == DayOfWeek.SUNDAY) {
             log.debug("[{}] Fecha {} es domingo, se omite cálculo de mora.", getLabel(), fecha);
             return true;
         }
-        if (holidaysRepository.existsByHoliDateAndHoliStatus(fecha, "A")) {
+        if (festivosCache.contains(fecha)) {  // ← O(1), sin query a BD
             log.debug("[{}] Fecha {} es festivo, se omite cálculo de mora.", getLabel(), fecha);
             return true;
         }

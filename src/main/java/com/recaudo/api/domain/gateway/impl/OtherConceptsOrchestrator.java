@@ -48,7 +48,7 @@ public class OtherConceptsOrchestrator {
      * Ejecuta todos los calculadores registrados para la fecha indicada.
      * Cada calculador define sus propias cuotas elegibles y su fórmula.
      */
-    @Transactional
+    //@Transactional
     public void runAll(LocalDate today) {
         log.info("[OtherConcepts] Iniciando proceso para {}. Calculadores activos: {}",
                 today, calculators.size());
@@ -90,7 +90,7 @@ public class OtherConceptsOrchestrator {
                     continue;
                 }
 
-                persistir(cuota, resultado.get(), glotypeId);
+                persistirEnTransaccion(cuota, resultado.get(), glotypeId);
                 registradas++;
 
             } catch (Exception e) {
@@ -158,6 +158,51 @@ public class OtherConceptsOrchestrator {
                 cabecera.getId(), cuota.getCreditId(), cuota.getQuotaNumber(), value);
     }
 
+    @Transactional
+    public void runForCredit(LocalDate today, Long creditId) {
+        log.info("[OtherConcepts] Iniciando proceso para creditId={} fecha={}", creditId, today);
+
+        for (OtherConceptCalculator calculator : calculators) {
+            String label = calculator.getLabel();
+            Long glotypeId = resolveGlotypeId(calculator.getGlotypeCode());
+
+            List<CreditAmortizationNEntity> cuotas =
+                    calculator.fetchEligibleQuotasByCreditId(today, creditId);
+
+            if (cuotas.isEmpty()) {
+                log.info("[OtherConcepts][{}] Sin cuotas elegibles para creditId={}", label, creditId);
+                continue;
+            }
+
+            for (CreditAmortizationNEntity cuota : cuotas) {
+                try {
+                    Optional<BigDecimal> resultado = calculator.compute(cuota, today);
+                    if (resultado.isEmpty()) continue;
+                    persistir(cuota, resultado.get(), glotypeId);
+                } catch (Exception e) {
+                    log.error("[OtherConcepts][{}] Error en cuota={}: {}", label, cuota.getId(), e.getMessage(), e);
+                }
+            }
+        }
+
+        log.info("[OtherConcepts] Proceso completado para creditId={}", creditId);
+    }
+
+    public void runForCredits(LocalDate today, List<Long> creditIds) {
+        log.info("[OtherConcepts] Iniciando proceso para {} créditos — fecha={}", creditIds.size(), today);
+
+        for (Long creditId : creditIds) {
+            try {
+                runForCredit(today, creditId);
+            } catch (Exception e) {
+                log.error("[OtherConcepts] Error procesando creditId={}: {}", creditId, e.getMessage(), e);
+                // continúa con el siguiente
+            }
+        }
+
+        log.info("[OtherConcepts] Proceso completado para {} créditos", creditIds.size());
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     //  HELPERS
     // ══════════════════════════════════════════════════════════════════════════
@@ -166,5 +211,10 @@ public class OtherConceptsOrchestrator {
         return glotypesRepository.findByKeyAndCode(KEY_TIPCON, gloCode)
                 .map(GlotypesEntity::getId)
                 .orElseThrow(() -> new RuntimeException("Glotype no encontrado: " + gloCode));
+    }
+
+    @Transactional
+    private void persistirEnTransaccion(CreditAmortizationNEntity cuota, BigDecimal value, Long glotypeId) {
+        persistir(cuota, value, glotypeId);
     }
 }

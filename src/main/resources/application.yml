@@ -6,6 +6,14 @@ server:
 
 spring:
   datasource:
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000       # 30s para obtener conexión del pool
+      idle-timeout: 600000            # 10min antes de cerrar conexión idle
+      max-lifetime: 1800000           # 30min vida máxima de una conexión
+      keepalive-time: 60000           # ping cada 60s para mantener viva la conexión
+      connection-test-query: SELECT 1  # query de validación
     driver-class-name: com.mysql.cj.jdbc.Driver
     #Local
     #url: jdbc:mysql://localhost:3306/recaudo?serverTimezone=UTC

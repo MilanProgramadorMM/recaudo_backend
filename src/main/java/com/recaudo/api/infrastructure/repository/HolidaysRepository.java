@@ -20,4 +20,7 @@ public interface HolidaysRepository extends JpaRepository<HolidayEntity, LocalDa
             nativeQuery = true)
     List<java.sql.Date> findActiveBetween(@Param("desde") LocalDate desde,
                                           @Param("hasta") LocalDate hasta);
+
+    @Query(value = "SELECT holi_date FROM holidays WHERE holi_status = 'A'", nativeQuery = true)
+    List<java.sql.Date> findAllActive();
 }

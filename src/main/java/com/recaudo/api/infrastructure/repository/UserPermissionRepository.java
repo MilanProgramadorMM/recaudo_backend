@@ -86,9 +86,7 @@ public interface UserPermissionRepository extends JpaRepository<UserPermissionEn
                   1 AS priority
               FROM user_permission up
               WHERE up.user_id = :userId
-          
               UNION ALL
-          
               SELECT
                   rp.module_id,
                   rp.action_id,
@@ -181,7 +179,6 @@ public interface UserPermissionRepository extends JpaRepository<UserPermissionEn
                       AND sp.allow = 1
                 )
           ) AS ordered_main;
-                              
         """, nativeQuery = true)
     String findEnabledPermissionsByUserId(@Param("userId") Long userId);
 

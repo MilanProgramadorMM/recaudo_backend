@@ -42,6 +42,13 @@ public interface OtherConceptCalculator {
      */
     List<CreditAmortizationNEntity> fetchEligibleQuotas(LocalDate today);
 
+
+    default List<CreditAmortizationNEntity> fetchEligibleQuotasByCreditId(LocalDate today, Long creditId) {
+        return fetchEligibleQuotas(today).stream()
+                .filter(c -> c.getCreditId().equals(creditId))
+                .toList();
+    }
+
     /**
      * Calcula el valor del concepto para una cuota específica.
      *

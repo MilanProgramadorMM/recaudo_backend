@@ -34,5 +34,13 @@ public interface CreditAmortizationNRepository extends JpaRepository<CreditAmort
     List<CreditAmortizationNEntity> findOverdueQuotas(@Param("fecha") LocalDate fecha);
 
 
+    @Query("SELECT c FROM CreditAmortizationNEntity c " +
+            "WHERE c.expirationDate <= :fecha " +
+            "AND c.paidFull = 'N' " +
+            "AND c.creditId = :creditId")
+    List<CreditAmortizationNEntity> findOverdueQuotasByCreditId(
+            @Param("fecha") LocalDate fecha,
+            @Param("creditId") Long creditId);
+
 
 }
