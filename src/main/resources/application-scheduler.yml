@@ -1,7 +1,7 @@
 app:
   scheduler:
     cron:
-      interes-mora: "0 0 0 31 2 ?"
+      interes-mora: "0 0 7 * * *"
       debido-cobrar: "0 0 0 31 2 ?"
 
 spring:
