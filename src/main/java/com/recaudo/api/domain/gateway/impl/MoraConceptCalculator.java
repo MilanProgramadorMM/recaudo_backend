@@ -1,6 +1,7 @@
 package com.recaudo.api.domain.gateway.impl;
 
 import com.recaudo.api.domain.gateway.OtherConceptCalculator;
+import com.recaudo.api.domain.model.dto.response.ConceptComputeResult;
 import com.recaudo.api.domain.model.entity.CreditAmortizationDetailEntity;
 import com.recaudo.api.domain.model.entity.CreditAmortizationNEntity;
 import com.recaudo.api.domain.model.entity.CreditEntity;
@@ -116,7 +117,7 @@ public class MoraConceptCalculator implements OtherConceptCalculator {
     }
 
     private Long getIdMora() {
-        if (cachedIdMora == null) cachedIdMora = resolveGlotypeId(GLO_SEG_VIDA);
+        if (cachedIdMora == null) cachedIdMora = resolveGlotypeId(GLO_MORA);
         return cachedIdMora;
     }
 
@@ -128,12 +129,16 @@ public class MoraConceptCalculator implements OtherConceptCalculator {
      *  - Con historial previo → diasMora = 1 (registro diario)
      */
     @Override
-    public Optional<BigDecimal> compute(CreditAmortizationNEntity cuota, LocalDate today) {
+    public ConceptComputeResult compute(CreditAmortizationNEntity cuota, LocalDate today) {
         try {
-            if (esNoHabil(today)) return Optional.empty();
+            if (esNoHabil(today)) {
+                return ConceptComputeResult.omitido("Fecha " + today + " no es día hábil (domingo o festivo)");
+            }
 
             long diasTotalesVencidos = ChronoUnit.DAYS.between(cuota.getExpirationDate(), today);
-            if (diasTotalesVencidos < 0) return Optional.empty();
+            if (diasTotalesVencidos < 0) {
+                return ConceptComputeResult.omitido("Cuota aún no vencida (vence " + cuota.getExpirationDate() + ")");
+            }
 
             // ✅ FIX: lanzar excepción si no existe, no retornar null
             CreditEntity credit = creditRepository.findById(cuota.getCreditId())
@@ -142,26 +147,35 @@ public class MoraConceptCalculator implements OtherConceptCalculator {
 
             if (credit.getTaxValue() == null) {
                 log.warn("[{}] cuotaId={} | taxValue es null, se omite.", getLabel(), cuota.getId());
-                return Optional.empty();
+                return ConceptComputeResult.omitido("taxValue (tasa) es null en el crédito");
             }
 
             BigDecimal tasaNominal = credit.getTaxValue()
                     .divide(BigDecimal.valueOf(100), 10, RoundingMode.HALF_UP);
 
             BigDecimal saldoPendiente = resolverSaldoPendiente(cuota);
-            if (saldoPendiente.compareTo(BigDecimal.ZERO) <= 0) return Optional.empty();
+            if (saldoPendiente.compareTo(BigDecimal.ZERO) <= 0) {
+                return ConceptComputeResult.omitido("Saldo pendiente <= 0 (cuota ya cubierta)");
+            }
 
             long diasAUsar = tieneMoraPrevia(cuota) ? 1L
                     : contarDiasHabiles(cuota.getExpirationDate(), today);
 
-            if (diasAUsar <= 0) return Optional.empty();
+            if (diasAUsar <= 0) {
+                return ConceptComputeResult.omitido("Días hábiles de mora calculados = 0");
+            }
 
             BigDecimal mora = computeMora(saldoPendiente, tasaNominal, diasAUsar);
-            return mora.compareTo(BigDecimal.ZERO) > 0 ? Optional.of(mora) : Optional.empty();
+
+            if (mora.compareTo(BigDecimal.ZERO) <= 0) {
+                return ConceptComputeResult.omitido("Valor de mora calculado = 0");
+            }
+
+            return ConceptComputeResult.ok(mora);
 
         } catch (Exception e) {
             log.error("[{}] Error calculando cuota={}: {}", getLabel(), cuota.getId(), e.getMessage(), e);
-            return Optional.empty();
+            return ConceptComputeResult.omitido("Error interno: " + e.getMessage());
         }
     }
     // ══════════════════════════════════════════════════════════════════════════

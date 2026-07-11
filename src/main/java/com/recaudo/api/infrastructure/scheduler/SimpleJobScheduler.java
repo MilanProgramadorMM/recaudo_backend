@@ -2,6 +2,7 @@ package com.recaudo.api.infrastructure.scheduler;
 
 import com.recaudo.api.domain.gateway.impl.DashboardDebidoCobrarOrchestrator;
 import com.recaudo.api.domain.gateway.impl.OtherConceptsOrchestrator;
+import com.recaudo.api.domain.model.dto.response.JobExecutionSummary;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -32,9 +33,8 @@ public class SimpleJobScheduler {
         log.info("[Job] Iniciando cálculo de conceptos adicionales — {}",
                 LocalDateTime.now().format(FORMATTER));
         try {
-            orchestrator.runAll(LocalDate.now());
-            log.info("[Job] Finalizado exitosamente — {}",
-                    LocalDateTime.now().format(FORMATTER));
+            JobExecutionSummary resumen = orchestrator.runAll(LocalDate.now());
+            log.info("[Job] Finalizado exitosamente — {}", LocalDateTime.now().format(FORMATTER));
         } catch (Exception e) {
             log.error("[Job] Error durante la ejecución: {}", e.getMessage(), e);
         }

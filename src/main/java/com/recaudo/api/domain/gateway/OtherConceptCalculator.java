@@ -1,5 +1,6 @@
 package com.recaudo.api.domain.gateway;
 
+import com.recaudo.api.domain.model.dto.response.ConceptComputeResult;
 import com.recaudo.api.domain.model.entity.CreditAmortizationNEntity;
 import org.springframework.stereotype.Component;
 
@@ -55,5 +56,5 @@ public interface OtherConceptCalculator {
      * @return Optional.empty() si el valor es cero o no aplica
      *         (el orquestador omite el registro en ese caso).
      */
-    Optional<BigDecimal> compute(CreditAmortizationNEntity cuota, LocalDate today);
+    ConceptComputeResult compute(CreditAmortizationNEntity cuota, LocalDate today);
 }

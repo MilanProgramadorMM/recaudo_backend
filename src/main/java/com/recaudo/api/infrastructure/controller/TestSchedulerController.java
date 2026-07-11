@@ -2,6 +2,7 @@ package com.recaudo.api.infrastructure.controller;
 
 import com.recaudo.api.domain.gateway.impl.DashboardDebidoCobrarOrchestrator;
 import com.recaudo.api.domain.gateway.impl.OtherConceptsOrchestrator;
+import com.recaudo.api.domain.model.dto.response.JobExecutionSummary;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -39,25 +40,33 @@ public class TestSchedulerController {
      */
 
     @PostMapping("/run")
-    public ResponseEntity<String> run(
+    public ResponseEntity<?> run(
             @RequestParam(name = "fecha", required = false) String fechaStr,
             @RequestParam(name = "creditId", required = false) Long creditId,
             @RequestBody(required = false) List<Long> creditIds) {
 
         LocalDate fecha = fechaStr != null ? LocalDate.parse(fechaStr) : LocalDate.now();
 
-        if (creditIds != null && !creditIds.isEmpty()) {
-            orchestrator.runForCredits(fecha, creditIds);
-            return ResponseEntity.ok("Job ejecutado para " + creditIds.size() + " créditos — fecha=" + fecha);
-        }
+        try {
+           /* if (creditIds != null && !creditIds.isEmpty()) {
+                JobExecutionSummary resumen = orchestrator.runForCredits(fecha, creditIds);
+                return ResponseEntity.ok(resumen);
+            }
 
-        if (creditId != null) {
-            orchestrator.runForCredit(fecha, creditId); // caso 3 y 4
-            return ResponseEntity.ok("Job ejecutado para creditId=" + creditId + " fecha=" + fecha);
-        }
+            if (creditId != null) {
+                JobExecutionSummary resumen = orchestrator.runForCredits(fecha, List.of(creditId));
+                return ResponseEntity.ok(resumen);
+            }
 
-        orchestrator.runAll(fecha);
-        return ResponseEntity.ok("Job ejecutado para fecha: " + fecha);
+            */
+
+            JobExecutionSummary resumen = orchestrator.runAll(fecha);
+            return ResponseEntity.ok(resumen);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body("Lote revertido — ningún crédito quedó registrado. Causa: " + e.getMessage());
+        }
     }
 
 

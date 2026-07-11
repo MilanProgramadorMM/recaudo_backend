@@ -19,6 +19,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -61,7 +62,7 @@ public class ClosingStatusAdapter implements ClosingStatusGateway {
             entity.setClosingStatus(code);
             entity.setUserStart(userStart);
             entity.setStatus(true);
-            entity.setStartDate(LocalDate.now());
+            entity.setStartDate(LocalDateTime.now());
 
             entitysaved = closingStatusRepository.save(entity);
 
@@ -89,7 +90,7 @@ public class ClosingStatusAdapter implements ClosingStatusGateway {
         validateTransition(lastStatus , dto.getNewStatus());
 
         lastEntity.setStatus(false);
-        lastEntity.setEndDate(LocalDate.now());
+        lastEntity.setEndDate(LocalDateTime.now());
         lastEntity.setUserEnd(getUsernameToken());
 
         closingStatusRepository.save(lastEntity);
@@ -99,7 +100,7 @@ public class ClosingStatusAdapter implements ClosingStatusGateway {
         entity.setClosingStatus(dto.getNewStatus());
         entity.setUserStart(getUsernameToken());
         entity.setStatus(true);
-        entity.setStartDate(LocalDate.now());
+        entity.setStartDate(LocalDateTime.now());
 
         ClosingStatusEntity entitySaved =  closingStatusRepository.save(entity);
 
