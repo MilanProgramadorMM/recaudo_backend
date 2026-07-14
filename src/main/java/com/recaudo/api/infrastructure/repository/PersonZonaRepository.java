@@ -25,7 +25,5 @@ public interface PersonZonaRepository extends JpaRepository<PersonZonaEntity, Lo
     List<PersonZonaEntity> findAllByZonaIdOrderByOrdenAsc(Long zonaId);
 
     List<PersonZonaEntity> findAllByZonaIdAndStatusTrue(Long zonaId);
-
-
 }
 

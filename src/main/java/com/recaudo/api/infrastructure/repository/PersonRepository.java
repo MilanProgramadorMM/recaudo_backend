@@ -267,6 +267,7 @@ public interface PersonRepository extends JpaRepository<PersonEntity, Long> {
                                      INNER JOIN zona z
                                          ON pz.zona_id = z.id
                                          AND z.value = :zona
+                                     WHERE pz.status = 1    
                                      ORDER BY pz.orden ASC;
             """, nativeQuery = true)
     List<PersonInterfaceResponseDto> getByZona(@Param("type") String type, @Param("zona") String zona, @Param("isAsesor") Boolean isAsesor);

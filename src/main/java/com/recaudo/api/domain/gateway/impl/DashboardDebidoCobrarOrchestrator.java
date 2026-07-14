@@ -66,7 +66,7 @@ public class DashboardDebidoCobrarOrchestrator {
                 DashboardDebidoCobrarEntity entity = DashboardDebidoCobrarEntity.builder()
                         .value(valor)
                         .zonaId(zona.getId())
-                        .userCreate(getUsernameToken())
+                        .userCreate("SYSTEM")
                         .createdAt(LocalDateTime.now())
                         .build();
 
