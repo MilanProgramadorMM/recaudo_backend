@@ -2,7 +2,10 @@ app:
   scheduler:
     cron:
       interes-mora: "0 0 7 * * *"
-      debido-cobrar: "0 0 0 31 2 ?"
+      debido-cobrar: "0 0 7 * * *"
+      #debido-cobrar: "0 */5 * * * *"
+      portfolio-snapshot: "0 0 23 * * *"
+      #portfolio-snapshot: "0 */5 * * * *"
 
 spring:
   datasource:

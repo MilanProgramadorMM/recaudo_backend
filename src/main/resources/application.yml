@@ -64,6 +64,9 @@ app:
     cron:
       interes-mora: "0 0 0 31 2 ?"
       debido-cobrar: "0 0 0 31 2 ?"
+      #debido-cobrar: "0 */2 * * * *"
+      portfolio-snapshot: "0 0 0 31 2 ?"
+      #portfolio-snapshot: "0 */2 * * * *"
 
   frontend:
     url: https://www.businesssam.com/app

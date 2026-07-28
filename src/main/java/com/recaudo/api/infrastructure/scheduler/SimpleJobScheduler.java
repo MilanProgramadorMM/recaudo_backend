@@ -2,7 +2,9 @@ package com.recaudo.api.infrastructure.scheduler;
 
 import com.recaudo.api.domain.gateway.impl.DashboardDebidoCobrarOrchestrator;
 import com.recaudo.api.domain.gateway.impl.OtherConceptsOrchestrator;
+import com.recaudo.api.domain.gateway.impl.PortfolioSnapshotOrchestrator;
 import com.recaudo.api.domain.model.dto.response.JobExecutionSummary;
+import com.recaudo.api.domain.model.dto.response.PortfolioSnapshotSummary;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -22,6 +24,8 @@ public class SimpleJobScheduler {
 
     private final OtherConceptsOrchestrator orchestrator;
     private final DashboardDebidoCobrarOrchestrator debidoCobrarOrchestrator;
+    private final PortfolioSnapshotOrchestrator portfolioSnapshotOrchestrator;
+
 
 
     /**
@@ -51,6 +55,21 @@ public class SimpleJobScheduler {
                     LocalDateTime.now().format(FORMATTER));
         } catch (Exception e) {
             log.error("[Job][DebidoCobrar] Error durante la ejecución: {}",
+                    e.getMessage(), e);
+        }
+    }
+
+    @Scheduled(cron = "${app.scheduler.cron.portfolio-snapshot}")
+    public void portfolioSnapshotDailyJob() {
+        log.info("[Job][PortfolioSnapshot] Iniciando — {}",
+                LocalDateTime.now().format(FORMATTER));
+        try {
+            PortfolioSnapshotSummary resumen = portfolioSnapshotOrchestrator.run(LocalDate.now());
+            log.info("[Job][PortfolioSnapshot] Finalizado exitosamente — procesados={} erroresPagina={} — {}",
+                    resumen.getTotalCreditosProcesados(), resumen.getPaginasConError(),
+                    LocalDateTime.now().format(FORMATTER));
+        } catch (Exception e) {
+            log.error("[Job][PortfolioSnapshot] Error durante la ejecución: {}",
                     e.getMessage(), e);
         }
     }

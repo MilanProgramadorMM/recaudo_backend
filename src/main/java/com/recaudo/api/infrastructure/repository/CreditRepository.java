@@ -225,4 +225,5 @@ public interface CreditRepository extends JpaRepository<CreditEntity, Long> {
             @Param("closingDate") LocalDate closingDate,
             @Param("ids") List<Long> ids
     );
+
 }

@@ -1,0 +1,53 @@
+package com.recaudo.api.domain.model.dto.response;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+public interface PortfolioSnapshotView {
+    Long getId();
+    LocalDate getSnapshotDate();
+    Integer getCreditId();
+    Integer getPersonId();
+    String getClienteFullname();
+    String getClienteDocumento();
+    Long getZonaId();
+    String getZonaNombre();
+    String getEstadoCredito();
+    Long getCreditLineId();
+    String getCreditLineNombre();
+    Long getPeriodId();
+    String getPeriodNombre();
+    String getPeriodCodigo();
+    Long getTaxTypeId();
+    String getTaxTypeNombre();
+    BigDecimal getTaxValue();
+    Integer getCuotasPlaneadas();
+    Integer getTotalCuotas();
+    Integer getCuotasPagadas();
+    Integer getCuotasPendientes();
+    BigDecimal getCapitalGenerado();
+    BigDecimal getCapitalPagado();
+    BigDecimal getCapitalPendiente();
+    BigDecimal getInteresGenerado();
+    BigDecimal getInteresPagado();
+    BigDecimal getInteresPendiente();
+    BigDecimal getSeguroVidaGenerado();
+    BigDecimal getSeguroVidaPagado();
+    BigDecimal getSeguroVidaPendiente();
+    BigDecimal getSeguroCarteraGenerado();
+    BigDecimal getSeguroCarteraPagado();
+    BigDecimal getSeguroCarteraPendiente();
+    BigDecimal getMoraGenerada();
+    BigDecimal getMoraPagada();
+    BigDecimal getMoraPendiente();
+    Integer getDiasMora();
+    BigDecimal getTotalPagado();
+    BigDecimal getSaldoTotal();
+    BigDecimal getOtrosConceptosGenerado();
+    String getRatingValue();
+    Integer getRatingRangeStart();
+    Integer getRatingRangeEnd();
+    LocalDateTime getCreatedAt();
+    String getJobExecutionId();
+}

@@ -2,7 +2,9 @@ package com.recaudo.api.infrastructure.controller;
 
 import com.recaudo.api.domain.gateway.impl.DashboardDebidoCobrarOrchestrator;
 import com.recaudo.api.domain.gateway.impl.OtherConceptsOrchestrator;
+import com.recaudo.api.domain.gateway.impl.PortfolioSnapshotOrchestrator;
 import com.recaudo.api.domain.model.dto.response.JobExecutionSummary;
+import com.recaudo.api.domain.model.dto.response.PortfolioSnapshotSummary;
 import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +19,8 @@ public class TestSchedulerController {
 
     private final OtherConceptsOrchestrator orchestrator;
     private final DashboardDebidoCobrarOrchestrator debidoCobrarOrchestrator;
+    private final PortfolioSnapshotOrchestrator portfolioSnapshotOrchestrator;
+
 
 
     /**
@@ -82,6 +86,19 @@ public class TestSchedulerController {
 
         return ResponseEntity.ok(
                 "Job de debido a cobrar ejecutado para fecha: " + fecha);
+    }
+
+    @PostMapping("/run-snapshot")
+    public ResponseEntity<PortfolioSnapshotSummary> runPortfolioSnapshot(
+            @RequestParam(name = "fecha", required = false) String fechaStr) {
+
+        LocalDate fecha = fechaStr != null
+                ? LocalDate.parse(fechaStr)
+                : LocalDate.now();
+
+        PortfolioSnapshotSummary resumen = portfolioSnapshotOrchestrator.run(fecha);
+
+        return ResponseEntity.ok(resumen);
     }
 
 }
