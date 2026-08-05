@@ -226,4 +226,32 @@ public interface CreditRepository extends JpaRepository<CreditEntity, Long> {
             @Param("ids") List<Long> ids
     );
 
+    @Query(value = """
+        SELECT
+            clo.id          AS idCierre,
+            p.fullname      AS asesor,
+            z.description   AS zona
+        FROM credit c
+        INNER JOIN credit_intention ci
+            ON ci.id = c.credit_intention_id
+        INNER JOIN zona z
+            ON z.id = ci.zone_id
+        INNER JOIN closing clo
+            ON clo.zona_id = z.id
+           AND clo.person_id = :personId
+        INNER JOIN person p
+            ON p.id = clo.person_id
+        INNER JOIN type_person tp
+            ON tp.id = p.type_person_id
+        INNER JOIN closing_status cs
+            ON cs.closing_id = clo.id
+        WHERE c.id = :creditId
+          AND tp.id = 1
+          AND cs.code = 'PRE_CIERRE'
+          AND cs.status = 1
+          AND clo.status = 1
+        """, nativeQuery = true)
+    CierreAsesorView findCierreAsesorAndZona(  @Param("personId") Long personId,
+                                        @Param("creditId") Long creditId);
+
 }

@@ -321,6 +321,11 @@ public class CreditAdapter implements CreditIGateway {
         );
     }
 
+    @Override
+    public CierreAsesorView findCierreAsesor(Long personId, Long creditId) {
+        return creditRepository.findCierreAsesorAndZona(personId, creditId);
+    }
+
     // ── helper privado (agrégalo una sola vez en la clase) ──────────────────────
     private CreditFullResponseDto mapView(CreditFullView v) {
         CreditFullResponseDto dto = new CreditFullResponseDto();

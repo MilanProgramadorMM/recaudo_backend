@@ -1,10 +1,7 @@
 package com.recaudo.api.domain.usecase;
 
 import com.recaudo.api.domain.gateway.CreditIGateway;
-import com.recaudo.api.domain.model.dto.response.CreditCausadoProjection;
-import com.recaudo.api.domain.model.dto.response.CreditFullResponseDto;
-import com.recaudo.api.domain.model.dto.response.CreditProjection;
-import com.recaudo.api.domain.model.dto.response.CreditResponseDto;
+import com.recaudo.api.domain.model.dto.response.*;
 import com.recaudo.api.domain.model.dto.rest_api.CreditRegisterDto;
 import com.recaudo.api.domain.model.entity.CreditEntity;
 import com.recaudo.api.infrastructure.helper.security.jwt.JwtUtil;
@@ -46,6 +43,10 @@ public class CreditUseCase {
 
     public CreditResponseDto getById(Long id) {
         return creditGateway.getById(id);
+    }
+
+    public CierreAsesorView getBasesor(Long personId, Long creditId) {
+        return creditGateway.findCierreAsesor(personId,creditId);
     }
 
     public List<CreditProjection> getByPersonId(Long personId) {

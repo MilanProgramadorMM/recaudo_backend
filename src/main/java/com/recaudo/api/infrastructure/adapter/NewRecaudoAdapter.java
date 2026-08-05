@@ -1106,11 +1106,10 @@ public class NewRecaudoAdapter {
     private void validateClosingStatus(
             RecaudoRequestDto requestDto, Long personId, String token) {
 
-        List<ClosingResponseDto> closings = closingAdapter.getByPersonId(personId, token);
-        boolean hasActiveClosing = closings.stream()
-                .anyMatch(c -> "PRE_CIERRE".equalsIgnoreCase(c.getClosingStatus()));
+        CierreAsesorView cierresActivosAsesorZona = creditRepository.findCierreAsesorAndZona(personId, requestDto.getCreditId());
+        //System.out.println(cierresactivosasesor);
 
-        if (!hasActiveClosing) {
+        if (cierresActivosAsesorZona == null){
             throw new BadRequestException("No puede recaudar sin un cierre activo");
         }
     }

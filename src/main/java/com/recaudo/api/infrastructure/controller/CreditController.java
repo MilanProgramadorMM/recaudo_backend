@@ -63,6 +63,20 @@ public class CreditController {
         );
     }
 
+    @GetMapping("/get-asesor/{personId}/{creditId}")
+    public ResponseEntity<DefaultResponseDto<CierreAsesorView>> getByAssor(@PathVariable Long personId, @PathVariable Long creditId) {
+        CierreAsesorView data = creditUseCase.getBasesor(personId, creditId);
+
+        return ResponseEntity.ok(
+                DefaultResponseDto.<CierreAsesorView>builder()
+                        .message("Cierre obtenido correctamente")
+                        .status(HttpStatus.OK)
+                        .details("Cierre obtenido correctamente")
+                        .data(data)
+                        .build()
+        );
+    }
+
     @GetMapping("/get-by-person/{id}")
     public ResponseEntity<DefaultResponseDto<List<CreditProjection>>> getByPersonId(
             @PathVariable Long id) {
