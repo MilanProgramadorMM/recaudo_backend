@@ -3,6 +3,7 @@ package com.recaudo.api.infrastructure.adapter;
 import com.recaudo.api.domain.gateway.DashboardCardGateway;
 import com.recaudo.api.domain.model.dto.response.DashboardHistorialDto;
 import com.recaudo.api.domain.model.dto.response.DashboardNoPagoSummaryDto;
+import com.recaudo.api.domain.model.dto.response.DetalleDebidoCobrarDTO;
 import com.recaudo.api.infrastructure.repository.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -76,5 +77,13 @@ public class DashboardCardAdapter implements DashboardCardGateway {
     public List<DashboardHistorialDto> getHistorialNoPago(
             LocalDate inicio, LocalDate fin, Long zonaId) {
         return repository.getHistorialNoPago(inicio, fin, zonaId);
+    }
+
+
+    /////////////////////COMPARATIVO VALOR CUOTA////////////////////////
+    @Override
+    public List<DetalleDebidoCobrarDTO> getDetalleDebidoCobrar(
+            LocalDate inicio, LocalDate fin, Long zonaId) {
+        return repository.getDetalleDebidoCobrarPorZona(inicio, fin, zonaId);
     }
 }

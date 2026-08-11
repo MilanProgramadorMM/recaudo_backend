@@ -94,56 +94,43 @@ public class ConsultasRepository {
 
     public List<DetalleMovimientoPorZonaDTO> getDetalleMovimientosPorZona(Long concept, Long paymentType, LocalDateTime startDate, LocalDateTime endDate, Long zona) {
         String baseSql = """
-    SELECT
-        z.value AS zona,
-
-        tr.concept_key,
-        tr.name AS concept,
-
-        g.name AS payment_type,
-
-        r.value_paid,
-
-        COALESCE(d.investment_value,0) AS investment_value,
-        COALESCE(d.interest_value,0) AS interest_value,
-        COALESCE(d.life_insurance,0) AS life_insurance,
-        COALESCE(d.portfolio_insurance,0) AS portfolio_insurance,
-
-        r.created_at,
-        r.user_create
-
-    FROM new_recaudo r
-
-    INNER JOIN credit c
-        ON c.id = r.credit_id
-
-    INNER JOIN credit_intention ci
-        ON ci.id = c.credit_intention_id
-
-    INNER JOIN zona z
-        ON z.id = ci.zone_id
-
-    LEFT JOIN glotypes g
-        ON g.id = r.payment_type_id
-
-    LEFT JOIN (
-        SELECT
-            nd.recaudo_id,
-
-            MAX(nd.type_recaudo_id) AS type_recaudo_id,
-
-            SUM(CASE WHEN nd.concept_id = 48 THEN nd.value ELSE 0 END) AS investment_value,
-            SUM(CASE WHEN nd.concept_id = 49 THEN nd.value ELSE 0 END) AS interest_value,
-            SUM(CASE WHEN nd.concept_id = 50 THEN nd.value ELSE 0 END) AS life_insurance,
-            SUM(CASE WHEN nd.concept_id = 51 THEN nd.value ELSE 0 END) AS portfolio_insurance
-
-        FROM new_recaudo_detail nd
-        GROUP BY nd.recaudo_id
-    ) d
-        ON d.recaudo_id = r.id
-
-    LEFT JOIN concept tr
-        ON tr.id = d.type_recaudo_id
+                SELECT
+                        z.value AS zona,
+                    	p.fullname AS client_name,
+                        tr.concept_key,
+                        tr.name AS concept,
+                        g.name AS payment_type,
+                        r.value_paid,
+                        COALESCE(d.investment_value,0) AS investment_value,
+                        COALESCE(d.interest_value,0) AS interest_value,
+                        COALESCE(d.life_insurance,0) AS life_insurance,
+                        COALESCE(d.portfolio_insurance,0) AS portfolio_insurance,
+                        r.created_at,
+                        r.user_create
+                    FROM new_recaudo r
+                    INNER JOIN credit c
+                        ON c.id = r.credit_id
+                    INNER JOIN credit_intention ci
+                        ON ci.id = c.credit_intention_id
+                    INNER JOIN person p ON p.id = c.person_id
+                    INNER JOIN zona z
+                        ON z.id = ci.zone_id
+                    LEFT JOIN glotypes g
+                        ON g.id = r.payment_type_id
+                    LEFT JOIN (
+                        SELECT
+                            nd.recaudo_id,
+                            MAX(nd.type_recaudo_id) AS type_recaudo_id,
+                            SUM(CASE WHEN nd.concept_id = 48 THEN nd.value ELSE 0 END) AS investment_value,
+                            SUM(CASE WHEN nd.concept_id = 49 THEN nd.value ELSE 0 END) AS interest_value,
+                            SUM(CASE WHEN nd.concept_id = 50 THEN nd.value ELSE 0 END) AS life_insurance,
+                            SUM(CASE WHEN nd.concept_id = 51 THEN nd.value ELSE 0 END) AS portfolio_insurance
+                        FROM new_recaudo_detail nd
+                        GROUP BY nd.recaudo_id
+                    ) d
+                        ON d.recaudo_id = r.id
+                    LEFT JOIN concept tr
+                        ON tr.id = d.type_recaudo_id
     """;
 
         QueryBuilder qb = new QueryBuilder(baseSql)
@@ -159,6 +146,7 @@ public class ConsultasRepository {
                 qb.getParams(),
                 (rs, rowNum) -> new DetalleMovimientoPorZonaDTO(
                         rs.getString("zona"),
+                        rs.getString("client_name"),
                         rs.getString("concept_key"),
                         rs.getString("concept"),
                         rs.getString("payment_type"),

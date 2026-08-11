@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 public class DetalleMovimientoPorZonaDTO {
 
     String zona;
+    String clientName;
     String concept_key;
     String concept;
     String payment_type;

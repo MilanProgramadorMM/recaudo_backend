@@ -119,4 +119,8 @@ public class DashboardMetricsUseCase {
         };
     }
 
+    public List<DetalleDebidoCobrarDTO> getDebidoCobrarDetalle(LocalDate fechaInicio, LocalDate fechaFin, Long zonaId){
+        return gateway.getDetalleDebidoCobrar(fechaInicio, fechaFin, zonaId);
+    }
+
 }

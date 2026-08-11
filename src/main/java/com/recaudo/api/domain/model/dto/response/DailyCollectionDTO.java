@@ -14,7 +14,7 @@ import java.util.List;
 @Builder
 public class DailyCollectionDTO {
 
-    private DailyCollectionProjection data;
+    private CardDataDTO  data;
     private List<DailyCollectionRespaldoProjection> recaudos;
     private CreditRatingDTO ratingCredit; // ← NUEVO
 

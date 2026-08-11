@@ -12,6 +12,7 @@ import com.recaudo.api.infrastructure.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -56,6 +57,7 @@ public class NewRecaudoAdapter {
     private final ZonaRepository zonaRepository;
     private final PersonRepository personRepository;
     private final CreditIntentionRepository creditIntentionRepository;
+    private final DashboardDebidoCobrarRepository debidoCobrarRepository;
 
     @Transactional
     public CreditRecaudoStatusDto getCreditPaymentStatus(Long creditId) {
@@ -639,6 +641,8 @@ public class NewRecaudoAdapter {
         } else {
 
             record.setValue(record.getValue().add(valorAbonado));
+
+            descontarDebidoCobrar(zonaId, valorAbonado);
             //record.setCant(record.getCant() + 1L);
         }
 
@@ -1142,5 +1146,23 @@ public class NewRecaudoAdapter {
         Map<Integer, List<CreditOtherConceptDetailEntity>> otherDetailsByQuotaNumber;
         Map<Long, Integer> quotaNumberByQuotaId;
         Map<Long, BigDecimal> moraPagadaByQuotaId;
+    }
+
+    private void descontarDebidoCobrar(Long zonaId, BigDecimal valorAbonado) {
+        LocalDate hoy = LocalDate.now();
+        LocalDateTime inicio = hoy.atStartOfDay();
+        LocalDateTime fin = hoy.plusDays(1).atStartOfDay();
+
+        debidoCobrarRepository
+                .findLatestEntityByZonaIdAndFecha(zonaId, inicio, fin)
+                .stream().findFirst()
+                .ifPresentOrElse(
+                        record -> {
+                            BigDecimal nuevoValor = record.getValue().subtract(valorAbonado.abs());
+                            record.setValue(nuevoValor);
+                            debidoCobrarRepository.save(record);
+                        },
+                        () -> log.warn("Sin registro de debido cobrar para zona {} en {}", zonaId, hoy)
+                );
     }
 }

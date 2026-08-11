@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -38,6 +39,20 @@ public interface DashboardDebidoCobrarRepository extends JpaRepository<Dashboard
         ORDER BY d.createdAt DESC
     """)
     Optional<BigDecimal> findLatestValueByZonaIdAndFecha(
+            @Param("zonaId") Long zonaId,
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin
+    );
+
+    @Query("""
+    SELECT d
+    FROM DashboardDebidoCobrarEntity d
+    WHERE d.zonaId = :zonaId
+      AND d.createdAt >= :inicio
+      AND d.createdAt < :fin
+    ORDER BY d.createdAt DESC
+""")
+    List<DashboardDebidoCobrarEntity> findLatestEntityByZonaIdAndFecha(
             @Param("zonaId") Long zonaId,
             @Param("inicio") LocalDateTime inicio,
             @Param("fin") LocalDateTime fin

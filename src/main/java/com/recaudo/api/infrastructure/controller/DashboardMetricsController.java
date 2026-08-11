@@ -2,6 +2,7 @@ package com.recaudo.api.infrastructure.controller;
 
 import com.recaudo.api.domain.model.dto.response.DashboardHistorialDto;
 import com.recaudo.api.domain.model.dto.response.DefaultResponseDto;
+import com.recaudo.api.domain.model.dto.response.DetalleDebidoCobrarDTO;
 import com.recaudo.api.domain.model.dto.response.consultas.DashboardSummaryDto;
 import com.recaudo.api.domain.usecase.DashboardMetricsUseCase;
 import lombok.AllArgsConstructor;
@@ -74,6 +75,17 @@ public class DashboardMetricsController {
                         .details("Historial generado correctamente")
                         .data(data)
                         .build()
+        );
+    }
+
+    @GetMapping("/debido-cobrar/detalle/{zonaId}")
+    public ResponseEntity<List<DetalleDebidoCobrarDTO>> getDebidoCobrarDetalle(
+            @PathVariable Long zonaId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        return ResponseEntity.ok(
+                dashboardMetricsUseCase.getDebidoCobrarDetalle(startDate, endDate, zonaId)
         );
     }
 

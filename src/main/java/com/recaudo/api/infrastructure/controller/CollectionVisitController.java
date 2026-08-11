@@ -2,6 +2,7 @@ package com.recaudo.api.infrastructure.controller;
 
 import com.recaudo.api.domain.model.dto.response.DailyCollectionDTO;
 import com.recaudo.api.domain.model.dto.response.DailyCollectionProjection;
+import com.recaudo.api.domain.model.dto.response.DailyCollectionResultDTO;
 import com.recaudo.api.infrastructure.adapter.CollectionVisitAdapter;
 import com.recaudo.api.infrastructure.adapter.DailyCollectionService;
 import com.recaudo.api.infrastructure.adapter.UserDetailsImpl;
@@ -37,7 +38,7 @@ public class CollectionVisitController {
      * - pagados hoy o no
      */
     @GetMapping("/daily")
-    public ResponseEntity<List<DailyCollectionDTO>> getDailyCollection(
+    public ResponseEntity<DailyCollectionResultDTO> getDailyCollection(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             Authentication authentication
     ) {

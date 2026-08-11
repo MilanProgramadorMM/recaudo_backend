@@ -2,6 +2,7 @@ package com.recaudo.api.domain.gateway;
 
 import com.recaudo.api.domain.model.dto.response.DashboardHistorialDto;
 import com.recaudo.api.domain.model.dto.response.DashboardNoPagoSummaryDto;
+import com.recaudo.api.domain.model.dto.response.DetalleDebidoCobrarDTO;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -21,4 +22,9 @@ public interface DashboardCardGateway {
     List<DashboardHistorialDto> getHistorialDebidoCobrar(LocalDate inicio, LocalDate fin, Long zonaId);
     List<DashboardHistorialDto> getHistorialRecaudado(LocalDate inicio, LocalDate fin, Long zonaId);
     List<DashboardHistorialDto> getHistorialNoPago(LocalDate inicio, LocalDate fin, Long zonaId);
+
+
+    /////////VALOR CUOTA COMPARARTIVO GRAFICO///////////////
+    List<DetalleDebidoCobrarDTO> getDetalleDebidoCobrar(LocalDate inicio, LocalDate fin, Long zonaId);
+
 }
