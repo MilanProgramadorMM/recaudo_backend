@@ -2,6 +2,7 @@ package com.recaudo.api.infrastructure.adapter;
 
 import com.recaudo.api.domain.gateway.CreditIGateway;
 import com.recaudo.api.domain.gateway.CreditIntentionStatusGateway;
+import com.recaudo.api.domain.gateway.PersonZonaGateway;
 import com.recaudo.api.domain.mapper.CreditMapper;
 import com.recaudo.api.domain.model.constant.CreditStatus;
 import com.recaudo.api.domain.model.dto.response.*;
@@ -70,6 +71,12 @@ public class CreditAdapter implements CreditIGateway {
 
     @Autowired(required = false)
     CreditMapper creditMapper = Mappers.getMapper(CreditMapper.class);
+
+    @Autowired
+    private PersonZonaGateway personZonaGateway;
+
+    @Autowired
+    private CreditIntentionRepository creditIntentionRepository;
 
 
     @Override
@@ -169,6 +176,17 @@ public class CreditAdapter implements CreditIGateway {
 
             // Insertar la tabla de amortización
             insertToCreditAmortization(dto.getCreditIntentionId(), saved.getId());
+            // Asignar orden al cliente en la zona si no lo tiene
+            Long zonaId = creditIntentionRepository.findById(dto.getCreditIntentionId())
+                    .map(CreditIntentionEntity::getZoneId)
+                    .orElse(null);
+
+            if (zonaId != null) {
+                personZonaGateway.asignarOrdenSiNoTiene(dto.getPersonId(), zonaId);
+            } else {
+                log.warn("La intención {} no tiene zona; no se asignó orden al cliente {}",
+                        dto.getCreditIntentionId(), dto.getPersonId());
+            }
 
             //Actualizar estado de la intencion de credito
             ChangeCreditStatusDto newStatus = new ChangeCreditStatusDto();

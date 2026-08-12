@@ -172,5 +172,50 @@ public class PersonZonaAdapter implements PersonZonaGateway {
         return clientesEnZona.get(clientesEnZona.size() - 1).getOrden() + 1;
     }
 
+    @Override
+    @Transactional
+    public void asignarOrdenSiNoTiene(Long personId, Long zonaId) {
+        // Registro activo del cliente (no asesor) en su zona
+        Optional<PersonZonaEntity> registroOpt =
+                personzonaRepository.findByPersonIdAndStatusTrueAndIsAsesorFalse(personId);
+
+        // Si ya tiene orden > 0 en esta misma zona, no hacer nada
+        if (registroOpt.isPresent()
+                && registroOpt.get().getZonaId().equals(zonaId)
+                && registroOpt.get().getOrden() > 0) {
+            return;
+        }
+
+        // Correr +1 el orden de todos los clientes activos de la zona
+        List<PersonZonaEntity> clientesZona =
+                new ArrayList<>(personzonaRepository.findAllByZonaIdAndStatusTrue(zonaId));
+
+        clientesZona.forEach(pz -> {
+            pz.setOrden(pz.getOrden() + 1);
+            pz.setEditedAt(LocalDateTime.now());
+        });
+        personzonaRepository.saveAll(clientesZona);
+
+        // Poner al cliente en orden 1
+        if (registroOpt.isPresent() && registroOpt.get().getZonaId().equals(zonaId)) {
+            // Ya está en la zona pero con orden 0: solo actualiza
+            PersonZonaEntity registro = registroOpt.get();
+            registro.setOrden(1);
+            registro.setEditedAt(LocalDateTime.now());
+            personzonaRepository.save(registro);
+        } else {
+            // No tiene registro en esta zona: crear uno nuevo en orden 1
+            PersonZonaEntity nuevo = PersonZonaEntity.builder()
+                    .personId(personId)
+                    .zonaId(zonaId)
+                    .orden(1)
+                    .status(true)
+                    .isAsesor(false)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            personzonaRepository.save(nuevo);
+        }
+    }
+
 
 }

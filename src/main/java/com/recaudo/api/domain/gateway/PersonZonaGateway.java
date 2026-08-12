@@ -11,4 +11,5 @@ public interface PersonZonaGateway {
     void updateClientToZone(Long personId, Long zoneId);
     void assignZonasToAsesor(Long personId, List<Long> zonasIds);
     List<AsesorZonaDto> getZonasByAsesor(Long personId);
+    void asignarOrdenSiNoTiene(Long personId, Long zonaId);
 }
