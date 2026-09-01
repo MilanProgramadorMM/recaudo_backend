@@ -60,7 +60,7 @@ public class DashboardDebidoCobrarOrchestrator {
 
                 // Calcular el debido a cobrar
                 BigDecimal valor = metricsRepository
-                        .getTotalDebidoCobrar(inicio, fin, zona.getId());
+                        .getTotalDebidoCobrarValorcCuota(inicio, fin, zona.getId());
 
                 // Insertar el nuevo registro
                 DashboardDebidoCobrarEntity entity = DashboardDebidoCobrarEntity.builder()

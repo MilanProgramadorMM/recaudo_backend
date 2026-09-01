@@ -3,12 +3,16 @@ package com.recaudo.api.infrastructure.repository;
 import com.recaudo.api.domain.model.dto.response.DashboardHistorialDto;
 import com.recaudo.api.domain.model.dto.response.DashboardNoPagoSummaryDto;
 import com.recaudo.api.domain.model.dto.response.DetalleDebidoCobrarDTO;
+import com.recaudo.api.domain.model.dto.response.consultas.DashboardSummaryDto;
 import com.recaudo.api.infrastructure.helper.sql.QueryBuilder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.stereotype.Repository;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import java.math.BigDecimal;
+import java.sql.CallableStatement;
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -46,7 +50,7 @@ public class DashboardMetricsRepository {
         );
     }
 
-    public BigDecimal getTotalDebidoCobrar(
+    public BigDecimal getTotalDebidoCobrarValorcCuota(
             LocalDateTime fechaInicio,
             LocalDateTime fechaFin,
             Long zonaId
@@ -248,5 +252,37 @@ public class DashboardMetricsRepository {
                         rs.getString("zona"),
                         rs.getString("nombre_dia")
                 ));
+    }
+
+
+
+    public DashboardSummaryDto getDashboardSummaryProc(LocalDate fecha, Long zonaId) {
+        return jdbcTemplate.getJdbcTemplate().execute(
+                (Connection con) -> {
+                    try (CallableStatement cs = con.prepareCall("CALL debido_cobrar(?, ?)")) {
+                        cs.setDate(1, java.sql.Date.valueOf(fecha));
+                        cs.setLong(2, zonaId);
+
+                        boolean hasResult = cs.execute();
+                        // Saltar el primer resultset (detalle por crédito)
+                        if (hasResult) {
+                            cs.getMoreResults(); // avanza al segundo resultset (totales)
+                        }
+                        try (ResultSet rs = cs.getResultSet()) {
+                            if (rs.next()) {
+                                return DashboardSummaryDto.builder()
+                                        .totalValorCuota(rs.getBigDecimal("totalValorCuota"))
+                                        .totalRecaudado(rs.getBigDecimal("totalRecaudado"))
+                                        .totalNoPagado(rs.getBigDecimal("totalNoPagado"))
+                                        .totalNoPagoCantidad(rs.getLong("totalNoPagoCantidad"))
+                                        .totalCartera(rs.getBigDecimal("totalCartera"))
+                                        .totalDebidoCobrar(rs.getBigDecimal("totalDebidoCobrar"))
+                                        .build();
+                            }
+                            return DashboardSummaryDto.builder().build();
+                        }
+                    }
+                }
+        );
     }
 }

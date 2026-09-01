@@ -103,9 +103,6 @@ public class NewRecaudoAdapter {
             BigDecimal totalPendiente = cuotas.stream()
                     .filter(c -> "N".equals(c.getPaidFull()))
                     .map(cuota -> {
-                        if (cuota.getQuotaNumber() == 8) {
-                            System.out.println("");
-                        }
                         QuotaComponentsDto data = resolveQuotaComponents(cuota, ctx);
                         return data.totalPending();
                     })
@@ -602,7 +599,7 @@ public class NewRecaudoAdapter {
                                 "No existe zona para el crédito: " + idcredit
                         ));
 
-        procesarRecaudo(dataZona.getId(), dataZona.getCode(), requestDto.getValuePaid());
+         procesarRecaudo(dataZona.getId(), dataZona.getCode(), requestDto.getValuePaid());
 
         log.info("Pago {} procesado. cuotasLiquidadas={}, saldoSobrante={}",
                 distributionType, cuotasLiquidadas, saldoRestante.max(BigDecimal.ZERO));

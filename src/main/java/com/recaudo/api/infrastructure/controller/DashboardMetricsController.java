@@ -40,9 +40,8 @@ public class DashboardMetricsController {
     ) {
 
         DashboardSummaryDto data =
-                dashboardMetricsUseCase.getDashboardSummary(
+                dashboardMetricsUseCase.getDashboardSummaryPro(
                         fechaInicio,
-                        fechaFin,
                         zonaId
                 );
 

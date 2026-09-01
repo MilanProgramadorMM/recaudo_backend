@@ -114,7 +114,7 @@ public interface DailyCollectionRepository
     JOIN credit_line cl         ON cl.id = ci.credit_line_id
     JOIN period p               ON p.id  = c.period_id
     JOIN zona z                 ON z.id  = ci.zone_id AND z.id IN (:zonas)
-    JOIN person_zona pz_asesor  ON pz_asesor.zona_id = z.id AND pz_asesor.orden = 0
+    JOIN person_zona pz_asesor  ON pz_asesor.zona_id = z.id -- AND pz_asesor.orden = 0
     JOIN user u                 ON u.person_id = pz_asesor.person_id
     JOIN person_zona pz_cliente ON pz_cliente.zona_id   = z.id
                                 AND pz_cliente.person_id = c.person_id
@@ -246,7 +246,7 @@ public interface DailyCollectionRepository
       AND EXISTS (
           SELECT 1 FROM person_zona pz_asesor
           JOIN user u ON u.person_id = pz_asesor.person_id
-          WHERE pz_asesor.zona_id = z.id AND pz_asesor.orden = 0
+          WHERE pz_asesor.zona_id = z.id -- AND pz_asesor.orden = 0
       )
       AND EXISTS (SELECT 1 FROM credit_amortization a4b
                   WHERE a4b.credit_id = c.id AND a4b.paid_full = 'N')
@@ -351,7 +351,7 @@ public interface DailyCollectionRepository
       AND EXISTS (
           SELECT 1 FROM person_zona pz_asesor
           JOIN user u ON u.person_id = pz_asesor.person_id
-          WHERE pz_asesor.zona_id = z.id AND pz_asesor.orden = 0
+          WHERE pz_asesor.zona_id = z.id -- AND pz_asesor.orden = 0
       )
       AND EXISTS (
           SELECT 1 FROM credit_amortization a_venc3

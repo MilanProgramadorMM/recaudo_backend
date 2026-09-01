@@ -36,8 +36,8 @@ public class DashboardMetricsUseCase {
         LocalDateTime fin =
                 fechaFin.plusDays(1).atStartOfDay();
 
-        BigDecimal debidoCobrar =
-                gateway.getTotalDebidoCobrar(
+        BigDecimal valorcuota =
+                gateway.getTotalDebidoCobrarValorCuota(
                         inicio,
                         fin,
                         zonaId
@@ -56,16 +56,23 @@ public class DashboardMetricsUseCase {
                         fin,
                         zonaId
                 );
+        BigDecimal debidoCobrar =
+                gateway.getTotalDebidoCobrarValorCuota(
+                        inicio,
+                        fin,
+                        zonaId
+                );
 
         BigDecimal cartera =
-                debidoCobrar.subtract(recaudado);
+                valorcuota.subtract(recaudado);
 
         return DashboardSummaryDto.builder()
-                .totalDebidoCobrar(debidoCobrar)
+                .totalValorCuota(valorcuota)
                 .totalRecaudado(recaudado)
                 .totalNoPagado(noPagadoSummary.totalValue())
                 .totalNoPagoCantidad(noPagadoSummary.totalCantidad())
                 .totalCartera(cartera)
+                .totalDebidoCobrar(debidoCobrar)
                 .build();
     }
 
@@ -121,6 +128,10 @@ public class DashboardMetricsUseCase {
 
     public List<DetalleDebidoCobrarDTO> getDebidoCobrarDetalle(LocalDate fechaInicio, LocalDate fechaFin, Long zonaId){
         return gateway.getDetalleDebidoCobrar(fechaInicio, fechaFin, zonaId);
+    }
+
+    public DashboardSummaryDto getDashboardSummaryPro(LocalDate fecha, Long zonaId) {
+        return gateway.getDashboardSummary(fecha, zonaId);
     }
 
 }

@@ -1,7 +1,26 @@
 package com.recaudo.api.infrastructure.adapter;
 
 import com.recaudo.api.domain.gateway.PortfolioSnapshotIGateway;
-import com.recaudo.api.domain.model.dto.response.*;
+import com.recaudo.api.domain.model.dto.response.CalificacionBucketDto;
+import com.recaudo.api.domain.model.dto.response.ClientAggregateView;
+import com.recaudo.api.domain.model.dto.response.ClientHistoryAnalysisDto;
+import com.recaudo.api.domain.model.dto.response.ClientListItemDto;
+import com.recaudo.api.domain.model.dto.response.ClientPortfolioStateDto;
+import com.recaudo.api.domain.model.dto.response.ConceptoMontoDto;
+import com.recaudo.api.domain.model.dto.response.ConteosCreditoDto;
+import com.recaudo.api.domain.model.dto.response.CreditTransitionView;
+import com.recaudo.api.domain.model.dto.response.CuotasResumenDto;
+import com.recaudo.api.domain.model.dto.response.PortfolioSnapshotResponseDto;
+import com.recaudo.api.domain.model.dto.response.PortfolioSnapshotView;
+import com.recaudo.api.domain.model.dto.response.PuntoHistoricoClienteDto;
+import com.recaudo.api.domain.model.dto.response.PuntoHistoricoDto;
+import com.recaudo.api.domain.model.dto.response.ResumenEvolucionClienteDto;
+import com.recaudo.api.domain.model.dto.response.ResumenEvolucionDto;
+import com.recaudo.api.domain.model.dto.response.TransicionDiariaDto;
+import com.recaudo.api.domain.model.dto.response.ZoneAggregateView;
+import com.recaudo.api.domain.model.dto.response.ZoneHistoryAnalysisDto;
+import com.recaudo.api.domain.model.dto.response.ZoneRatingView;
+import com.recaudo.api.domain.model.dto.response.ZoneSnapshotStateDto;
 import com.recaudo.api.exception.ResourceNotFoundException;
 import com.recaudo.api.infrastructure.repository.PortfolioSnapshotRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +30,13 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 @Slf4j

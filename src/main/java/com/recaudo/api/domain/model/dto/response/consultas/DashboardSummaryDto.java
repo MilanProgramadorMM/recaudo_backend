@@ -15,6 +15,8 @@ public class DashboardSummaryDto {
 
     private BigDecimal totalDebidoCobrar;
 
+    private BigDecimal totalValorCuota;
+
     private BigDecimal totalRecaudado;
 
     private BigDecimal totalNoPagado;

@@ -4,6 +4,7 @@ import com.recaudo.api.domain.gateway.DashboardCardGateway;
 import com.recaudo.api.domain.model.dto.response.DashboardHistorialDto;
 import com.recaudo.api.domain.model.dto.response.DashboardNoPagoSummaryDto;
 import com.recaudo.api.domain.model.dto.response.DetalleDebidoCobrarDTO;
+import com.recaudo.api.domain.model.dto.response.consultas.DashboardSummaryDto;
 import com.recaudo.api.infrastructure.repository.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +32,7 @@ public class DashboardCardAdapter implements DashboardCardGateway {
      */
 
     @Override
-    public BigDecimal getTotalDebidoCobrar(
+    public BigDecimal getTotalDebidoCobrarValorCuota(
             LocalDateTime fechaInicio,
             LocalDateTime fechaFin,
             Long zonaId
@@ -46,7 +47,7 @@ public class DashboardCardAdapter implements DashboardCardGateway {
                     // Fallback: si el job aún no corrió, calcula en tiempo real
                     log.warn("[DashboardCardAdapter] Sin registro precalculado para " +
                             "zona {} en {}. Ejecutando consulta en tiempo real.", zonaId, inicioDia.toLocalDate());
-                    return repository.getTotalDebidoCobrar(fechaInicio, fechaFin, zonaId);
+                    return repository.getTotalDebidoCobrarValorcCuota(inicioDia, finDia, zonaId);
                 });
     }
 
@@ -58,6 +59,11 @@ public class DashboardCardAdapter implements DashboardCardGateway {
     @Override
     public BigDecimal getTotalRecaudadoZona(LocalDateTime fechaInicio, LocalDateTime fechaFin, Long zonaId) {
         return repository.getTotalRecaudado(fechaInicio,fechaFin,zonaId);
+    }
+
+    @Override
+    public DashboardSummaryDto getDashboardSummary(LocalDate fecha, Long zonaId) {
+        return repository.getDashboardSummaryProc(fecha, zonaId);
     }
 
     ////////////////////GRAFICOS/////////////////

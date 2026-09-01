@@ -161,33 +161,42 @@ public class ConsultasRepository {
         );
     }
 
-    public List<DefaultConsultasDTO> getSaldoVencidoPorZona(LocalDateTime startDate, LocalDateTime endDate) {
+    public List<DefaultConsultasDTO> getSaldoVencidoPorZona(LocalDateTime startDate,LocalDateTime endDate) {
         String baseSql = """
-            SELECT
-                z.id,
-                z.value AS zona,
-                COALESCE(SUM(a.quota_value), 0)
-                + COALESCE(SUM(r.total_paid), 0) AS value
-            FROM zona z
-            LEFT JOIN credit_intention ci ON ci.zone_id = z.id
-            LEFT JOIN credit c ON c.credit_intention_id = ci.id
-            LEFT JOIN amortization a
-                ON a.credit_id = c.id
-                AND a.expiration_date < :endDate
-                AND a.paid_full = 'N'
-            LEFT JOIN (
-                SELECT cuota_id, SUM(value_paid) AS total_paid
-                FROM recaudo
-                WHERE value_paid < 0
-                GROUP BY cuota_id
-            ) r ON r.cuota_id = a.id
-        """;
+        SELECT
+            z.id,
+            z.value AS zona,
+            COALESCE(SUM(
+                GREATEST(
+                    a.total_quota_value - COALESCE(pagos.abonado_rubros, 0)
+                , 0)
+            ), 0) AS value
+        FROM zona z
+        INNER JOIN credit_intention ci ON ci.zone_id = z.id
+        INNER JOIN credit c
+            ON c.credit_intention_id = ci.id
+            AND c.credit_status = 'ACTIVE'
+            AND c.deleted_at IS NULL
+        INNER JOIN credit_amortization a
+            ON a.credit_id = c.id
+            AND a.paid_full = 'N'
+            AND a.expiration_date <= :endDate
+        LEFT JOIN (
+            SELECT nr.quota_id,
+                   SUM(ABS(nrd.value)) AS abonado_rubros
+            FROM new_recaudo nr
+            JOIN new_recaudo_detail nrd ON nrd.recaudo_id = nr.id
+            WHERE nr.value_paid < 0
+              AND nrd.concept_id IN (48, 49, 50, 51)
+            GROUP BY nr.quota_id
+        ) pagos ON pagos.quota_id = a.id
+    """;
 
         QueryBuilder qb = new QueryBuilder(baseSql)
                 .addFilter("", "endDate", endDate)
                 .buildWhere()
-                .append("GROUP BY z.id, z.value")
-                .append("ORDER BY z.value");
+                .append(" GROUP BY z.id, z.value")
+                .append(" ORDER BY z.value");
 
         return jdbcTemplate.query(
                 qb.getSql(),
@@ -206,98 +215,88 @@ public class ConsultasRepository {
             Long zona) {
 
         String baseSql = """
-    WITH recaudos_agrupados AS (
+        WITH recaudos_agrupados AS (
+            SELECT
+                nr.quota_id,
+                SUM(ABS(nrd.value)) AS abonado_rubros
+            FROM new_recaudo nr
+            INNER JOIN new_recaudo_detail nrd ON nrd.recaudo_id = nr.id
+            WHERE nr.value_paid < 0
+              AND nrd.concept_id IN (48, 49, 50, 51)
+            GROUP BY nr.quota_id
+        ),
+        mora_agrupada AS (
+            SELECT
+                coc.credit_id,
+                coc.quota_number,
+                SUM(cocd.value) AS mora_real
+            FROM credit_other_concepts coc
+            INNER JOIN credit_other_concepts_detail cocd
+                ON cocd.credit_other_concepts_id = coc.id
+            GROUP BY
+                coc.credit_id,
+                coc.quota_number
+        )
         SELECT
-            quota_id,
-            SUM(value_paid) AS total_paid
-        FROM new_recaudo
-        WHERE value_paid < 0
-        GROUP BY quota_id
-    ),
-    mora_agrupada AS (
-        SELECT
-            coc.credit_id,
-            coc.quota_number,
-            SUM(cocd.value) AS mora_real
-        FROM credit_other_concepts coc
-        INNER JOIN credit_other_concepts_detail cocd
-            ON cocd.credit_other_concepts_id = coc.id
-        GROUP BY
-            coc.credit_id,
-            coc.quota_number
-    )
-    SELECT
-        c.id AS credit_id,
-        ci.id AS credit_intention_id,
-        z.value AS zona,
-        p.fullname AS person_name,
+            c.id AS credit_id,
+            ci.id AS credit_intention_id,
+            z.value AS zona,
+            p.fullname AS person_name,
 
-        COALESCE(SUM(a.total_quota_value), 0)
-            + COALESCE(SUM(r.total_paid), 0) AS value,
+            COALESCE(SUM(
+                GREATEST(a.total_quota_value - COALESCE(r.abonado_rubros, 0), 0)
+            ), 0) AS value,
 
-        MAX(
-            DATEDIFF(CURDATE(), a.expiration_date)
-        ) AS dias_mora,
+            MAX(DATEDIFF(CURDATE(), a.expiration_date)) AS dias_mora,
 
-        MAX(
-            DATEDIFF(CURDATE(), a.expiration_date)
-        ) / 30 AS periodos_vencidos,
+            MAX(DATEDIFF(CURDATE(), a.expiration_date)) / 30 AS periodos_vencidos,
 
-        COALESCE(
-            SUM(m.mora_real),
-            0
-        ) AS interes_moratorio,
+            COALESCE(SUM(m.mora_real), 0) AS interes_moratorio,
 
-        MAX(
-            DATEDIFF(CURDATE(), a.expiration_date)
-        ) > 0 AS is_overdue
+            MAX(DATEDIFF(CURDATE(), a.expiration_date)) > 0 AS is_overdue
 
-    FROM zona z
-
-    LEFT JOIN credit_intention ci
-        ON ci.zone_id = z.id
-
-    LEFT JOIN credit c
-        ON c.credit_intention_id = ci.id
-
-    LEFT JOIN person p
-        ON c.person_id = p.id
-
-    LEFT JOIN credit_amortization a
-        ON a.credit_id = c.id
-        AND a.expiration_date < :endDate
-        AND a.paid_full = 'N'
-
-    LEFT JOIN recaudos_agrupados r
-        ON r.quota_id = a.id
-
-    LEFT JOIN mora_agrupada m
-        ON m.credit_id = a.credit_id
-        AND m.quota_number = a.quota_number
+        FROM zona z
+        INNER JOIN credit_intention ci
+            ON ci.zone_id = z.id
+        INNER JOIN credit c
+            ON c.credit_intention_id = ci.id
+            AND c.credit_status = 'ACTIVE'
+            AND c.deleted_at IS NULL
+        INNER JOIN person p
+            ON c.person_id = p.id
+        INNER JOIN credit_amortization a
+            ON a.credit_id = c.id
+            AND a.expiration_date <= :endDate
+            AND a.paid_full = 'N'
+        LEFT JOIN recaudos_agrupados r
+            ON r.quota_id = a.id
+        LEFT JOIN mora_agrupada m
+            ON m.credit_id = a.credit_id
+            AND m.quota_number = a.quota_number
     """;
 
-        QueryBuilder qb = new QueryBuilder(baseSql)
-                .addFilter("", "startDate", startDate)
-                .addFilter("", "endDate", endDate)
-                .addFilter("z.id = :zone", "zone", zona)
-                .buildWhere()
-                .append("""
-            GROUP BY
-                z.id,
-                z.value,
-                p.id,
-                p.fullname,
-                c.id,
-                ci.id
+            QueryBuilder qb = new QueryBuilder(baseSql)
+                    .addFilter("", "endDate", endDate)      // registra :endDate (usado en el JOIN)
+                    .addFilter("z.id = :zone", "zone", zona)
+                    .buildWhere()
+                    .append("""
+                GROUP BY
+                    z.id,
+                    z.value,
+                    p.id,
+                    p.fullname,
+                    c.id,
+                    ci.id
             """)
-                .append("""
-            HAVING
-                COALESCE(SUM(a.total_quota_value), 0)
-                + COALESCE(SUM(r.total_paid), 0) > 0
+                    .append("""
+                HAVING
+                    COALESCE(SUM(
+                        GREATEST(a.total_quota_value - COALESCE(r.abonado_rubros, 0), 0)
+                    ), 0) > 0
             """)
-                .append("""
-            ORDER BY
-                MAX(DATEDIFF(CURDATE(), a.expiration_date)) DESC
+                    .append("""
+                ORDER BY
+                    MAX(DATEDIFF(CURDATE(), a.expiration_date)) DESC
             """);
 
         return jdbcTemplate.query(
