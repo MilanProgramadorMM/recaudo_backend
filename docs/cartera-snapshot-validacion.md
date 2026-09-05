@@ -449,6 +449,27 @@ ORDER BY s.zona_id;
 
 ## 7. Limitaciones conocidas (no son bugs de dato, son de diseño — repórtalas si necesitas cambiarlas)
 
+0. **⚠️ Los snapshots con `snapshot_date` anterior al 2026-09-01 NO son confiables — no respetan
+   fecha de corte en absoluto.** La versión original de la query (commit `2360df0`, "se implementa
+   logica de cartera", 2026-07-27) calculaba `generado` sumando el plan de amortización **completo**
+   del crédito (pasado y futuro) y `pagado` sumando **todos** los recaudos históricos del crédito,
+   sin ningún `WHERE` que filtrara por `:fecha` — el parámetro de fecha prácticamente no se usaba
+   para el cálculo financiero, solo para `diasMora` y para etiquetar la fila. El filtro real
+   (`WHERE ca.expiration_date <= :fecha`, `nr.created_at < fecha + 1 día`) se agregó recién en el
+   commit `233bbd0` ("ajustes basados en el 7 de agosto", aplicado 2026-09-01).
+   **Consecuencia:** cualquier fila con `snapshot_date < '2026-09-01'` fue calculada con la lógica
+   vieja — su `capitalGenerado`/`interesGenerado`/`seguro*Generado` reflejan el valor **total** del
+   crédito (`credit.total_capital_value`, etc.) sin importar si ya había vencido, y su `*Pagado`
+   suma pagos que pudieron haber ocurrido después de esa fecha. Esto infla `saldoTotal` y distorsiona
+   por completo cualquier comparación de evolución (`getZoneHistory`/`getClientHistory`,
+   `resumenEvolucion`) que cruce esa fecha — no es un dato "un poco impreciso", es una magnitud
+   completamente distinta a lo que debería ser un snapshot puntual. Verificado con el crédito 691
+   de zona ELITE: el 2026-08-06 registró `capitalGenerado ≈ $6.817.524` (≈ `total_capital_value`
+   completo, $6.750.000), cuando la primera cuota del crédito no vencía hasta el 2026-08-18 — bajo
+   la query corregida, ese valor debería haber sido $0.
+   **Recomendación:** no usar snapshots anteriores al 2026-09-01 para análisis histórico o de
+   evolución. Ver la sección 9 para el plan de regeneración de esas fechas.
+
 1. **`estadoCredito`, `cuotasPagadas`, `diasMora` usan el estado ACTUAL de `credit.credit_status` y
    `credit_amortization.paid_full`, no un histórico versionado.** El job es confiable cuando corre
    para "hoy" (como está el cron), pero si se re-ejecuta manualmente para una fecha pasada
@@ -472,3 +493,321 @@ Responde el mismo `PortfolioSnapshotSummary` que ves en logs: `totalCreditosProc
 `portfolio_snapshot.job_execution_id` — útil para aislar qué corrida generó cada dato si el job se
 disparó varias veces el mismo día (recuerda que `limpiarSnapshotPrevio` borra todo lo de esa
 `snapshot_date` antes de reinsertar, así que solo queda la última corrida).
+
+## 9. Plan para regenerar los snapshots anteriores al 2026-09-01
+
+Dado el hallazgo de la sección 7.0, los snapshots viejos no se pueden "arreglar" editando filas —
+hay que volver a correr el job para cada `snapshot_date` afectada, para que se recalculen con la
+query actual (la que sí respeta `expiration_date <= :fecha`).
+
+**Antes de tocar nada**, corre esto para confirmar el rango real afectado (no asumas que es todo
+desde el 27 de julio — puede que el job solo se haya usado para pruebas puntuales, no a diario):
+
+```sql
+SELECT MIN(snapshot_date) AS primera, MAX(snapshot_date) AS ultima,
+       COUNT(DISTINCT snapshot_date) AS dias_distintos, COUNT(*) AS filas_totales
+FROM portfolio_snapshot
+WHERE snapshot_date < '2026-09-01';
+```
+
+Y para ver exactamente qué fechas existen (por si hay huecos y no vale la pena regenerar todo el
+rango calendario, solo las fechas que ya tienen datos):
+
+```sql
+SELECT snapshot_date, COUNT(*) AS creditos, MAX(job_execution_id) AS ultimo_job
+FROM portfolio_snapshot
+WHERE snapshot_date < '2026-09-01'
+GROUP BY snapshot_date
+ORDER BY snapshot_date;
+```
+
+**Regenerar** significa llamar, una por una y en orden, `POST /dev/other-concepts/run-snapshot?fecha=X`
+para cada `snapshot_date` afectada. Cada llamada hace `DELETE ... WHERE snapshot_date = fecha` y
+vuelve a insertar con la query actual — no hay que borrar nada a mano antes.
+
+El endpoint vive bajo `/dev/**`, que **no** está en la lista `permitAll()` de `SecurityConfig`
+(está comentado: `//.requestMatchers("/dev/**").permitAll()`), así que necesitas un JWT válido
+(`Authorization: Bearer <token>`) para llamarlo. `application.yml` tiene
+`jwt-expiration-milliseconds: 60000`, pero en la práctica el token emitido dura **24 horas**
+(verificado decodificando un token real: `exp - iat = 86400s`) — de sobra para una corrida de 46+
+llamadas, ese valor de config no corresponde 1:1 a segundos de vida del token.
+
+⚠️ **Header obligatorio que falta en cualquier request si no lo agregas:** `VersionFilter`
+(`src/main/java/com/recaudo/api/config/VersionFilter.java`) intercepta **todas** las rutas —
+incluyendo `/dev/**` y `/auth/login` — y devuelve `426 Upgrade Required` con
+`{"message":"Debe actualizar la aplicacion"}` si no viene el header `X-App-Version` con el valor
+exacto de `app.version` en `application.yml` (hoy `1.0.3`). Sin este header, **nada** de lo de abajo
+funciona, ni siquiera el login.
+
+### 9.1 Paso a paso — levantar el backend contra la BD correcta
+
+```powershell
+cd C:\Users\milanmejia\Documents\GitHub\recaudo_backend
+$env:JAVA_HOME = "C:\Users\milanmejia\.jdks\temurin-17.0.18"
+.\gradlew.bat bootRun
+```
+
+**Sin perfil activo** (`bootRun` a secas) usa `application.yml` por defecto, que apunta a
+`159.203.163.185/recaudo_dev` — la BD correcta para este procedimiento. **No actives el perfil
+`scheduler`** para esto: `application-scheduler.yml` apunta a una BD distinta (`recaudo`, sin
+`_dev`) — mismo host, otra base. Espera a ver `Started MainApplication` en el log (20-40s) antes de
+seguir.
+
+Antes de levantar una instancia nueva, revisa si ya hay una corriendo en el puerto 8080
+(`netstat -ano | grep :8080` en Git Bash, o `Get-NetTCPConnection -LocalPort 8080` en PowerShell) —
+si el IDE ya tiene el backend arriba, úsala directamente en vez de duplicar.
+
+### 9.2 Vía PowerShell (`Invoke-RestMethod`)
+
+Conseguir el token:
+
+```powershell
+$login = Invoke-RestMethod -Method Post -Uri "http://localhost:8080/api/auth/login" `
+  -ContentType "application/json" -Headers @{ "X-App-Version" = "1.0.3" } `
+  -Body '{"username":"TU_USUARIO","password":"TU_CLAVE"}'
+$token = $login.data.token   # ajusta el path si tu respuesta trae el token en otro campo
+```
+
+Prueba con una sola fecha primero (ver sección 9.4 para cómo validar el resultado), y si sale bien,
+corre el resto en lote:
+
+```powershell
+$fechas = @(
+  "2026-07-12","2026-07-13","2026-07-14","2026-07-15","2026-07-16","2026-07-17","2026-07-18",
+  "2026-07-19","2026-07-20","2026-07-21","2026-07-22","2026-07-23","2026-07-27","2026-07-28",
+  "2026-07-29","2026-07-30","2026-07-31","2026-08-01","2026-08-02","2026-08-03","2026-08-04",
+  "2026-08-05","2026-08-07","2026-08-08","2026-08-09","2026-08-10","2026-08-11","2026-08-12",
+  "2026-08-13","2026-08-14","2026-08-15","2026-08-16","2026-08-17","2026-08-18","2026-08-19",
+  "2026-08-20","2026-08-21","2026-08-22","2026-08-23","2026-08-24","2026-08-25","2026-08-26",
+  "2026-08-27","2026-08-28","2026-08-29","2026-08-30"
+)
+
+foreach ($f in $fechas) {
+  try {
+    $r = Invoke-RestMethod -Method Post `
+      -Uri "http://localhost:8080/api/dev/other-concepts/run-snapshot?fecha=$f" `
+      -Headers @{ Authorization = "Bearer $token"; "X-App-Version" = "1.0.3" }
+    Write-Host "$f -> OK, procesados=$($r.totalCreditosProcesados)"
+  } catch {
+    Write-Host "$f -> ERROR: $($_.Exception.Message)"
+    # Si es 401 (token vencido), vuelve a correr el login de arriba y relanza el foreach
+    # solo con las fechas que faltan (quítalas de $fechas las que ya salieron OK).
+  }
+}
+```
+
+### 9.3 Vía Postman (Collection Runner)
+
+Postman no tiene un "loop" nativo en una sola request — la forma correcta de iterar 46 fechas es el
+**Collection Runner con un archivo de datos (CSV)**:
+
+1. **Crea una Collection** nueva, ej. "Recaudo — Regenerar Snapshots".
+2. **Variable de colección** `baseUrl` = `http://localhost:8080/api`.
+3. **Header a nivel de Collection** (pestaña **Headers** de la Collection, no de cada request, para
+   que aplique a todas): `X-App-Version: 1.0.3` — si no, todo responde `426 Upgrade Required` (ver
+   nota arriba de la sección 9 sobre `VersionFilter`).
+4. **Request de login** dentro de la colección: `POST {{baseUrl}}/auth/login`, body raw JSON
+   `{"username": "...", "password": "..."}`. En la pestaña **Tests** de esa request, agrega:
+   ```javascript
+   const data = pm.response.json();
+   pm.collectionVariables.set("token", data.data.token); // ajusta el path según tu respuesta real
+   ```
+   Esto guarda el token automáticamente cada vez que corres el login.
+5. **Request de regeneración**: `POST {{baseUrl}}/dev/other-concepts/run-snapshot?fecha={{fecha}}`.
+   En la pestaña **Authorization**, tipo `Bearer Token`, valor `{{token}}`.
+6. **Corre el login manualmente una vez** (botón Send) para tener un token fresco en la variable.
+7. **Crea el archivo `fechas.csv`** (en tu equipo, cualquier carpeta) con una columna `fecha`:
+   ```
+   fecha
+   2026-07-12
+   2026-07-13
+   2026-07-14
+   2026-07-15
+   2026-07-16
+   2026-07-17
+   2026-07-18
+   2026-07-19
+   2026-07-20
+   2026-07-21
+   2026-07-22
+   2026-07-23
+   2026-07-27
+   2026-07-28
+   2026-07-29
+   2026-07-30
+   2026-07-31
+   2026-08-01
+   2026-08-02
+   2026-08-03
+   2026-08-04
+   2026-08-05
+   2026-08-07
+   2026-08-08
+   2026-08-09
+   2026-08-10
+   2026-08-11
+   2026-08-12
+   2026-08-13
+   2026-08-14
+   2026-08-15
+   2026-08-16
+   2026-08-17
+   2026-08-18
+   2026-08-19
+   2026-08-20
+   2026-08-21
+   2026-08-22
+   2026-08-23
+   2026-08-24
+   2026-08-25
+   2026-08-26
+   2026-08-27
+   2026-08-28
+   2026-08-29
+   2026-08-30
+   ```
+8. Abre el **Runner** (botón "Run" sobre la colección, o el ícono del Runner en la barra lateral).
+9. Selecciona **solo** la request de regeneración (no incluyas la de login en el run).
+10. En **Data File**, sube `fechas.csv` — Postman detecta la columna `fecha` y la cantidad de
+    iteraciones automáticamente (46).
+11. Pon **Delay** en `0ms` (o `100ms` si quieres ir más despacio) y dale **Run**.
+12. Postman ejecuta la request 46 veces, sustituyendo `{{fecha}}` por cada fila del CSV. Al terminar
+    ves un resumen pass/fail por iteración, y puedes hacer clic en cualquiera para ver el response body
+    completo (`totalCreditosProcesados`, etc.).
+13. **Si el token vence a mitad de camino** (verás varias iteraciones con `401`): vuelve a correr el
+    request de login (paso 6), edita `fechas.csv` para dejar solo las fechas que fallaron, y vuelve a
+    correr el Runner con ese CSV recortado.
+
+### 9.4 Verificar que la regeneración funcionó
+
+```sql
+SELECT capital_generado, capital_pagado, capital_pendiente
+FROM portfolio_snapshot
+WHERE credit_id = 691 AND snapshot_date = '2026-08-06';
+```
+
+Debe dar `capital_generado = 0` (la primera cuota del crédito 691 vence el 18-ago, después del
+corte). Y a nivel de zona:
+
+```sql
+SELECT snapshot_date, COUNT(*) AS creditos, SUM(saldo_total) AS saldoTotal
+FROM portfolio_snapshot
+WHERE zona_nombre = 'ELITE' AND snapshot_date IN ('2026-08-06', '2026-09-03')
+GROUP BY snapshot_date;
+```
+
+El `saldoTotal` del 06-ago ya no debería ser una cifra desproporcionada — debería quedar en un rango
+comparable al del 03-sep, con la diferencia explicada por pagos reales de ese mes, no por un error
+de cálculo.
+
+**Lo que sí va a mejorar** con la regeneración: `capitalGenerado/Pagado/Pendiente`,
+`interesGenerado/Pagado/Pendiente`, `seguro*Generado/Pagado/Pendiente`, `moraGenerada/Pagada/Pendiente`,
+`totalPagado`, `saldoTotal` — todos van a respetar la fecha de corte real por primera vez.
+
+**Lo que sigue sin ser 100% histórico** incluso después de regenerar (limitación de la sección 7,
+punto 1, que es distinta a esta): `cuotasPagadas`, `diasMora` y `estadoCredito` van a reflejar el
+estado **actual** de `credit_amortization.paid_full`/`credit.credit_status`, no el que tenían en esa
+fecha pasada. Para créditos donde nada cambió de estado desde entonces esto no importa; para
+créditos que se pagaron o cancelaron después, esos tres campos del snapshot regenerado seguirán sin
+ser exactos — pero ya es una mejora enorme sobre el estado actual (que ni siquiera el saldo estaba bien).
+
+**Antes de ejecutar el regenerado en lote**, confirma explícitamente con el equipo — son escrituras
+reales sobre `portfolio_snapshot` (aunque acotadas y reversibles solo re-corriendo de nuevo, no es
+una operación trivial de deshacer si se ejecuta contra la base de producción).
+
+## 10. Bitácora — regeneración ejecutada (2026-09-05)
+
+Registro de la corrida real que corrigió los 47 snapshots afectados (sección 7.0). Queda acá para
+que quede trazable qué se hizo, contra qué ambiente, y qué se verificó — no repetir esta corrida a
+menos que se detecte otro problema en el mismo rango de fechas.
+
+**Ambiente:** backend local (`./gradlew bootRun`, sin perfil activo → `application.yml` por
+defecto), apuntando a `159.203.163.185/recaudo_dev`. Usuario `administrador` (rol `Administrador`).
+Header `X-App-Version: 1.0.3` en cada request (obligatorio, ver nota en la sección 9 —
+esto no estaba documentado antes de esta corrida; se descubrió en el momento porque sin él todo
+responde `426 Upgrade Required`).
+
+**Alcance:** las 47 fechas de la sección 7.0/9 (2026-07-12 → 2026-08-30, con el hueco ya conocido
+del 24-26 de julio sin datos). Se llamó `POST /dev/other-concepts/run-snapshot?fecha=X` una vez por
+fecha, en 7 tandas (1 de prueba + 6 lotes de hasta 8 fechas), todas secuenciales, ninguna en
+paralelo.
+
+**Resultado — las 47 llamadas terminaron `paginasConError: 0`:**
+
+| Fecha | Créditos procesados | jobExecutionId |
+|---|---|---|
+| 2026-08-06 (prueba) | 398 | `428bbdde-5c74-4050-90df-d954a5bf9b7b` |
+| 2026-07-12 | 398 | `99a52c66-023b-458b-a671-30819935b172` |
+| 2026-07-13 | 398 | `2ec16794-2dd0-4d29-812c-51c1c2e37f0d` |
+| 2026-07-14 | 398 | `dee011bf-7409-43b2-9650-13d06b6dbc4d` |
+| 2026-07-15 | 398 | `5786a24d-4b3b-4b36-86d1-ae74df84e0b8` |
+| 2026-07-16 | 398 | `224e981f-b1e7-4d85-90de-0cf860ecb57a` |
+| 2026-07-17 | 398 | `c93ed29e-0090-4319-8bef-8f3dbbd8c737` |
+| 2026-07-18 | 398 | `ef845bcc-c48f-4264-99c2-b61a8c6d2844` |
+| 2026-07-19 | 398 | `7ac8870a-71ff-4bee-8acd-ebcb0075d436` |
+| 2026-07-20 | 398 | `a520fc74-6795-4556-8f13-6295470d35b5` |
+| 2026-07-21 | 398 | `3fac8be9-cc0d-4d9e-9d7b-5086a491d11e` |
+| 2026-07-22 | 398 | `da05ff71-a511-4233-a6a2-192fe9338290` |
+| 2026-07-23 | 398 | `274dc84b-e9ef-4f1a-ac28-ebea67e4f4ed` |
+| 2026-07-27 | 398 | `f06de01c-391c-4c92-9b2f-f7c94e8c2475` |
+| 2026-07-28 | 398 | `85490ba7-2558-4fd0-b4ac-21b3f7a37aaa` |
+| 2026-07-29 | 398 | `e0964e5c-1840-41ba-bd7f-0b6a70460092` |
+| 2026-07-30 | 398 | `70a6f63e-6878-4b6f-adec-011636a5b9b2` |
+| 2026-07-31 | 398 | `eb73777c-d329-4f0e-861f-510579fbe3da` |
+| 2026-08-01 | 398 | `23fc6f26-5904-45e3-9f94-37d061656d28` |
+| 2026-08-02 | 398 | `d38d485a-55d6-4d6e-a259-61ce780cb45a` |
+| 2026-08-03 | 398 | `2a716649-48ce-431d-902e-c240fdfa2b27` |
+| 2026-08-04 | 398 | `62d30f9e-4496-446d-8ff0-cc5727245270` |
+| 2026-08-05 | 398 | `6161412c-1d7d-4ef4-b538-1b21df0ddaae` |
+| 2026-08-07 | 398 | `a2782075-0b17-4317-a422-31dabb9f1d73` |
+| 2026-08-08 | 398 | `ba941373-aee9-4ed0-88b1-d495971d4226` |
+| 2026-08-09 | 398 | `d6d836f3-8485-42b1-b4c3-733259e8b2f8` |
+| 2026-08-10 | 398 | `3cb76877-b0b5-437c-bafb-9465277d7fb6` |
+| 2026-08-11 | 398 | `5d55aa83-1ebe-45ab-a0b4-ba714fb2c257` |
+| 2026-08-12 | 398 | `a8795651-0bf7-48f4-a9e0-ff5ad5f0d756` |
+| 2026-08-13 | 398 | `8458be86-b527-45a9-897d-12b925e79932` |
+| 2026-08-14 | 398 | `d99e5659-4ea1-40f6-bcb2-a3d76e1f6441` |
+| 2026-08-15 | 398 | `1caa806a-8a5c-484f-a194-560af44a12f5` |
+| 2026-08-16 | 398 | `d64c9dcc-4c96-4fdc-9e4b-16ea7f0cf3d4` |
+| 2026-08-17 | 398 | `989a7e3a-638c-4c50-9233-18b94db6f508` |
+| 2026-08-18 | 398 | `70464068-6a69-4ba2-bb89-336b7b6979e5` |
+| 2026-08-19 | 398 | `96bc390b-3d1b-4762-82ad-44c7f00cb17d` |
+| 2026-08-20 | 398 | `451b49be-94c9-4e84-8453-eaee6c7590f7` |
+| 2026-08-21 | 398 | `a7f64037-19c3-47f0-a906-4ec7deedaa6d` |
+| 2026-08-22 | 398 | `f5543007-a5c3-4cf6-a55b-4af997faf259` |
+| 2026-08-23 | 398 | `3fe83573-937a-4c43-bdb1-f6eca5b48213` |
+| 2026-08-24 | 398 | `6b7edad7-e32b-427f-b1f3-e0854db0ce5e` |
+| 2026-08-25 | 398 | `66c01a2a-0029-4af8-8860-533084c9426a` |
+| 2026-08-26 | 398 | `8de72c0d-9895-4b79-a2be-7da5f387c172` |
+| 2026-08-27 | 398 | `e4e38b2f-6bd9-4287-839c-218080eb4748` |
+| 2026-08-28 | 398 | `d67802f9-fa41-405e-ab92-1524e5e9c4ff` |
+| 2026-08-29 | 398 | `2d3ed404-3e45-4631-987b-4bbfee61c3dd` |
+| 2026-08-30 | 398 | `f0c7b514-bb2e-491b-b3c0-3fa87fb7eaeb` |
+
+Nota: `398` es el conteo global de créditos `ACTIVE` en el momento de la corrida (2026-09-05) —
+igual en las 47 fechas porque, como dice la limitación de la sección 7 punto 3, el job usa el
+conjunto de créditos activo **actual**, no el histórico de cada fecha.
+
+**Verificación post-regeneración (vía `GET /portfolio-snapshots/get-by-date/{fecha}`, sumando en
+Python por no tener cliente `mysql` a mano en ese momento):**
+
+| Fecha | Créditos zona ELITE | saldoTotal ELITE | capitalPendiente ELITE |
+|---|---|---|---|
+| 2026-08-06 (ya regenerado) | 77 | $3.544.021,23 | $3.759.559,63 |
+| 2026-09-03 | 77 | $26.726.788,55 | $19.805.067,41 |
+
+Antes de la regeneración, el 06-ago mostraba `saldoTotal ≈ $269.355.353,08` (con 74 créditos) — una
+caída de ~90% hacia el 03-sep que no tenía sentido de negocio. Después de regenerar, el saldo **crece**
+de $3,5M a $26,7M entre esas fechas, que es el comportamiento esperado de una cartera activa
+acumulando cuotas vencidas con el tiempo. El conteo de créditos también pasó a ser el mismo en ambas
+fechas (77) por la razón explicada en la nota de arriba.
+
+**Hallazgo nuevo, no corregido, para seguimiento aparte:** en créditos sin ninguna cuota vencida
+todavía a la fecha de corte (ej. crédito 691 al 2026-08-06, cuya primera cuota vence el 18-ago),
+`totalCuotas`, `cuotasPagadas` y `cuotasPendientes` salen `null` en vez de `0`. Pasa porque la CTE
+`cuotas` de `CreditSnapshotSourceRepository` filtra por `expiration_date <= :fecha`, y si ningún
+registro de `credit_amortization` del crédito cumple esa condición, el `GROUP BY` no genera fila
+para ese `credit_id` — el `LEFT JOIN` en la query principal deja esas tres columnas en `NULL` en vez
+de `0`. No afecta ningún cálculo de saldo (es cosmético a nivel de esas tres columnas), pero si algún
+consumidor (frontend, reporte) no maneja `null` con cuidado, puede romper una suma o un `.toFixed()`.
+Pendiente de decidir si se corrige (ej. `COALESCE` en esas tres columnas del `SELECT` principal).

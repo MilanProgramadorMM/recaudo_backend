@@ -11,6 +11,7 @@ import java.util.List;
 public interface ContactInfoGateway {
 
     void saveContactInfoClient(PersonRegisterDto dto, Long personId);
+    void updateContactInfoClient(PersonRegisterDto dto, Long personId);
     public ContactInfoRegisterDto save(ContactInfoRegisterDto person);
     List<ContactInfoListDto> getByPerson(Long personId);
     ContactInfoRegisterDto update(Long id, ContactInfoRegisterDto dto);

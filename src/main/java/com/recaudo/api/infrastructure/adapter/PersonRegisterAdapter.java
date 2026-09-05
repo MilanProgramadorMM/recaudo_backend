@@ -283,6 +283,10 @@ public class PersonRegisterAdapter implements PersonGateway {
             personZonaGateway.updateClientToZone(personId, dto.getZona());
         }
 
+        // Actualizar información de contacto (whatsApp, celular, correo, dirección) —
+        // antes esto solo se guardaba al crear (save()), nunca al editar.
+        contactInfoGateway.updateContactInfoClient(dto, personId);
+
         return personMapper.entityToDto(personRepository.save(entity));
     }
 

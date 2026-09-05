@@ -134,6 +134,56 @@ public class ContactInfoAdapter implements ContactInfoGateway {
         }
     }
 
+    @Override
+    public void updateContactInfoClient(PersonRegisterDto dto, Long personId) {
+        // Actualiza (o crea si no existía) el contacto — a diferencia de saveContactInfoClient,
+        // que es insert-only y usado solo al registrar una persona nueva.
+        if (dto.getAdress() != null && !dto.getAdress().isBlank()) {
+            upsertContact(personId, "DIRPRIN", dto.getAdress(), dto);
+        }
+        if (dto.getWhatsApp() != null && !dto.getWhatsApp().isBlank()) {
+            upsertContact(personId, "WHA", dto.getWhatsApp(), dto);
+        }
+        if (dto.getCelular() != null && !dto.getCelular().isBlank()) {
+            upsertContact(personId, "CEPRIN", dto.getCelular(), dto);
+        }
+        if (dto.getCorreo() != null && !dto.getCorreo().isBlank()) {
+            upsertContact(personId, "COPRIN", dto.getCorreo(), dto);
+        }
+    }
+
+    private void upsertContact(Long personId, String code, String value, PersonRegisterDto dto) {
+        GlotypesEntity tipo = glotypesRepository.findByKeyAndCode("TIPUBI", code)
+                .orElseThrow(() -> new BadRequestException("No existe code: " + code));
+
+        ContactInfoEntity entity = contactInfoRepository.findByPersonAndType(personId, tipo.getId())
+                .orElse(new ContactInfoEntity());
+
+        String username = getUsernameToken();
+
+        if (entity.getId() == null) {
+            entity.setPerson(personId);
+            entity.setType(tipo.getId());
+            entity.setCreatedAt(LocalDateTime.now());
+            entity.setUserCreate(username);
+        } else {
+            entity.setEditedAt(LocalDateTime.now());
+            entity.setUserEdit(username);
+        }
+
+        entity.setValue(value.trim());
+
+        if ("DIRPRIN".equalsIgnoreCase(code)) {
+            entity.setCountry(dto.getCountryId());
+            entity.setDepartment(dto.getDepartentId());
+            entity.setCity(dto.getCityId());
+            entity.setNeighborhood(dto.getNeighborhoodId());
+            entity.setDescription(dto.getDetails());
+        }
+
+        contactInfoRepository.save(entity);
+    }
+
     private void saveContact(Long personId, String code, String value, PersonRegisterDto dto) {
         GlotypesEntity tipo = glotypesRepository.findByKeyAndCode("TIPUBI", code).orElse(null);
         if (tipo == null) {
