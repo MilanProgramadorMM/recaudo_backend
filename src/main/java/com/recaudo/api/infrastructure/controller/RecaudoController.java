@@ -62,7 +62,6 @@ public class RecaudoController {
         }
     }
 
-
     /**
      * Endpoint para consultar el estado de pago de un crédito
      */

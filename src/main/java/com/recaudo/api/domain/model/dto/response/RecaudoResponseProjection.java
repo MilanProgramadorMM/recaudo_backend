@@ -15,4 +15,6 @@ public interface RecaudoResponseProjection {
     String getCreatedAt();
     String getZona();
     String getDescription();
+    Long getNumeroCuota();
+    Long getCuotasPendientes();
 }

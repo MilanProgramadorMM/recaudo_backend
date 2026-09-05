@@ -42,14 +42,12 @@ public interface CreditSnapshotSourceRepository extends JpaRepository<CreditEnti
                    SUM(CASE WHEN nrd.concept_id = 48 THEN ABS(nrd.value) ELSE 0 END) AS capital,
                    SUM(CASE WHEN nrd.concept_id = 49 THEN ABS(nrd.value) ELSE 0 END) AS interes,
                    SUM(CASE WHEN nrd.concept_id = 50 THEN ABS(nrd.value) ELSE 0 END) AS seg_vida,
-                   SUM(CASE WHEN nrd.concept_id = 51 THEN ABS(nrd.value) ELSE 0 END) AS seg_cartera,
-                   SUM(CASE WHEN nrd.concept_id = 53 THEN ABS(nrd.value) ELSE 0 END) AS mora_pago_53,
-                   SUM(CASE WHEN nrd.concept_id = 54 THEN ABS(nrd.value) ELSE 0 END) AS mora_pago_54
+                   SUM(CASE WHEN nrd.concept_id = 51 THEN ABS(nrd.value) ELSE 0 END) AS seg_cartera
             FROM new_recaudo nr
             JOIN new_recaudo_detail nrd ON nrd.recaudo_id = nr.id
             WHERE nr.value_paid < 0
               AND nr.created_at < (:fecha + INTERVAL 1 DAY)
-              AND nrd.concept_id IN (48, 49, 50, 51, 53, 54)
+              AND nrd.concept_id IN (48, 49, 50, 51)
             GROUP BY nr.credit_id
         ),
         mora_gen AS (
@@ -58,6 +56,16 @@ public interface CreditSnapshotSourceRepository extends JpaRepository<CreditEnti
             FROM credit_other_concepts coc
             JOIN credit_other_concepts_detail cocd ON cocd.credit_other_concepts_id = coc.id
             WHERE cocd.concept_id = 52
+              AND cocd.created_at < (:fecha + INTERVAL 1 DAY)
+            GROUP BY coc.credit_id
+        ),
+        mora_pagado AS (
+            SELECT coc.credit_id,
+                   SUM(CASE WHEN cocd.concept_id = 53 THEN ABS(cocd.value) ELSE 0 END) AS pagado,
+                   SUM(CASE WHEN cocd.concept_id = 54 THEN ABS(cocd.value) ELSE 0 END) AS reversado
+            FROM credit_other_concepts coc
+            JOIN credit_other_concepts_detail cocd ON cocd.credit_other_concepts_id = coc.id
+            WHERE cocd.concept_id IN (53, 54)
               AND cocd.created_at < (:fecha + INTERVAL 1 DAY)
             GROUP BY coc.credit_id
         ),
@@ -102,13 +110,13 @@ public interface CreditSnapshotSourceRepository extends JpaRepository<CreditEnti
             ROUND(COALESCE(pagado.seg_cartera, 0), 2)   AS seguroCarteraPagado,
             ROUND(COALESCE(generado.seg_cartera, 0) - COALESCE(pagado.seg_cartera, 0), 2) AS seguroCarteraPendiente,
             ROUND(COALESCE(mora_gen.generado, 0), 2) AS moraGenerada,
-            ROUND(COALESCE(pagado.mora_pago_53, 0) - COALESCE(pagado.mora_pago_54, 0), 2) AS moraPagada,
+            ROUND(COALESCE(mora_pagado.pagado, 0) - COALESCE(mora_pagado.reversado, 0), 2) AS moraPagada,
             ROUND(COALESCE(mora_gen.generado, 0)
-                - (COALESCE(pagado.mora_pago_53, 0) - COALESCE(pagado.mora_pago_54, 0)), 2) AS moraPendiente,
+                - (COALESCE(mora_pagado.pagado, 0) - COALESCE(mora_pagado.reversado, 0)), 2) AS moraPendiente,
             ROUND(
                 COALESCE(pagado.capital, 0) + COALESCE(pagado.interes, 0)
               + COALESCE(pagado.seg_vida, 0) + COALESCE(pagado.seg_cartera, 0)
-              + (COALESCE(pagado.mora_pago_53, 0) - COALESCE(pagado.mora_pago_54, 0))
+              + (COALESCE(mora_pagado.pagado, 0) - COALESCE(mora_pagado.reversado, 0))
             , 2) AS totalPagado,
             ROUND(
                 (COALESCE(generado.capital, 0)     - COALESCE(pagado.capital, 0))
@@ -116,7 +124,7 @@ public interface CreditSnapshotSourceRepository extends JpaRepository<CreditEnti
               + (COALESCE(generado.seg_vida, 0)    - COALESCE(pagado.seg_vida, 0))
               + (COALESCE(generado.seg_cartera, 0) - COALESCE(pagado.seg_cartera, 0))
               + (COALESCE(mora_gen.generado, 0)
-                    - (COALESCE(pagado.mora_pago_53, 0) - COALESCE(pagado.mora_pago_54, 0)))
+                    - (COALESCE(mora_pagado.pagado, 0) - COALESCE(mora_pagado.reversado, 0)))
             , 2) AS saldoTotal,
             ROUND(0, 2) AS otrosConceptosGenerado,
             COALESCE(DATEDIFF(:fecha, mora_dias.fecha_vencimiento_mas_antigua), 0) AS diasMora
@@ -131,6 +139,7 @@ public interface CreditSnapshotSourceRepository extends JpaRepository<CreditEnti
         LEFT  JOIN generado            ON generado.credit_id  = c.id
         LEFT  JOIN pagado              ON pagado.credit_id    = c.id
         LEFT  JOIN mora_gen            ON mora_gen.credit_id  = c.id
+        LEFT  JOIN mora_pagado         ON mora_pagado.credit_id = c.id
         LEFT  JOIN mora_dias           ON mora_dias.credit_id = c.id
         WHERE c.credit_status = 'ACTIVE'
         ORDER BY c.id

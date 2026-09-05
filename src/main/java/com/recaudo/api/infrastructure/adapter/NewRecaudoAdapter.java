@@ -447,7 +447,7 @@ public class NewRecaudoAdapter {
             throw new IllegalArgumentException("El valor pagado debe ser mayor a cero");
         }
 
-        validateClosingStatus(requestDto, personId, token);
+        //validateClosingStatus(requestDto, personId, token);
 
         String distributionType = Optional.ofNullable(requestDto.getDistributionType())
                 .orElse("NORMAL");
@@ -484,6 +484,8 @@ public class NewRecaudoAdapter {
         saveDetail(recaudo.getId(), conceptNC.getId(), glotypeId,
                 requestDto.getValuePaid().negate());
 
+        marcarVisitaDelCreditoSiHayCuotaPendiente(requestDto.getCreditId());
+
         log.info("Pago componente {} procesado: crédito={}", distributionType,
                 requestDto.getCreditId());
 
@@ -492,6 +494,22 @@ public class NewRecaudoAdapter {
                 .totalPaid(requestDto.getValuePaid())
                 .cuotasPagadas(0).cuotasFaltantes(0).saldoSobrante(BigDecimal.ZERO)
                 .build();
+    }
+
+    // Pago a solo un componente (capital o interés) no está atado a una cuotaId específica en
+    // el request, pero sí representa un abono de hoy sobre el crédito. Se refleja en la visita
+    // diaria de la cuota pendiente más próxima, igual que hace processMultipleQuotasPayment.
+    private void marcarVisitaDelCreditoSiHayCuotaPendiente(Long creditId) {
+        amortizationRepository
+                .findByCreditIdAndPaidFullOrderByQuotaNumberAsc(creditId, "N")
+                .stream()
+                .findFirst()
+                .ifPresent(cuota -> {
+                    String username = getUsernameToken();
+                    collectionVisitAdapter.registerDailyVisitIfNotExists(
+                            creditId, cuota.getId(), username, LocalDate.now());
+                    collectionVisitAdapter.markAsPaidToday(cuota.getId(), LocalDate.now());
+                });
     }
 
     // Pago normal / ruta / ajuste
@@ -580,12 +598,15 @@ public class NewRecaudoAdapter {
                 cuota.setLiquidated("S");
             }
 
+            // Se abonó algo a esta cuota hoy — cuenta como "pagado hoy" en la visita diaria,
+            // sin importar si alcanzó a saldarla por completo (abono parcial también cuenta).
+            collectionVisitAdapter.markAsPaidToday(cuota.getId(), LocalDate.now());
+
             // paid_full = 'S' solo cuando se cubre totalQuotaValue + moraCausada
             BigDecimal nuevoTotalPagado = comp.totalPaid().add(dist.getTotalApplied());
             if (nuevoTotalPagado.compareTo(comp.totalDebt()) >= 0) {
                 cuota.setPaidFull("S");
                 cuotasLiquidadas++;
-                collectionVisitAdapter.markAsPaidToday(cuota.getId(), LocalDate.now());
             }
 
             amortizationRepository.save(cuota);
@@ -638,10 +659,10 @@ public class NewRecaudoAdapter {
         } else {
 
             record.setValue(record.getValue().add(valorAbonado));
-
-            descontarDebidoCobrar(zonaId, valorAbonado);
             //record.setCant(record.getCant() + 1L);
         }
+
+        descontarDebidoCobrar(zonaId, valorAbonado);
 
         dashboardRecaudoRepository.save(record);
     }

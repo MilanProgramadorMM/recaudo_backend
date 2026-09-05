@@ -50,50 +50,28 @@ public class DashboardMetricsRepository {
         );
     }
 
-    public BigDecimal getTotalDebidoCobrarValorcCuota(
+    public BigDecimal getTotalDebidoCobrarValorCuotaNominal(
             LocalDateTime fechaInicio,
             LocalDateTime fechaFin,
             Long zonaId
     ) {
-
         String sql = """
-        
-                SELECT
-                    COALESCE(SUM(a.total_quota_value), 0) AS debido_a_cobrar
-                FROM credit_amortization a
-                INNER JOIN credit c
-                    ON c.id = a.credit_id
-                INNER JOIN credit_intention ci
-                    ON ci.id = c.credit_intention_id
-                WHERE c.credit_status = 'ACTIVE'
-                  AND c.deleted_at IS NULL
-                  AND a.paid_full = 'N'
-                  AND ci.zone_id = :zonaId
-                  AND a.expiration_date >= :fechaInicio
-                  AND a.expiration_date < :fechaFin;
-        """;
-
-        MapSqlParameterSource params =
-                new MapSqlParameterSource()
-                        .addValue("zonaId", zonaId)
-                        .addValue("fechaInicio", fechaInicio)
-                        .addValue("fechaFin", fechaFin);
-
-        // DEBUG
-        String sqlDebug = sql
-                .replace(":zonaId", String.valueOf(zonaId))
-                .replace(":fechaInicio", "'" + fechaInicio + "'")
-                .replace(":fechaFin", "'" + fechaFin + "'");
-
-        System.out.println("========== SQL EJECUTADO ==========");
-        System.out.println(sqlDebug);
-        System.out.println("===================================");
-
-        return jdbcTemplate.queryForObject(
-                sql,
-                params,
-                BigDecimal.class
-        );
+        SELECT COALESCE(SUM(a.total_quota_value), 0) AS valor_cuota_nominal
+        FROM credit_amortization a
+        INNER JOIN credit c             ON c.id = a.credit_id
+        INNER JOIN credit_intention ci  ON ci.id = c.credit_intention_id
+        WHERE c.credit_status = 'ACTIVE'
+          AND c.deleted_at IS NULL
+          AND a.paid_full = 'N'
+          AND ci.zone_id = :zonaId
+          AND a.expiration_date >= :fechaInicio
+          AND a.expiration_date < :fechaFin
+    """;
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("zonaId", zonaId)
+                .addValue("fechaInicio", fechaInicio)
+                .addValue("fechaFin", fechaFin);
+        return jdbcTemplate.queryForObject(sql, params, BigDecimal.class);
     }
 
     public DashboardNoPagoSummaryDto getTotalNoPago(
@@ -128,12 +106,11 @@ public class DashboardMetricsRepository {
 
 
     // GRAFICOS /////////////////////////////////////////////////////////////////////////////////////////////////
-
     public List<DashboardHistorialDto> getHistorialDebidoCobrar(
             LocalDate fechaInicio, LocalDate fechaFin, Long zonaId) {
 
         String sql = """
-        SELECT DATE(created_at) AS fecha, SUM(value) AS valor
+        SELECT DATE(created_at) AS fecha, SUM(value_original) AS valor
         FROM dashboard_debido_cobrar
         WHERE zona_id = :zonaId
           AND created_at >= :inicio
@@ -206,29 +183,40 @@ public class DashboardMetricsRepository {
 
     public List<DetalleDebidoCobrarDTO> getDetalleDebidoCobrarPorZona(
             LocalDate startDate, LocalDate endDate, Long zona) {
-
         String baseSql = """
-        SELECT DISTINCT
-               c.id                       AS credit_id,
-               a.id                       AS cuota_id,
-               a.quota_number             AS quota_number,
-               a.expiration_date          AS expiration_date,
-               ci.fullname                AS client_name,
-               pz_cliente.orden           AS client_orden,
-               a.total_quota_value        AS valor_cuota,
-               z.description              AS zona_code,
-               z.value                    AS zona,
-               DAYNAME(a.expiration_date) AS nombre_dia
-        FROM credit_amortization a
-        JOIN credit c               ON c.id = a.credit_id
-                                   AND c.credit_status = 'ACTIVE'
-        JOIN credit_intention ci    ON ci.id = c.credit_intention_id
-        JOIN zona z                 ON z.id = ci.zone_id
-        JOIN person_zona pz_cliente ON pz_cliente.zona_id = z.id
-                                   AND pz_cliente.person_id = c.person_id
-                                   AND pz_cliente.orden > 0
-    """;
-
+    SELECT DISTINCT
+         c.id                       AS credit_id,
+         a.id                       AS cuota_id,
+         a.quota_number             AS quota_number,
+         a.expiration_date          AS expiration_date,
+         ci.fullname                AS client_name,
+         pz_cliente.orden           AS client_orden,
+         a.total_quota_value        AS valor_cuota_nominal,
+         GREATEST(
+             a.total_quota_value
+           - COALESCE((
+                 SELECT SUM(ABS(nrd.value))
+                 FROM new_recaudo nr
+                 JOIN new_recaudo_detail nrd ON nrd.recaudo_id = nr.id
+                 WHERE nr.quota_id = a.id
+                   AND nr.value_paid < 0
+                   AND nr.created_at < (:endDate + INTERVAL 1 DAY)
+                   AND nrd.concept_id IN (48, 49, 50, 51)
+             ), 0)
+         , 0)                       AS valor_cuota_pendiente,
+         z.description              AS zona_code,
+         z.value                    AS zona,
+         DAYNAME(a.expiration_date) AS nombre_dia
+    FROM credit_amortization a
+    JOIN credit c               ON c.id = a.credit_id
+                               AND c.credit_status = 'ACTIVE'
+                               AND c.deleted_at IS NULL
+    JOIN credit_intention ci    ON ci.id = c.credit_intention_id
+    JOIN zona z                 ON z.id = ci.zone_id
+    JOIN person_zona pz_cliente ON pz_cliente.zona_id = z.id
+                               AND pz_cliente.person_id = c.person_id
+                               AND pz_cliente.orden > 0
+""";
         QueryBuilder qb = new QueryBuilder(baseSql)
                 .addFilter("a.paid_full = :paidFull", "paidFull", "N")
                 .addFilter("a.expiration_date >= :startDate", "startDate", startDate)
@@ -237,8 +225,6 @@ public class DashboardMetricsRepository {
                 .buildWhere()
                 .append(" ORDER BY z.value, pz_cliente.orden ");
 
-        System.out.println("SQL: " + qb.getSql());
-        System.out.println("PARAMS: " + qb.getParams().getValues());
         return jdbcTemplate.query(qb.getSql(), qb.getParams(),
                 (rs, rowNum) -> new DetalleDebidoCobrarDTO(
                         rs.getLong("credit_id"),
@@ -247,11 +233,49 @@ public class DashboardMetricsRepository {
                         rs.getObject("expiration_date", LocalDate.class),
                         rs.getString("client_name"),
                         rs.getInt("client_orden"),
-                        rs.getBigDecimal("valor_cuota"),
+                        rs.getBigDecimal("valor_cuota_nominal"),
+                        rs.getBigDecimal("valor_cuota_pendiente"),
                         rs.getString("zona_code"),
                         rs.getString("zona"),
                         rs.getString("nombre_dia")
                 ));
+    }
+
+    public BigDecimal getTotalDebidoCobrarValorCuotaPendiente(
+            LocalDateTime fechaInicio,
+            LocalDateTime fechaFin,
+            Long zonaId
+    ) {
+        String sql = """
+        SELECT COALESCE(SUM(GREATEST(
+            a.total_quota_value
+          - COALESCE((
+                SELECT SUM(ABS(nrd.value))
+                FROM new_recaudo nr
+                JOIN new_recaudo_detail nrd ON nrd.recaudo_id = nr.id
+                WHERE nr.quota_id = a.id
+                  AND nr.value_paid < 0
+                  AND nr.created_at < :fechaInicio
+                  AND nrd.concept_id IN (48, 49, 50, 51)
+            ), 0)
+        , 0)), 0) AS valor_cuota_pendiente
+        FROM credit_amortization a
+        INNER JOIN credit c             ON c.id = a.credit_id
+        INNER JOIN credit_intention ci  ON ci.id = c.credit_intention_id
+        WHERE c.credit_status = 'ACTIVE'
+          AND c.deleted_at IS NULL
+          AND a.paid_full = 'N'
+          AND ci.zone_id = :zonaId
+          AND a.expiration_date >= :fechaInicio
+          AND a.expiration_date < :fechaFin
+    """;
+
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("zonaId", zonaId)
+                .addValue("fechaInicio", fechaInicio)
+                .addValue("fechaFin", fechaFin);
+
+        return jdbcTemplate.queryForObject(sql, params, BigDecimal.class);
     }
 
 
@@ -271,7 +295,10 @@ public class DashboardMetricsRepository {
                         try (ResultSet rs = cs.getResultSet()) {
                             if (rs.next()) {
                                 return DashboardSummaryDto.builder()
+                                        .totalValorCuotaNominal(rs.getBigDecimal("totalValorCuotaNominal"))
                                         .totalValorCuota(rs.getBigDecimal("totalValorCuota"))
+                                        .totalValorCuotaTabla(rs.getBigDecimal("valorCuotaTabla"))
+                                        .valorCuotaTablaOriginal(rs.getBigDecimal("valorCuotaTablaOriginal"))
                                         .totalRecaudado(rs.getBigDecimal("totalRecaudado"))
                                         .totalNoPagado(rs.getBigDecimal("totalNoPagado"))
                                         .totalNoPagoCantidad(rs.getLong("totalNoPagoCantidad"))

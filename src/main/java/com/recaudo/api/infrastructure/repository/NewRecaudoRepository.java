@@ -38,7 +38,10 @@ public interface NewRecaudoRepository extends JpaRepository<NewRecaudoEntity, Lo
             u.username                                  AS userCreate,
             z.value                                     AS zona,
             DATE_FORMAT(r.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
-            'Pago de Cuota'                             AS description
+            'Pago de Cuota'                             AS description,
+            ca.quota_number                             AS numeroCuota,
+            fn_contar_cuotas_pendientes(c.id)           AS cuotasPendientes,
+            gt.name                                     AS metodoPago
         FROM closing cl
         INNER JOIN person p   ON p.id   = cl.person_id
         INNER JOIN user u     ON u.person_id = p.id
@@ -47,20 +50,25 @@ public interface NewRecaudoRepository extends JpaRepository<NewRecaudoEntity, Lo
         INNER JOIN credit c   ON c.id   = r.credit_id
         INNER JOIN credit_intention ci ON ci.id = c.credit_intention_id
         INNER JOIN zona z     ON z.id   = ci.zone_id
+        LEFT JOIN credit_amortization ca ON ca.id = r.quota_id
+        LEFT JOIN glotypes gt ON gt.id = r.payment_type_id AND gt.type = 5
         WHERE cl.id = :closingId
           AND DATE(r.created_at) = :fecha
           AND ci.zone_id = :zonaId
- 
+        
         UNION ALL
- 
+        
         SELECT
             1                                           AS recaudoId,
             p.fullname                                  AS clientName,
             c.initial_value_payment                     AS valuePaid,
-            c.user_create                               AS userCreate,
+            c.user_create                                AS userCreate,
             z.value                                     AS zona,
             DATE_FORMAT(c.created_at, '%Y-%m-%d %H:%i:%s') AS createdAt,
-            'Cuota Inicial'                             AS description
+            'Cuota Inicial'                             AS description,
+            0                                            AS numeroCuota,
+            fn_contar_cuotas_pendientes(c.id)           AS cuotasPendientes,
+            NULL                                         AS metodoPago
         FROM credit c
         INNER JOIN person p   ON c.person_id = p.id
         INNER JOIN credit_intention ci ON c.credit_intention_id = ci.id

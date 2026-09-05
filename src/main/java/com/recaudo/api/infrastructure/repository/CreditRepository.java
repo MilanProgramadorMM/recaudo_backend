@@ -147,7 +147,8 @@ public interface CreditRepository extends JpaRepository<CreditEntity, Long> {
                                         CONCAT(p.firstname, ' ', p.lastname) AS fullname,
                                         p.document AS document,
                                         z.value AS zoneName,
-                                        per.name AS periodName
+                                        per.name AS periodName,
+                                        c.credit_status
                                     FROM credit c
                                     INNER JOIN person p ON c.person_id = p.id
                                     LEFT JOIN person_zona pz ON p.id = pz.person_id AND pz.is_asesor = false

@@ -94,45 +94,62 @@ public class ConsultasRepository {
 
     public List<DetalleMovimientoPorZonaDTO> getDetalleMovimientosPorZona(Long concept, Long paymentType, LocalDateTime startDate, LocalDateTime endDate, Long zona) {
         String baseSql = """
-                SELECT
-                        z.value AS zona,
-                    	p.fullname AS client_name,
-                        tr.concept_key,
-                        tr.name AS concept,
-                        g.name AS payment_type,
-                        r.value_paid,
-                        COALESCE(d.investment_value,0) AS investment_value,
-                        COALESCE(d.interest_value,0) AS interest_value,
-                        COALESCE(d.life_insurance,0) AS life_insurance,
-                        COALESCE(d.portfolio_insurance,0) AS portfolio_insurance,
-                        r.created_at,
-                        r.user_create
-                    FROM new_recaudo r
-                    INNER JOIN credit c
-                        ON c.id = r.credit_id
-                    INNER JOIN credit_intention ci
-                        ON ci.id = c.credit_intention_id
-                    INNER JOIN person p ON p.id = c.person_id
-                    INNER JOIN zona z
-                        ON z.id = ci.zone_id
-                    LEFT JOIN glotypes g
-                        ON g.id = r.payment_type_id
-                    LEFT JOIN (
-                        SELECT
-                            nd.recaudo_id,
-                            MAX(nd.type_recaudo_id) AS type_recaudo_id,
-                            SUM(CASE WHEN nd.concept_id = 48 THEN nd.value ELSE 0 END) AS investment_value,
-                            SUM(CASE WHEN nd.concept_id = 49 THEN nd.value ELSE 0 END) AS interest_value,
-                            SUM(CASE WHEN nd.concept_id = 50 THEN nd.value ELSE 0 END) AS life_insurance,
-                            SUM(CASE WHEN nd.concept_id = 51 THEN nd.value ELSE 0 END) AS portfolio_insurance
-                        FROM new_recaudo_detail nd
-                        GROUP BY nd.recaudo_id
-                    ) d
-                        ON d.recaudo_id = r.id
-                    LEFT JOIN concept tr
-                        ON tr.id = d.type_recaudo_id
-    """;
-
+            SELECT
+                    z.value AS zona,
+                    p.fullname AS client_name,
+                    COALESCE(tr.concept_key, gm.code) AS concept_key,
+                    COALESCE(tr.name, gm.name)         AS concept,
+                    g.name AS payment_type,
+                    r.value_paid,
+                    COALESCE(d.investment_value,0) AS investment_value,
+                    COALESCE(d.interest_value,0) AS interest_value,
+                    COALESCE(d.life_insurance,0) AS life_insurance,
+                    COALESCE(d.portfolio_insurance,0) AS portfolio_insurance,
+                    r.created_at,
+                    r.user_create
+                FROM new_recaudo r
+                INNER JOIN credit c
+                    ON c.id = r.credit_id
+                INNER JOIN credit_intention ci
+                    ON ci.id = c.credit_intention_id
+                INNER JOIN person p ON p.id = c.person_id
+                INNER JOIN zona z
+                    ON z.id = ci.zone_id
+                LEFT JOIN glotypes g
+                    ON g.id = r.payment_type_id
+                LEFT JOIN (
+                    SELECT
+                        nd.recaudo_id,
+                        MAX(nd.type_recaudo_id) AS type_recaudo_id,
+                        SUM(CASE WHEN nd.concept_id = 48 THEN nd.value ELSE 0 END) AS investment_value,
+                        SUM(CASE WHEN nd.concept_id = 49 THEN nd.value ELSE 0 END) AS interest_value,
+                        SUM(CASE WHEN nd.concept_id = 50 THEN nd.value ELSE 0 END) AS life_insurance,
+                        SUM(CASE WHEN nd.concept_id = 51 THEN nd.value ELSE 0 END) AS portfolio_insurance
+                    FROM new_recaudo_detail nd
+                    GROUP BY nd.recaudo_id
+                ) d
+                    ON d.recaudo_id = r.id
+                LEFT JOIN concept tr
+                    ON tr.id = d.type_recaudo_id
+                LEFT JOIN (
+                    SELECT
+                        coc.credit_id,
+                        cocd.value,
+                        cocd.created_at,
+                        cocd.user_create,
+                        cocd.concept_id
+                    FROM credit_other_concepts_detail cocd
+                    INNER JOIN credit_other_concepts coc
+                        ON coc.id = cocd.credit_other_concepts_id
+                    WHERE cocd.concept_id IN (53, 54)
+                ) m
+                    ON m.credit_id   = c.id
+                    AND m.value       = r.value_paid
+                    AND m.created_at  = r.created_at
+                    AND m.user_create = r.user_create
+                LEFT JOIN glotypes gm
+                    ON gm.id = m.concept_id
+""";
         QueryBuilder qb = new QueryBuilder(baseSql)
                 .addFilter("ci.zone_id = :zona", "zona", zona)
                 .addFilter("d.type_recaudo_id = :concept", "concept", concept)
@@ -407,63 +424,66 @@ public class ConsultasRepository {
             LocalDateTime endDate) {
 
         String baseSql = """
-    SELECT
-        z.id,
-        z.value AS zona,
-
-        SUM(a.total_quota_value) AS quota_value,
-
-        SUM(
-            COALESCE(ad.interest_value, 0)
-        ) AS interest_value,
-
-        SUM(
-            COALESCE(ad.investment_value, 0)
-        ) AS investment_value
-
-    FROM credit_amortization a
-
-    LEFT JOIN (
         SELECT
-            amortization_id,
+            z.id,
+            z.value AS zona,
 
-            SUM(
-                CASE
-                    WHEN concept_id = 48
-                    THEN value
-                    ELSE 0
-                END
-            ) AS investment_value,
+            -- Saldo pendiente (nominal - abonos de rubros), topado en 0
+            COALESCE(SUM(
+                GREATEST(a.total_quota_value - COALESCE(pagos.abonado_rubros, 0), 0)
+            ), 0) AS quota_value,
 
-            SUM(
-                CASE
-                    WHEN concept_id = 49
-                    THEN value
-                    ELSE 0
-                END
-            ) AS interest_value
+            -- Interés pendiente (generado 49 - pagado 49)
+            COALESCE(SUM(
+                GREATEST(COALESCE(ad.interest_value, 0) - COALESCE(pagos.pagado_interes, 0), 0)
+            ), 0) AS interest_value,
 
-        FROM credit_amortization_detail
-        GROUP BY amortization_id
-    ) ad
-        ON ad.amortization_id = a.id
+            -- Capital pendiente (generado 48 - pagado 48)
+            COALESCE(SUM(
+                GREATEST(COALESCE(ad.investment_value, 0) - COALESCE(pagos.pagado_capital, 0), 0)
+            ), 0) AS investment_value
 
-    INNER JOIN credit c
-        ON a.credit_id = c.id
+        FROM credit_amortization a
 
-    INNER JOIN credit_intention ci
-        ON c.credit_intention_id = ci.id
+        LEFT JOIN (
+            SELECT amortization_id,
+                   SUM(CASE WHEN concept_id = 48 THEN value ELSE 0 END) AS investment_value,
+                   SUM(CASE WHEN concept_id = 49 THEN value ELSE 0 END) AS interest_value
+            FROM credit_amortization_detail
+            GROUP BY amortization_id
+        ) ad ON ad.amortization_id = a.id
 
-    INNER JOIN zona z
-        ON ci.zone_id = z.id
+        LEFT JOIN (
+            SELECT nr.quota_id,
+                   SUM(ABS(nrd.value)) AS abonado_rubros,
+                   SUM(CASE WHEN nrd.concept_id = 48 THEN ABS(nrd.value) ELSE 0 END) AS pagado_capital,
+                   SUM(CASE WHEN nrd.concept_id = 49 THEN ABS(nrd.value) ELSE 0 END) AS pagado_interes
+            FROM new_recaudo nr
+            JOIN new_recaudo_detail nrd ON nrd.recaudo_id = nr.id
+            WHERE nr.value_paid < 0
+              AND nrd.concept_id IN (48, 49, 50, 51)
+            GROUP BY nr.quota_id
+        ) pagos ON pagos.quota_id = a.id
+
+        INNER JOIN credit c
+            ON a.credit_id = c.id
+            AND c.credit_status = 'ACTIVE'
+            AND c.deleted_at IS NULL
+
+        INNER JOIN credit_intention ci
+            ON c.credit_intention_id = ci.id
+
+        INNER JOIN zona z
+            ON ci.zone_id = z.id
     """;
 
         QueryBuilder qb = new QueryBuilder(baseSql)
+                .addFilter("a.paid_full = :paidFull", "paidFull", "N")
                 .addFilter("a.expiration_date >= :startDate", "startDate", startDate)
                 .addFilter("a.expiration_date < :endDate", "endDate", endDate)
                 .buildWhere()
-                .append("GROUP BY z.id, z.value")
-                .append("ORDER BY z.value");
+                .append(" GROUP BY z.id, z.value")
+                .append(" ORDER BY z.value");
 
         return jdbcTemplate.query(
                 qb.getSql(),

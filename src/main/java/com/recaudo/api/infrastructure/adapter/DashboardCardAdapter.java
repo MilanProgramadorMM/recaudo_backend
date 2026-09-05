@@ -47,7 +47,7 @@ public class DashboardCardAdapter implements DashboardCardGateway {
                     // Fallback: si el job aún no corrió, calcula en tiempo real
                     log.warn("[DashboardCardAdapter] Sin registro precalculado para " +
                             "zona {} en {}. Ejecutando consulta en tiempo real.", zonaId, inicioDia.toLocalDate());
-                    return repository.getTotalDebidoCobrarValorcCuota(inicioDia, finDia, zonaId);
+                    return repository.getTotalDebidoCobrarValorCuotaPendiente(inicioDia, finDia, zonaId);
                 });
     }
 

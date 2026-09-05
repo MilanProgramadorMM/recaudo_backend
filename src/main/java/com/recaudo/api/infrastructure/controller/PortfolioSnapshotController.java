@@ -95,7 +95,7 @@ public class PortfolioSnapshotController {
     }
 
     // Endpoint: lista/buscador de clientes con cartera en una fecha
-// GET /portfolio-snapshots/clients?date=2026-07-15&search=juan
+    // GET /portfolio-snapshots/clients?date=2026-07-15&search=juan
     @GetMapping("/clients")
     public ResponseEntity<DefaultResponseDto<List<ClientListItemDto>>> getClients(
             @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,

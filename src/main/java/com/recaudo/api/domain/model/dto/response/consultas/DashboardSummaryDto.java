@@ -14,13 +14,12 @@ import java.math.BigDecimal;
 public class DashboardSummaryDto {
 
     private BigDecimal totalDebidoCobrar;
-
     private BigDecimal totalValorCuota;
-
+    private BigDecimal totalValorCuotaTabla;
+    private BigDecimal totalValorCuotaNominal;
+    private BigDecimal valorCuotaTablaOriginal;
     private BigDecimal totalRecaudado;
-
     private BigDecimal totalNoPagado;
-
     private BigDecimal totalCartera;
     private Long totalNoPagoCantidad;
 }

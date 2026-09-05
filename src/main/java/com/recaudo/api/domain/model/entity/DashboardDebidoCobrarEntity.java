@@ -34,4 +34,7 @@ public class DashboardDebidoCobrarEntity {
         @Column(name = "created_at", updatable = false)
         private LocalDateTime createdAt;
 
+        @Column(name = "value_original", nullable = false)
+        private BigDecimal valueOriginal;
+
 }

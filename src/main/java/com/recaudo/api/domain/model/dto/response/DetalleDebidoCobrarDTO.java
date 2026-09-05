@@ -10,7 +10,8 @@ public record DetalleDebidoCobrarDTO(
         LocalDate expirationDate,
         String clientName,
         Integer clientOrden,
-        BigDecimal valorCuota,
+        BigDecimal valorCuotaNominal,
+        BigDecimal valorCuotaPendiente,
         String zonaCode,
         String zona,
         String nombreDia

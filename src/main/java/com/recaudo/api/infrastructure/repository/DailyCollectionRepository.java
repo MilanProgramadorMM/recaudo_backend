@@ -121,7 +121,6 @@ public interface DailyCollectionRepository
                                 AND pz_cliente.orden > 0
     LEFT JOIN collection_visit cv ON cv.cuota_id = a.id AND cv.visit_date = :fecha
     WHERE c.credit_status = 'ACTIVE'
-      AND a.paid_full = 'N'
       AND a.expiration_date = :fecha
     ORDER BY z.value, pz_cliente.orden, a.expiration_date, a.quota_number
 """, nativeQuery = true)

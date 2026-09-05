@@ -60,7 +60,7 @@ public class DashboardDebidoCobrarOrchestrator {
 
                 // Calcular el debido a cobrar
                 BigDecimal valor = metricsRepository
-                        .getTotalDebidoCobrarValorcCuota(inicio, fin, zona.getId());
+                        .getTotalDebidoCobrarValorCuotaPendiente(inicio, fin, zona.getId());
 
                 // Insertar el nuevo registro
                 DashboardDebidoCobrarEntity entity = DashboardDebidoCobrarEntity.builder()
@@ -68,6 +68,7 @@ public class DashboardDebidoCobrarOrchestrator {
                         .zonaId(zona.getId())
                         .userCreate("SYSTEM")
                         .createdAt(LocalDateTime.now())
+                        .valueOriginal(valor)
                         .build();
 
                 debidoCobrarRepository.save(entity);

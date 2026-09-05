@@ -19,4 +19,5 @@ public interface CreditProjection {
     String getZoneName();
     String getPeriodName();
     LocalDateTime getCreatedAt();
+    String getCreditStatus();
 }
