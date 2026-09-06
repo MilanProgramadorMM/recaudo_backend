@@ -24,7 +24,7 @@ spring:
     #username: recaudoapp
     #password: R3c4uD0-DB
     #prod
-    url: jdbc:mysql://159.203.163.185:3306/recaudo_dev?serverTimezone=America/Bogota
+    url: jdbc:mysql://159.203.163.185:3306/recaudo?serverTimezone=America/Bogota
     username: recaudoapp
     password: R3c4uD0-DB
 
