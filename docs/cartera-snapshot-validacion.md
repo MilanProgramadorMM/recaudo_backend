@@ -811,3 +811,137 @@ para ese `credit_id` — el `LEFT JOIN` en la query principal deja esas tres col
 de `0`. No afecta ningún cálculo de saldo (es cosmético a nivel de esas tres columnas), pero si algún
 consumidor (frontend, reporte) no maneja `null` con cuidado, puede romper una suma o un `.toFixed()`.
 Pendiente de decidir si se corrige (ej. `COALESCE` en esas tres columnas del `SELECT` principal).
+
+## 11. Bitácora — regeneración ejecutada en PRODUCCIÓN (2026-09-06)
+
+Segunda corrida, esta vez contra la base de **producción** (`159.203.163.185/recaudo`). La corrida de
+la sección 10 fue contra `recaudo_dev`; esta la replica en producción, con dos diferencias de alcance
+importantes que se descubrieron al hacer el levantamiento previo.
+
+**Ambiente:** backend local (`./gradlew bootRun`, sin perfil activo), con `application.yml` apuntando
+a `159.203.163.185/recaudo`. Se corrió **sin** el perfil `scheduler` a propósito: `application.yml`
+tiene los tres crons en `"0 0 0 31 2 ?"` (31 de febrero = nunca), mientras que
+`application-scheduler.yml` los tiene reales (mora 7am, debido-cobrar 7am, snapshot 11pm). Levantar
+con el perfil `scheduler` para llegar a la BD de producción habría dejado **armados** los jobs de
+mora y debido-cobrar contra producción durante toda la corrida. Usuario `administrador`, header
+`X-App-Version: 1.0.3` en cada request.
+
+### 11.1 Hallazgo previo: producción corría el código viejo
+
+A diferencia de dev —donde el fix `233bbd0` estaba aplicado desde el 2026-09-01 y por tanto los
+snapshots de septiembre ya eran correctos— en producción **nunca se desplegó**. Evidencia recogida
+antes de escribir nada, sobre el snapshot del 2026-09-05 generado por el cron de producción:
+
+- `capitalGenerado = 0` en **0 de 403** créditos.
+- `totalCuotas NULL` en **0 de 403**.
+
+Bajo la query corregida, todo crédito sin cuota vencida a la fecha de corte debe dar `capitalGenerado
+= 0` **y** `totalCuotas NULL` (el bug de la sección 10). Producción pasó de 398 a 403 créditos entre
+el 01 y el 05 de septiembre, así que forzosamente había créditos recién originados que caerían en ese
+caso. Cero ocurrencias ⇒ código viejo.
+
+Corroborado por la serie de `saldoTotal`, que iba de $720,4 M (12-jul) a $869,1 M (05-sep) — casi
+plana en dos meses. Bajo la query corregida ese número debe **crecer** con el tiempo, porque van
+venciendo cuotas.
+
+**Consecuencia sobre el alcance:** se regeneraron **53 fechas** (2026-07-12 → 2026-09-05), no las 47
+de dev. En producción también septiembre estaba afectado.
+
+### 11.2 Corrección aplicada antes de correr
+
+Se agregó el `COALESCE` pendiente de la sección 10 (`totalCuotas`, `cuotasPagadas`, `cuotasPendientes`
+salían `NULL` en créditos sin cuota vencida), en `CreditSnapshotSourceRepository.java` líneas 97-99:
+
+```sql
+COALESCE(cuotas.total_cuotas, 0)   AS totalCuotas,
+COALESCE(cuotas.cuotas_pagadas, 0) AS cuotasPagadas,
+(COALESCE(cuotas.total_cuotas, 0) - COALESCE(cuotas.cuotas_pagadas, 0)) AS cuotasPendientes,
+```
+
+Se hizo antes de la corrida para no tener que regenerar las 53 fechas de producción una segunda vez.
+Validado: **0 NULLs** en las 53 fechas después de regenerar.
+
+También se revirtió un cambio accidental en `application.yml` que dejaba
+`spring.servlet.multipart.file-size-threshold` **vacío** (antes `2KB`). Un valor vacío no convierte a
+`DataSize` y habría impedido el arranque.
+
+### 11.3 Respaldo previo
+
+Además del backup de BD tomado por el equipo, se guardó el estado completo de las 53 fechas vía
+`GET /portfolio-snapshots/get-by-date/{fecha}`, un JSON por fecha (~720 KB c/u) más un CSV de
+totales. Es una segunda vía de recuperación, independiente del backup de motor.
+
+### 11.4 Resultado
+
+**53 de 53 fechas en `OK`, `paginasConError: 0`, cero fallos.** 403 créditos procesados en cada una
+(el conteo global de `ACTIVE` al momento de la corrida — igual en todas las fechas por la limitación
+de la sección 7 punto 3). Duración ~57 s por fecha, ~50 min en total. Se ejecutó una fecha de prueba
+(2026-08-06), se verificó contra el respaldo, y luego el resto en un lote secuencial con registro
+incremental por fecha.
+
+Antes/después de la fecha de prueba:
+
+| Campo | Antes | Después |
+|---|---|---|
+| créditos | 414 | 403 |
+| `capitalGenerado` | $901.124.365 | $283.523.479 |
+| `capitalPagado` | $363.595.936 | $212.412.769 |
+| `saldoTotal` | $803.637.143 | $101.148.872 |
+| créditos con `capitalGenerado = 0` | 0 | 150 |
+| `totalCuotas` NULL | 0 | 0 |
+
+Verificación agregada sobre las 53 fechas:
+
+- 53/53 con 403 créditos.
+- **0 NULLs** en `totalCuotas` (confirma 11.2).
+- `saldoTotal` pasó de una serie casi plana en ~$720-869 M a una serie creciente de **$66,9 M
+  (12-jul) a $152,1 M (05-sep)** — el comportamiento esperado de una cartera activa acumulando
+  cuotas vencidas.
+- Créditos con `capitalGenerado = 0` bajan de **236 (12-jul) a 35 (05-sep)** de forma casi monótona:
+  a medida que avanza el tiempo, menos créditos están sin ninguna cuota vencida. Es un chequeo de
+  consistencia interna fuerte.
+
+La serie de saldo **no** es monótona creciente y no debe serlo: baja en días de recaudo alto, cuando
+lo cobrado supera lo que venció. Ej. 08-11 ($108,5 M) → 08-12 ($107,6 M).
+
+### 11.5 Pendientes que esta corrida NO resuelve
+
+1. **⚠️ El deploy del código corregido a producción sigue pendiente.** Mientras no se despliegue
+   `233bbd0` o posterior (incluyendo el `COALESCE` de 11.2), el cron de las 23:00 sigue generando
+   cada noche con la query vieja. El histórico quedó bien; lo nuevo nace mal desde el 2026-09-06.
+   **Al desplegar, hay que regenerar las fechas transcurridas entre esta corrida y el deploy.**
+2. `estadoCredito`, `cuotasPagadas` y `diasMora` siguen reflejando el estado **actual**, no el de
+   cada fecha pasada (limitación de la sección 7 punto 1). No cambia con regenerar.
+3. El conteo de créditos es el `ACTIVE` actual en todas las fechas, no el histórico de cada una
+   (sección 7 punto 3).
+4. `otrosConceptosGenerado` sigue en 0 fijo (sección 7 punto 2).
+5. **⚠️ Hallazgo nuevo — saldos negativos por pagos anticipados.** La query corregida cuenta lo
+   *generado* con `ca.expiration_date <= :fecha` pero lo *pagado* con `nr.created_at < :fecha + 1 día`.
+   Un cliente que abona **antes** de que la cuota venza produce `pagado > generado` y por tanto un
+   `*Pendiente` negativo. Con la query vieja no ocurría, porque `generado` era el plan completo y el
+   pago nunca lo superaba.
+
+   Medido en producción tras la regeneración:
+
+   | Fecha | Créditos con `saldoTotal < 0` | Suma de negativos | `saldoTotal` de la fecha |
+   |---|---|---|---|
+   | 2026-07-12 | 14 | −$11.125.658,73 | $66.918.218,48 |
+   | 2026-08-06 | 28 (antes de regenerar: 1) | −$12.023.335,40 | $101.148.871,87 |
+   | 2026-09-05 | 42 | −$7.803.609,82 | $152.103.600,64 |
+
+   Caso testigo: crédito **590** al 2026-08-06 — `capitalGenerado = 0` (ninguna cuota vencida a esa
+   fecha), `capitalPagado = 81.000`, `saldoTotal = −150.000`.
+
+   **No es un error de la regeneración** — es inherente al fix de la fecha de corte, y aritméticamente
+   la fila es consistente. Pero **es una decisión de negocio pendiente**: hoy esos montos negativos
+   **restan** del saldo agregado de cartera (zona, cliente, global), como si redujeran lo que deben los
+   demás deudores. Un cliente con pago anticipado no debería disminuir la cartera por cobrar de otros.
+
+   Opciones a evaluar con el área de cartera, ninguna aplicada:
+   - Truncar en 0 los `*Pendiente` negativos y exponer el excedente en un campo aparte
+     (`saldoAFavor`), que es lo que representa de verdad.
+   - Dejarlos negativos a nivel de crédito pero excluirlos de las sumas agregadas.
+   - Dejarlo como está, documentando que `saldoTotal` es un neto que incluye anticipos.
+
+   Cualquiera de las dos primeras implica cambiar `CreditSnapshotSourceRepository` y **regenerar otra
+   vez** las fechas afectadas.
